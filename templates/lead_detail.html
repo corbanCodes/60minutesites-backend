@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% set active = 'leads' %}
+{% block title %}{{ lead.name }} | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>{{ lead.name }} <span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}; vertical-align: middle;">{{ lead.status }}</span></h1>
+  <a class="btn ghost" href="/admin/leads">← Back</a>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <form method="post" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+    <input type="hidden" name="action" value="status">
+    <span class="muted" style="font-weight:700">Move to:</span>
+    {% for s in STATUSES %}
+      {% if s != lead.status %}
+      <button class="btn sm" style="background: {{ STATUS_COLORS[s] }}" name="status" value="{{ s }}" type="submit">{{ s }}</button>
+      {% endif %}
+    {% endfor %}
+  </form>
+</div>
+
+<div class="row2" style="align-items:start">
+  <form class="form card" method="post">
+    <input type="hidden" name="action" value="update">
+    <h2 style="margin:0">Details</h2>
+    <div><label>Name</label><input type="text" name="name" value="{{ lead.name }}"></div>
+    <div><label>Business</label><input type="text" name="business" value="{{ lead.business }}"></div>
+    <div class="row2">
+      <div><label>Cell</label><input type="tel" name="phone" value="{{ lead.phone }}"></div>
+      <div><label>Email</label><input type="email" name="email" value="{{ lead.email }}"></div>
+    </div>
+    <div class="row2">
+      <div><label>Business type</label><input type="text" name="business_type" value="{{ lead.business_type }}"></div>
+      <div><label>Source</label><input type="text" name="source" value="{{ lead.source }}"></div>
+    </div>
+    <button class="btn" type="submit">Save changes</button>
+    <p class="muted" style="margin:4px 0 0">Added {{ lead.created_at.strftime("%b %-d, %Y %-I:%M %p") }} UTC</p>
+  </form>
+
+  <div class="card">
+    <h2 style="margin-top:0">Notes</h2>
+    <form class="form" method="post">
+      <input type="hidden" name="action" value="note">
+      <textarea name="body" placeholder="Called at 2pm — wants a plumbing site, has logo…"></textarea>
+      <button class="btn sm" type="submit">Add note</button>
+    </form>
+    {% for note in lead.notes %}
+      <div class="note">{{ note.body }}<div class="when">{{ note.created_at.strftime("%b %-d, %-I:%M %p") }} UTC</div></div>
+    {% else %}
+      <p class="muted">No notes yet.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<form method="post" style="margin-top:18px" onsubmit="return confirm('Delete this lead and all notes?')">
+  <input type="hidden" name="action" value="delete">
+  <button class="btn danger sm" type="submit">Delete lead</button>
+</form>
+{% endblock %}

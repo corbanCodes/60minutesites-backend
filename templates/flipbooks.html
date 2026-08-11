@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% set active = 'flipbooks' %}
+{% block title %}Flipbooks | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>PDF Flipbooks</h1></div>
+<form class="form card" method="post" enctype="multipart/form-data" style="margin-bottom:22px">
+  <h2 style="margin:0">New flipbook</h2>
+  <div class="row2">
+    <div><label>Title</label><input type="text" name="title" placeholder="Spring Menu 2026" required></div>
+    <div><label>PDF file</label><input type="file" name="pdf" accept="application/pdf" required></div>
+  </div>
+  <button class="btn" type="submit">Upload &amp; animate</button>
+  <p class="muted" style="margin:0">Pages render once and live in the database — they survive redeploys.</p>
+</form>
+{% if rows %}
+<table>
+  <tr><th>Title</th><th>Share link</th><th>Pages</th><th>Created</th><th></th></tr>
+  {% for book in rows %}
+  <tr>
+    <td class="rowlink">{{ book.title }}</td>
+    <td><a href="/f/{{ book.slug }}" target="_blank">/f/{{ book.slug }}</a></td>
+    <td>{{ book.page_count }}</td>
+    <td class="muted">{{ book.created_at.strftime("%b %-d") }}</td>
+    <td>
+      <form method="post" action="/admin/flipbooks/{{ book.id }}/delete" onsubmit="return confirm('Delete this flipbook?')" style="display:inline">
+        <button class="btn danger sm" type="submit">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card muted">No flipbooks yet. Upload any PDF and it becomes a page-turning book at a shareable link.</div>
+{% endif %}
+{% endblock %}

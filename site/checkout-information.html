@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Complete your information to get started with your professional website.">
+  <meta name="robots" content="noindex">
+  <title>Your Information | 60 Minute Sites</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon_io (4)/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_io (4)/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon_io (4)/favicon-16x16.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .checkout-info-page {
+      min-height: calc(100vh - 70px);
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding: calc(70px + 60px) 20px 60px;
+    }
+    .checkout-info-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .checkout-info-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .checkout-info-header h1 {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      color: var(--black);
+    }
+    .checkout-info-header p {
+      font-size: 1.05rem;
+      color: var(--gray);
+      margin: 0;
+    }
+    .step-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--gray);
+      white-space: nowrap;
+    }
+    .step.active {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .step.completed {
+      color: #22c55e;
+    }
+    .step-num {
+      width: 28px;
+      min-width: 28px;
+      height: 28px;
+      min-height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: var(--light-gray);
+      color: var(--gray);
+      flex-shrink: 0;
+      aspect-ratio: 1;
+    }
+    .step.active .step-num {
+      background: var(--primary);
+      color: white;
+    }
+    .step.completed .step-num {
+      background: #22c55e;
+      color: white;
+    }
+    .step-divider {
+      width: 40px;
+      height: 2px;
+      background: var(--light-gray);
+      align-self: center;
+    }
+    .info-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: var(--shadow-lg);
+    }
+    .form-group {
+      margin-bottom: 24px;
+    }
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--black);
+    }
+    .form-group label .required {
+      color: #ef4444;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 1rem;
+      border: 2px solid var(--light-gray);
+      border-radius: var(--radius-md);
+      font-family: var(--font-primary);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+      background: white;
+    }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    .form-group select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      padding-right: 40px;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+    .form-group input::placeholder {
+      color: #aaa;
+    }
+    .form-group .helper-text {
+      font-size: 0.85rem;
+      color: var(--gray);
+      margin-top: 6px;
+    }
+    .form-submit {
+      margin-top: 32px;
+    }
+    .form-submit .btn {
+      width: 100%;
+      padding: 18px 32px;
+      font-size: 1.1rem;
+    }
+    .secure-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      color: var(--gray);
+      font-size: 0.9rem;
+    }
+    .secure-note i {
+      color: #22c55e;
+    }
+    .back-link {
+      text-align: center;
+      margin-top: 24px;
+    }
+    .back-link a {
+      color: var(--gray);
+      font-size: 0.9rem;
+    }
+    .back-link a:hover {
+      color: var(--primary);
+    }
+    .plan-summary {
+      background: var(--off-white);
+      border: 2px solid var(--light-gray);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .plan-summary-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .plan-summary-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      color: white;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .plan-summary-name {
+      font-weight: 600;
+      color: var(--black);
+    }
+    .plan-summary-details {
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+    .plan-summary-price {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .plan-summary a {
+      font-size: 0.8rem;
+      margin-left: 8px;
+    }
+  </style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-649666163"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-649666163');
+</script>
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '3728691617450623');
+fbq('track', 'PageView');
+document.addEventListener('click', function(e) {
+  var a = e.target.closest && e.target.closest('a[href^="tel:"]');
+  if (a) { fbq('trackCustom', 'PhoneTap', {content_name: 'phone_call_tap'}); }
+}, true);
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel -->
+<script>if(window.fbq)fbq('track','InitiateCheckout');</script>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <div class="checkout-info-page">
+    <div class="checkout-info-container">
+      <!-- Step Indicator -->
+      <div class="step-indicator">
+        <div class="step completed">
+          <span class="step-num"><i class="fas fa-check"></i></span>
+          <span>Review</span>
+        </div>
+        <div class="step-divider"></div>
+        <div class="step active">
+          <span class="step-num">2</span>
+          <span>Your Info</span>
+        </div>
+        <div class="step-divider"></div>
+        <div class="step">
+          <span class="step-num">3</span>
+          <span>Payment</span>
+        </div>
+      </div>
+
+      <div class="checkout-info-header">
+        <h1>Tell Us About Yourself</h1>
+        <p>We'll use this to get in touch and prepare for your onboarding call.</p>
+      </div>
+
+      <div class="info-card">
+        <!-- Plan Summary -->
+        <div class="plan-summary" id="plan-summary">
+          <div class="plan-summary-left">
+            <div class="plan-summary-icon"><i class="fas fa-globe"></i></div>
+            <div>
+              <div class="plan-summary-name" id="plan-name">Website Plan</div>
+              <div class="plan-summary-details" id="plan-details">$50/mo + $150 setup</div>
+            </div>
+          </div>
+          <div>
+            <span class="plan-summary-price" id="plan-price">$150</span>
+            <a href="checkout.html">Change</a>
+          </div>
+        </div>
+
+        <form action="https://formspree.io/f/mvzalyrw" method="POST" id="checkout-form">
+          <div class="form-group">
+            <label for="name">Full Name <span class="required">*</span></label>
+            <input type="text" id="name" name="name" placeholder="John Smith" required>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email Address <span class="required">*</span></label>
+            <input type="email" id="email" name="email" placeholder="john@example.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number <span class="required">*</span></label>
+            <input type="tel" id="phone" name="phone" placeholder="(555) 123-4567" required>
+          </div>
+
+          <div class="form-group">
+            <label for="company">Company Name <span class="required">*</span></label>
+            <input type="text" id="company" name="company" placeholder="Smith's Plumbing LLC" required>
+          </div>
+
+          <div class="form-group">
+            <label for="about">About Your Company <span class="required">*</span></label>
+            <textarea id="about" name="about" rows="3" placeholder="Tell us a bit about your business - what services you offer, how long you've been in business, what makes you different..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="template">Which template did you choose?</label>
+            <input type="text" id="template" name="template" placeholder="e.g., Builder Pro, Glamour Cuts, or 'Not sure yet'">
+            <p class="helper-text">Don't worry if you haven't picked one yet - we'll help you choose on our call!</p>
+          </div>
+
+          <div class="form-group">
+            <label for="domain">Preferred Domain</label>
+            <select id="domain" name="domain">
+              <option value="">Select an option...</option>
+              <option value="I already have a domain">I already have a domain</option>
+              <option value="I need help getting a domain">I need help getting a domain</option>
+              <option value="Not sure yet">Not sure yet</option>
+            </select>
+            <p class="helper-text">We can help you set up or connect a domain on our call.</p>
+          </div>
+
+          <input type="text" name="_gotcha" style="display:none !important" tabindex="-1" autocomplete="off">
+            <input type="hidden" name="_subject" id="form-subject" value="New Website Purchase - Website Plan">
+          <input type="hidden" name="_next" id="form-next" value="https://buy.stripe.com/fZu3cvaMWcUPcrabqKeAg04">
+          <input type="hidden" name="plan" id="form-plan" value="monthly">
+
+          <div class="form-submit">
+            <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+              Continue to Payment - $150 <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+
+          <div class="secure-note">
+            <i class="fas fa-lock"></i>
+            <span>Your information is secure and will never be shared.</span>
+          </div>
+        </form>
+      </div>
+
+      <div class="back-link">
+        <a href="checkout.html"><i class="fas fa-arrow-left"></i> Back to Order Summary</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/main.js"></script>
+  <script src="js/components.js"></script>
+  <script>
+    // Plan configuration
+    const plans = {
+      monthly: {
+        name: 'Website Plan',
+        details: '$50/mo + $150 setup',
+        price: '$200',
+        buttonText: 'Continue to Payment - $200',
+        subject: 'New Website Purchase - Website Plan',
+        stripeUrl: 'https://buy.stripe.com/fZu3cvaMWcUPcrabqKeAg04'
+      },
+      annual: {
+        name: 'Annual Plan',
+        details: '$500/year - No setup fee!',
+        price: '$500',
+        buttonText: 'Continue to Payment - $500',
+        subject: 'New Website Purchase - Annual Plan',
+        stripeUrl: 'https://buy.stripe.com/6oU4gzcV49ID62M2UeeAg05'
+      }
+    };
+
+    // Get plan from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectedPlan = urlParams.get('plan') || 'monthly';
+    const plan = plans[selectedPlan] || plans.monthly;
+
+    // Update page elements
+    document.getElementById('plan-name').textContent = plan.name;
+    document.getElementById('plan-details').textContent = plan.details;
+    document.getElementById('plan-price').textContent = plan.price;
+    document.getElementById('submit-btn').innerHTML = plan.buttonText + ' <i class="fas fa-arrow-right"></i>';
+    document.getElementById('form-subject').value = plan.subject;
+    document.getElementById('form-next').value = plan.stripeUrl;
+    document.getElementById('form-plan').value = selectedPlan;
+  </script>
+<script>
+(function(){
+  var t0 = Date.now();
+  document.addEventListener('submit', function(e){
+    var f = e.target;
+    if (!f.action || f.action.indexOf('formspree') === -1) return;
+    ['fill_seconds','traffic_source'].forEach(function(n){
+      if (!f.querySelector('[name="'+n+'"]')){
+        var i = document.createElement('input'); i.type='hidden'; i.name=n; f.appendChild(i);
+      }
+    });
+    f.querySelector('[name="fill_seconds"]').value = Math.round((Date.now()-t0)/1000);
+    f.querySelector('[name="traffic_source"]').value = (location.search || 'direct') + ' | ref: ' + (document.referrer || 'none');
+  }, true);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+industry,slug,title,keyword,read_time,article_type
+llm-optimization,ai-crawler-http-status,HTTP Status Codes and AI Crawler Behavior,http status ai,7,guide
+llm-optimization,redirect-handling-llm-bots,Redirect Handling for LLM Bots,redirect llm bots,7,guide
+llm-optimization,canonical-tags-ai-crawlers,Canonical Tags for AI Crawlers,canonical ai crawlers,7,guide
+llm-optimization,pagination-llm-crawling,Pagination and LLM Crawling,pagination llm,7,guide
+llm-optimization,infinite-scroll-ai-indexing,Infinite Scroll AI Indexing Issues,infinite scroll ai,7,guide
+llm-optimization,lazy-loading-llm-content,Lazy Loading Impact on LLM Content Discovery,lazy loading llm,7,guide
+llm-optimization,image-alt-text-ai-understanding,Image Alt Text for AI Understanding,image alt ai,7,guide
+llm-optimization,image-caption-llm-context,Image Captions and LLM Context,image caption llm,7,guide
+llm-optimization,visual-content-ai-search,Visual Content in AI Search,visual content ai,8,guide
+llm-optimization,multimedia-llm-optimization,Multimedia Content LLM Optimization,multimedia llm,8,guide
+llm-optimization,pdf-content-ai-crawling,PDF Content and AI Crawling,pdf ai crawling,7,guide
+llm-optimization,document-indexing-llm,Document Indexing for LLM Search,document indexing llm,8,guide
+llm-optimization,file-format-ai-accessibility,File Format Accessibility for AI,file format ai,7,guide
+llm-optimization,content-extraction-llm-bots,Content Extraction by LLM Bots,content extraction llm,8,guide
+llm-optimization,html-parsing-ai-crawlers,HTML Parsing by AI Crawlers,html parsing ai,8,guide
+llm-optimization,clean-code-llm-readability,Clean Code for LLM Readability,clean code llm,8,guide
+llm-optimization,semantic-markup-ai-comprehension,Semantic Markup for AI Comprehension,semantic markup ai,8,guide
+llm-optimization,aria-labels-ai-accessibility,ARIA Labels and AI Accessibility,aria labels ai,7,guide
+llm-optimization,structured-headings-llm,Structured Headings for LLM Navigation,structured headings llm,7,guide
+llm-optimization,content-hierarchy-ai-understanding,Content Hierarchy for AI Understanding,content hierarchy ai,8,guide
+llm-optimization,information-architecture-llm,Information Architecture for LLM SEO,info architecture llm,9,guide
+llm-optimization,site-structure-ai-crawling,Site Structure for AI Crawling Efficiency,site structure ai,8,guide
+llm-optimization,navigation-patterns-llm,Navigation Patterns LLMs Prefer,navigation llm,7,guide
+llm-optimization,breadcrumb-schema-ai,Breadcrumb Schema for AI Navigation,breadcrumb schema ai,7,guide
+llm-optimization,footer-links-llm-crawling,Footer Links and LLM Crawling,footer links llm,6,guide
+llm-optimization,sidebar-content-ai-indexing,Sidebar Content AI Indexing,sidebar content ai,6,guide
+llm-optimization,main-content-llm-identification,Main Content Identification by LLMs,main content llm,8,guide
+llm-optimization,content-sections-ai-parsing,Content Sections for AI Parsing,content sections ai,7,guide
+llm-optimization,article-markup-llm,Article Markup for LLM Recognition,article markup llm,8,guide
+llm-optimization,blog-post-schema-ai,Blog Post Schema for AI Search,blog post schema ai,8,guide
+llm-optimization,author-schema-llm-trust,Author Schema for LLM Trust Signals,author schema llm,8,guide
+llm-optimization,organization-schema-ai,Organization Schema for AI Recognition,organization schema ai,8,guide
+llm-optimization,product-schema-llm-ecommerce,Product Schema for LLM E-commerce,product schema llm,8,guide
+llm-optimization,service-schema-ai-local,Service Schema for AI Local Search,service schema ai,8,guide
+llm-optimization,event-schema-llm-visibility,Event Schema for LLM Visibility,event schema llm,7,guide
+llm-optimization,recipe-schema-ai-search,Recipe Schema for AI Search,recipe schema ai,7,guide
+llm-optimization,video-schema-llm-optimization,Video Schema for LLM Optimization,video schema llm,7,guide
+llm-optimization,speakable-schema-ai-assistants,Speakable Schema for AI Assistants,speakable schema ai,8,guide
+llm-optimization,claim-review-schema-llm,ClaimReview Schema for LLM Fact-Checking,claim review llm,8,guide
+llm-optimization,dataset-schema-ai-research,Dataset Schema for AI Research Visibility,dataset schema ai,8,guide
+llm-optimization,software-schema-llm-tech,Software Schema for LLM Tech Searches,software schema llm,7,guide
+llm-optimization,course-schema-ai-education,Course Schema for AI Education Search,course schema ai,7,guide
+llm-optimization,job-posting-schema-llm,Job Posting Schema for LLM HR Search,job posting llm,7,guide
+llm-optimization,medical-schema-ai-health,Medical Schema for AI Health Searches,medical schema ai,8,guide
+llm-optimization,legal-schema-llm-law,Legal Schema for LLM Law Searches,legal schema llm,8,guide
+llm-optimization,financial-schema-ai-fintech,Financial Schema for AI Fintech Visibility,financial schema ai,8,guide
+llm-optimization,review-schema-llm-ratings,Review Schema for LLM Rating Extraction,review schema llm,7,guide
+llm-optimization,aggregate-rating-ai-search,AggregateRating Schema for AI Search,aggregate rating ai,7,guide
+llm-optimization,rich-results-llm-optimization,Rich Results and LLM Optimization Overlap,rich results llm,8,guide
+llm-optimization,featured-snippets-ai-connection,Featured Snippets and AI Connection,featured snippets ai,8,guide
+llm-optimization,knowledge-panel-llm-influence,Knowledge Panel Influence on LLM,knowledge panel llm,8,guide
+llm-optimization,entity-based-seo-ai,Entity-Based SEO for AI Search,entity seo ai,9,guide
+llm-optimization,brand-entity-llm-recognition,Brand Entity Recognition by LLMs,brand entity llm,8,guide
+llm-optimization,personal-brand-ai-visibility,Personal Brand AI Visibility,personal brand ai,8,guide
+llm-optimization,company-entity-llm-seo,Company Entity LLM SEO,company entity llm,8,guide
+llm-optimization,product-entity-ai-search,Product Entity in AI Search,product entity ai,8,guide
+llm-optimization,topic-entity-llm-authority,Topic Entity and LLM Authority,topic entity llm,9,guide
+llm-optimization,entity-relationships-ai,Entity Relationships for AI Understanding,entity relationships ai,9,guide
+llm-optimization,entity-attributes-llm,Entity Attributes LLMs Extract,entity attributes llm,8,guide
+llm-optimization,entity-mentions-ai-content,Entity Mentions in AI Content Strategy,entity mentions ai,8,guide
+llm-optimization,co-occurrence-llm-signals,Co-occurrence Signals for LLM Ranking,co occurrence llm,8,guide
+llm-optimization,semantic-relationships-ai,Semantic Relationships for AI,semantic relationships ai,9,guide
+llm-optimization,ontology-llm-seo,Ontology Concepts in LLM SEO,ontology llm seo,9,guide
+llm-optimization,taxonomy-ai-content,Taxonomy in AI Content Organization,taxonomy ai content,8,guide
+llm-optimization,categorization-llm-understanding,Content Categorization for LLM Understanding,categorization llm,8,guide
+llm-optimization,tagging-strategy-ai-search,Tagging Strategy for AI Search,tagging ai search,7,guide
+llm-optimization,topic-modeling-llm-content,Topic Modeling in LLM Content Strategy,topic modeling llm,9,guide
+llm-optimization,content-classification-ai,Content Classification for AI,content classification ai,8,guide
+llm-optimization,relevance-scoring-llm,Relevance Scoring in LLM Algorithms,relevance scoring llm,9,guide
+llm-optimization,ranking-factors-ai-2026,AI Search Ranking Factors for 2026,ranking factors ai,10,guide
+llm-optimization,algorithm-updates-llm-search,Algorithm Updates in LLM Search,algorithm updates llm,9,guide
+llm-optimization,ai-search-evolution,Evolution of AI Search Technology,ai search evolution,9,guide
+llm-optimization,future-llm-seo-trends,Future LLM SEO Trends,future llm seo,9,guide
+llm-optimization,preparing-ai-search-future,Preparing for the Future of AI Search,preparing ai search,9,guide
+llm-optimization,ai-first-content-strategy,AI-First Content Strategy,ai first content,9,guide
+llm-optimization,llm-native-content,LLM-Native Content Creation,llm native content,9,guide
+llm-optimization,conversational-ai-optimization,Conversational AI Optimization,conversational ai opt,9,guide
+llm-optimization,chatbot-integration-llm-seo,Chatbot Integration and LLM SEO,chatbot llm seo,8,guide
+llm-optimization,ai-agent-visibility,AI Agent Visibility for Websites,ai agent visibility,9,guide
+llm-optimization,rag-optimization-content,RAG Optimization for Content Publishers,rag optimization,9,guide
+llm-optimization,vector-database-seo,Vector Database SEO Implications,vector database seo,9,guide
+llm-optimization,embedding-optimization-content,Content Embedding Optimization,embedding optimization,9,guide
+llm-optimization,semantic-search-vectors,Semantic Search Vectors Explained,semantic vectors,9,guide
+llm-optimization,ai-retrieval-optimization,AI Retrieval Optimization for Content,ai retrieval opt,9,guide
+llm-optimization,context-window-optimization,Context Window Optimization for LLMs,context window llm,9,guide
+llm-optimization,token-efficiency-content,Token Efficiency in Content for LLMs,token efficiency llm,8,guide
+llm-optimization,content-compression-ai,Content Compression for AI Processing,content compression ai,8,guide
+llm-optimization,summarization-friendly-content,Summarization-Friendly Content,summarization content,8,guide
+llm-optimization,key-point-extraction-optimization,Key Point Extraction Optimization,key point extraction,8,guide
+llm-optimization,conclusion-optimization-llm,Conclusion Optimization for LLM Extraction,conclusion llm,7,guide
+llm-optimization,intro-optimization-ai-search,Introduction Optimization for AI Search,intro optimization ai,7,guide
+llm-optimization,hook-writing-llm-content,Hook Writing for LLM Content,hook writing llm,7,guide
+llm-optimization,first-paragraph-ai-importance,First Paragraph Importance for AI,first paragraph ai,7,guide
+llm-optimization,opening-statement-llm,Opening Statement Optimization for LLM,opening statement llm,7,guide
+llm-optimization,thesis-statement-ai-content,Thesis Statement in AI Content,thesis statement ai,7,guide
+llm-optimization,main-argument-llm-extraction,Main Argument Extraction by LLMs,main argument llm,8,guide
+llm-optimization,supporting-evidence-ai,Supporting Evidence for AI Trust,supporting evidence ai,8,guide
+llm-optimization,data-presentation-llm,Data Presentation for LLM Understanding,data presentation llm,8,guide

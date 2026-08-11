@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Tips and Guides for Small Business | 60 Minute Sites Blog</title>
+  <meta name="description" content="Expert advice on websites, SEO, and growing your business online. Practical guides for small business owners who want professional websites without the hassle.">
+  <link rel="canonical" href="https://60minutesites.com/blog/">
+
+  <meta property="og:title" content="Website Tips and Guides for Small Business | 60 Minute Sites Blog">
+  <meta property="og:description" content="Expert advice on websites, SEO, and growing your business online. Practical guides for small business owners.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://60minutesites.com/blog/">
+  <meta property="og:site_name" content="60 Minute Sites">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Website Tips and Guides for Small Business">
+  <meta name="twitter:description" content="Expert advice on websites, SEO, and growing your business online.">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io (4)/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io (4)/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io (4)/favicon-16x16.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "60 Minute Sites Blog",
+    "description": "Expert advice on websites, SEO, and growing your business online",
+    "url": "https://60minutesites.com/blog/",
+    "publisher": {
+      "@type": "Organization",
+      "name": "60 Minute Sites",
+      "url": "https://60minutesites.com"
+    }
+  }
+  </script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/blog/css/blog.css">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-649666163"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-649666163');
+</script>
+</head>
+<body>
+  <div id="blog-header"></div>
+
+  <!-- Blog Hero -->
+  <section class="blog-hero">
+    <div class="container">
+      <h1>Website Tips and Guides for Small Business</h1>
+      <p>Expert advice on websites, SEO, and growing your business online. Practical guides written for busy business owners.</p>
+      <div class="blog-search">
+        <input type="text" id="blog-search" class="blog-search-input" placeholder="Search articles..." aria-label="Search articles">
+      </div>
+    </div>
+  </section>
+
+  <!-- Category Pills -->
+  <section class="blog-categories">
+    <div class="container">
+      <div class="category-pills">
+        <a href="#" class="category-pill active" data-category="featured">Featured</a>
+        <a href="#industries" class="category-pill" data-category="industries">By Industry</a>
+        <a href="#" class="category-pill" data-category="llm-optimization">AI & LLM</a>
+        <a href="#" class="category-pill" data-category="lead-generation">Lead Generation</a>
+        <a href="#" class="category-pill" data-category="local-seo">Local SEO</a>
+        <a href="#" class="category-pill" data-category="web-design">Web Design</a>
+        <a href="#" class="category-pill" data-category="comparisons">Comparisons</a>
+        <a href="#" class="category-pill" data-category="getting-started">Getting Started</a>
+        <a href="#" class="category-pill" data-category="website-cost">Website Cost</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Blog Content -->
+  <div class="container">
+    <div class="blog-layout">
+      <main>
+        <!-- Featured/Category Posts Section -->
+        <section class="featured-posts" id="featured-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 id="featured-heading">Featured Guides</h2>
+            <div class="pagination-controls" id="featured-pagination" style="display: none;">
+              <button class="btn btn-secondary" id="prev-btn" disabled><i class="fas fa-chevron-left"></i> Prev</button>
+              <span id="page-info" style="margin: 0 1rem; color: #999;">1 / 1</span>
+              <button class="btn btn-secondary" id="next-btn">Next <i class="fas fa-chevron-right"></i></button>
+            </div>
+          </div>
+          <div class="featured-grid" id="featured-grid">
+            <!-- Loaded dynamically by JS -->
+          </div>
+        </section>
+
+        <!-- Industry Filter Section -->
+        <section id="industries" class="hub-links" style="margin-bottom: 2rem;">
+          <h4>Browse by Industry</h4>
+          <div class="hub-links-list" id="industry-filters">
+            <a href="#" class="industry-filter active" data-industry="all">All</a>
+            <!-- Industry buttons will be populated by JS -->
+          </div>
+        </section>
+
+        <!-- Articles Grid -->
+        <section>
+          <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;" id="articles-heading">All Articles</h2>
+          <div class="posts-grid" id="posts-grid">
+            <!-- Articles loaded dynamically by JS from articles-data.js -->
+          </div>
+          
+          <!-- Pagination -->
+          <div class="blog-pagination" id="articles-pagination">
+            <!-- Pagination buttons loaded by JS -->
+          </div>
+        </section>
+      </main>
+
+      <!-- Sidebar -->
+      <aside class="blog-sidebar">
+        <div class="sidebar-section sidebar-search">
+          <h4>Search</h4>
+          <input type="text" placeholder="Search articles..." aria-label="Search">
+        </div>
+
+        <div class="sidebar-section">
+          <h4>Popular Articles</h4>
+          <div class="sidebar-posts">
+            <a href="/blog/small-business-websites/" class="sidebar-post">
+              <div>
+                <h5>Complete Small Business Website Guide</h5>
+                <span>15 min read</span>
+              </div>
+            </a>
+            <a href="/blog/website-cost/how-much-does-website-cost.html" class="sidebar-post">
+              <div>
+                <h5>How Much Does a Website Cost</h5>
+                <span>10 min read</span>
+              </div>
+            </a>
+            <a href="/blog/local-seo/google-business-profile-guide.html" class="sidebar-post">
+              <div>
+                <h5>Google Business Profile Guide</h5>
+                <span>11 min read</span>
+              </div>
+            </a>
+            <a href="/blog/diy-vs-professional/" class="sidebar-post">
+              <div>
+                <h5>DIY vs Professional Websites</h5>
+                <span>9 min read</span>
+              </div>
+            </a>
+            <a href="/blog/website-conversions/" class="sidebar-post">
+              <div>
+                <h5>Website Conversion Optimization</h5>
+                <span>13 min read</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <h4>Industries</h4>
+          <div class="sidebar-categories">
+            <a href="/blog/plumber-websites/" class="sidebar-category">
+              <span>Plumber</span>
+            </a>
+            <a href="/blog/electrician-websites/" class="sidebar-category">
+              <span>Electrician</span>
+            </a>
+            <a href="/blog/hvac-websites/" class="sidebar-category">
+              <span>HVAC</span>
+            </a>
+            <a href="/blog/construction-websites/" class="sidebar-category">
+              <span>Construction</span>
+            </a>
+            <a href="/blog/salon-websites/" class="sidebar-category">
+              <span>Salon</span>
+            </a>
+            <a href="/blog/restaurant-websites/" class="sidebar-category">
+              <span>Restaurant</span>
+            </a>
+            <a href="/blog/real-estate-websites/" class="sidebar-category">
+              <span>Real Estate</span>
+            </a>
+            <a href="/blog/fitness-websites/" class="sidebar-category">
+              <span>Fitness</span>
+            </a>
+            <a href="/blog/photography-websites/" class="sidebar-category">
+              <span>Photography</span>
+            </a>
+            <a href="/blog/custom-websites/" class="sidebar-category">
+              <span>Custom Websites</span>
+            </a>
+            <a href="#industries" class="sidebar-category" style="color: var(--primary);">
+              <span>View All Industries →</span>
+            </a>
+          </div>
+        </div>
+        
+        <div class="sidebar-section">
+          <h4>Topics</h4>
+          <div class="sidebar-categories">
+            <a href="/blog/website-cost/" class="sidebar-category">
+              <span>Website Cost</span>
+            </a>
+            <a href="/blog/local-seo/" class="sidebar-category">
+              <span>Local SEO</span>
+            </a>
+            <a href="/blog/small-business-websites/" class="sidebar-category">
+              <span>Web Design</span>
+            </a>
+            <a href="/blog/wix-alternatives/" class="sidebar-category">
+              <span>Wix Alternatives</span>
+            </a>
+            <a href="/blog/getting-started/" class="sidebar-category">
+              <span>Getting Started</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="sidebar-section sidebar-cta">
+          <h4>Get Your Website</h4>
+          <p>Professional website live in 60 minutes. From $41.67/month.</p>
+          <a href="/checkout.html" class="btn btn-secondary">Get Started</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- CTA Section -->
+  <section class="cta-section cta-final">
+    <div class="container">
+      <div class="cta-content">
+        <h2>Ready for Your Professional Website?</h2>
+        <p>Join hundreds of small businesses with websites that actually work. Live in 60 minutes, from $41.67/month.</p>
+        <div class="hero-buttons">
+          <a href="/book-demo.html" class="btn btn-secondary btn-lg"><i class="fas fa-calendar-check"></i> Book Free Demo</a>
+          <a href="/checkout.html" class="btn btn-outline-white btn-lg">Get Started Now</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="blog-footer"></div>
+
+  <script src="/js/main.js"></script>
+  <script src="/blog/js/components.js"></script>
+  <script src="/blog/js/articles-data.js"></script>
+  <script src="/blog/js/blog-filter.js"></script>
+</body>
+</html>

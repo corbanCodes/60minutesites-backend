@@ -1,0 +1,245 @@
+industry,slug,title,keyword,read_time,article_type
+local-seo,what-is-voice-ai-for-small-business,What Is Voice AI and How Can Small Businesses Use It?,voice ai small business,8,guide
+local-seo,how-do-voice-ai-agents-work,How Do Voice AI Agents Work for Business?,voice ai agents business,8,guide
+local-seo,can-voice-ai-answer-phone-calls,Can Voice AI Answer Phone Calls for My Business?,voice ai phone calls,7,guide
+local-seo,what-is-an-ai-receptionist,What Is an AI Receptionist and Do I Need One?,ai receptionist,7,guide
+local-seo,how-much-does-voice-ai-cost,How Much Does Voice AI Cost for Small Business?,voice ai cost,7,guide
+local-seo,voice-ai-vs-answering-service,Voice AI vs Answering Service: Which Is Better?,voice ai vs answering service,8,comparison
+local-seo,best-voice-ai-for-contractors,What Is the Best Voice AI for Contractors?,voice ai contractors,8,guide
+local-seo,best-voice-ai-for-plumbers,What Is the Best Voice AI for Plumbers?,voice ai plumbers,8,guide
+local-seo,best-voice-ai-for-dentists,What Is the Best Voice AI for Dental Offices?,voice ai dentists,8,guide
+local-seo,best-voice-ai-for-lawyers,What Is the Best Voice AI for Law Firms?,voice ai lawyers,8,guide
+local-seo,can-ai-schedule-appointments,Can AI Schedule Appointments for My Business?,ai schedule appointments,7,guide
+local-seo,how-to-automate-phone-answering,How Do I Automate Phone Answering for My Business?,automate phone answering,8,guide
+local-seo,what-is-conversational-ai,What Is Conversational AI for Business?,conversational ai business,7,guide
+local-seo,voice-ai-for-after-hours,How Can Voice AI Help After Hours?,voice ai after hours,7,guide
+local-seo,ai-phone-agent-benefits,What Are the Benefits of an AI Phone Agent?,ai phone agent benefits,8,guide
+local-seo,how-to-get-custom-software,How Do I Get Custom Software for My Business?,custom software business,9,guide
+local-seo,custom-software-vs-off-the-shelf,Custom Software vs Off-the-Shelf: Which Should I Choose?,custom software vs off the shelf,9,comparison
+local-seo,how-much-does-custom-software-cost,How Much Does Custom Software Cost?,custom software cost,8,guide
+local-seo,do-i-need-custom-software,Do I Need Custom Software for My Small Business?,need custom software,7,guide
+local-seo,what-is-a-software-agency,What Is a Software Agency and How Do They Help?,software agency,7,guide
+local-seo,how-to-find-software-developer,How Do I Find a Good Software Developer?,find software developer,8,guide
+local-seo,custom-crm-for-small-business,Should I Get a Custom CRM for My Business?,custom crm small business,8,guide
+local-seo,custom-booking-system,Do I Need a Custom Booking System?,custom booking system,7,guide
+local-seo,automate-business-processes,How Can I Automate My Business Processes?,automate business processes,9,guide
+local-seo,what-is-business-automation,What Is Business Automation and How Does It Work?,business automation,8,guide
+local-seo,small-business-software-tools,What Software Tools Do Small Businesses Need?,small business software tools,9,guide
+local-seo,how-to-streamline-operations,How Do I Streamline My Business Operations?,streamline business operations,8,guide
+local-seo,best-software-for-contractors,What Is the Best Software for Contractors?,software for contractors,8,guide
+local-seo,best-software-for-plumbers,What Is the Best Software for Plumbers?,software for plumbers,8,guide
+local-seo,best-software-for-electricians,What Is the Best Software for Electricians?,software for electricians,8,guide
+local-seo,how-to-grow-small-business,How Do I Grow My Small Business in 2026?,grow small business 2026,10,guide
+local-seo,how-to-get-more-customers,How Do I Get More Customers for My Business?,get more customers,9,guide
+local-seo,how-to-generate-leads,How Do I Generate Leads for My Business?,generate leads business,9,guide
+local-seo,what-is-lead-generation,What Is Lead Generation and How Does It Work?,lead generation,8,guide
+local-seo,best-lead-generation-tools,What Are the Best Lead Generation Tools?,best lead generation tools,9,guide
+local-seo,how-to-find-new-clients,How Do I Find New Clients for My Business?,find new clients,8,guide
+local-seo,how-to-get-leads-without-ads,How Can I Get Leads Without Paying for Ads?,leads without ads,8,guide
+local-seo,cold-outreach-for-small-business,Does Cold Outreach Work for Small Businesses?,cold outreach small business,8,guide
+local-seo,email-marketing-for-leads,How Do I Use Email Marketing to Get Leads?,email marketing leads,8,guide
+local-seo,how-to-build-email-list,How Do I Build an Email List for My Business?,build email list,8,guide
+local-seo,what-is-leadsprinter,What Is LeadSprinter and How Does It Work?,leadsprinter,7,guide
+local-seo,leadsprinter-review,LeadSprinter Review: Is It Worth It for Lead Generation?,leadsprinter review,8,review
+local-seo,automated-lead-generation,What Is Automated Lead Generation?,automated lead generation,8,guide
+local-seo,how-to-automate-lead-finding,How Do I Automate Finding Leads?,automate lead finding,8,guide
+local-seo,b2b-lead-generation-tools,What Are the Best B2B Lead Generation Tools?,b2b lead generation tools,9,guide
+local-seo,how-to-get-contractor-leads,How Do I Get Leads as a Contractor?,contractor leads,8,guide
+local-seo,how-to-get-plumber-leads,How Do I Get More Plumbing Leads?,plumber leads,8,guide
+local-seo,how-to-get-electrician-leads,How Do I Get More Electrician Leads?,electrician leads,8,guide
+local-seo,how-to-get-hvac-leads,How Do I Get More HVAC Leads?,hvac leads,8,guide
+local-seo,how-to-get-roofing-leads,How Do I Get More Roofing Leads?,roofing leads,8,guide
+local-seo,web-development-for-small-business,What Is Web Development and Do I Need It?,web development small business,8,guide
+local-seo,how-much-does-web-development-cost,How Much Does Web Development Cost?,web development cost,8,guide
+local-seo,web-developer-vs-website-builder,Web Developer vs Website Builder: Which Do I Need?,web developer vs website builder,9,comparison
+local-seo,how-to-hire-web-developer,How Do I Hire a Good Web Developer?,hire web developer,8,guide
+local-seo,what-is-responsive-web-design,What Is Responsive Web Design and Why Does It Matter?,responsive web design,7,guide
+local-seo,how-long-to-build-website,How Long Does It Take to Build a Website?,how long build website,7,guide
+local-seo,what-is-web-hosting,What Is Web Hosting and Do I Need It?,web hosting,6,guide
+local-seo,best-web-hosting-small-business,What Is the Best Web Hosting for Small Business?,best web hosting small business,8,guide
+local-seo,how-to-choose-domain-name,How Do I Choose a Good Domain Name?,choose domain name,7,guide
+local-seo,what-is-ssl-certificate,What Is an SSL Certificate and Do I Need One?,ssl certificate,6,guide
+local-seo,why-small-agencies-are-better,Why Are Small Agencies Better Than Big Companies?,small agencies vs big companies,8,guide
+local-seo,benefits-of-working-with-small-agency,What Are the Benefits of Working with a Small Agency?,benefits small agency,8,guide
+local-seo,how-to-choose-web-design-agency,How Do I Choose the Right Web Design Agency?,choose web design agency,8,guide
+local-seo,questions-to-ask-web-developer,What Questions Should I Ask a Web Developer?,questions ask web developer,7,guide
+local-seo,red-flags-web-design-agency,What Are Red Flags When Hiring a Web Design Agency?,red flags web design agency,7,guide
+local-seo,how-to-get-website-fast,How Can I Get a Website Built Fast?,get website fast,7,guide
+local-seo,60-minute-website,Can I Really Get a Website in 60 Minutes?,60 minute website,7,guide
+local-seo,website-templates-vs-custom,Website Templates vs Custom Design: Which Is Better?,website templates vs custom,8,comparison
+local-seo,how-to-update-old-website,How Do I Update My Old Website?,update old website,7,guide
+local-seo,when-to-redesign-website,When Should I Redesign My Website?,when redesign website,7,guide
+local-seo,how-to-make-website-mobile-friendly,How Do I Make My Website Mobile Friendly?,make website mobile friendly,7,guide
+local-seo,website-speed-optimization,How Do I Make My Website Load Faster?,website speed optimization,8,guide
+local-seo,what-is-ux-design,What Is UX Design and Why Does It Matter?,ux design,7,guide
+local-seo,how-to-improve-website-conversion,How Do I Improve My Website Conversion Rate?,improve website conversion,9,guide
+local-seo,what-is-a-landing-page,What Is a Landing Page and Do I Need One?,landing page,7,guide
+local-seo,how-to-create-landing-page,How Do I Create an Effective Landing Page?,create landing page,8,guide
+local-seo,best-call-to-action-examples,What Are the Best Call to Action Examples?,call to action examples,7,guide
+local-seo,how-to-write-website-copy,How Do I Write Good Website Copy?,write website copy,8,guide
+local-seo,website-content-tips,What Content Should Be on My Business Website?,website content tips,8,guide
+local-seo,how-to-add-testimonials,How Do I Add Testimonials to My Website?,add testimonials website,6,guide
+local-seo,importance-of-about-page,Why Is the About Page Important for My Website?,about page importance,7,guide
+local-seo,how-to-create-contact-page,How Do I Create an Effective Contact Page?,create contact page,6,guide
+local-seo,should-i-have-blog-on-website,Should I Have a Blog on My Business Website?,blog on website,7,guide
+local-seo,how-often-to-blog,How Often Should I Blog for My Business?,how often blog,7,guide
+local-seo,what-to-blog-about,What Should I Blog About for My Business?,what to blog about,7,guide
+local-seo,blogging-for-seo,Does Blogging Help with SEO?,blogging for seo,8,guide
+local-seo,how-to-write-blog-posts,How Do I Write Blog Posts That Rank?,write blog posts rank,8,guide
+local-seo,content-marketing-for-small-business,What Is Content Marketing for Small Business?,content marketing small business,9,guide
+local-seo,how-to-start-content-marketing,How Do I Start Content Marketing?,start content marketing,8,guide
+local-seo,social-media-vs-website,Social Media vs Website: Which Is More Important?,social media vs website,8,comparison
+local-seo,do-i-need-social-media,Do I Need Social Media for My Business?,need social media business,7,guide
+local-seo,best-social-media-for-contractors,What Is the Best Social Media for Contractors?,social media contractors,7,guide
+local-seo,best-social-media-for-restaurants,What Is the Best Social Media for Restaurants?,social media restaurants,7,guide
+local-seo,how-to-get-google-reviews,How Do I Get More Google Reviews?,get google reviews,8,guide
+local-seo,how-to-respond-to-bad-reviews,How Do I Respond to Bad Reviews?,respond bad reviews,7,guide
+local-seo,importance-of-online-reviews,Why Are Online Reviews Important for My Business?,online reviews importance,8,guide
+local-seo,how-to-ask-for-reviews,How Do I Ask Customers for Reviews?,ask for reviews,7,guide
+local-seo,google-business-profile-tips,What Are the Best Google Business Profile Tips?,google business profile tips,8,guide
+local-seo,how-to-verify-google-business,How Do I Verify My Google Business Profile?,verify google business,6,guide
+local-seo,google-maps-ranking-tips,How Do I Rank Higher on Google Maps?,google maps ranking tips,9,guide
+local-seo,what-is-local-pack,What Is the Google Local Pack and How Do I Get In?,google local pack,8,guide
+local-seo,local-seo-for-beginners,What Is Local SEO for Beginners?,local seo beginners,9,guide
+local-seo,how-long-does-seo-take,How Long Does SEO Take to Work?,how long seo take,8,guide
+local-seo,is-seo-worth-it,Is SEO Worth It for Small Business?,is seo worth it,8,guide
+local-seo,seo-vs-ppc,SEO vs PPC: Which Is Better for Small Business?,seo vs ppc,9,comparison
+local-seo,how-much-does-seo-cost,How Much Does SEO Cost for Small Business?,seo cost small business,8,guide
+local-seo,can-i-do-seo-myself,Can I Do SEO Myself or Do I Need an Expert?,do seo myself,8,guide
+local-seo,what-is-on-page-seo,What Is On-Page SEO and How Do I Do It?,on page seo,8,guide
+local-seo,what-is-off-page-seo,What Is Off-Page SEO and Why Does It Matter?,off page seo,8,guide
+local-seo,what-are-backlinks,What Are Backlinks and How Do I Get Them?,backlinks,8,guide
+local-seo,how-to-do-keyword-research,How Do I Do Keyword Research for My Business?,keyword research,9,guide
+local-seo,what-are-long-tail-keywords,What Are Long-Tail Keywords and Why Do They Matter?,long tail keywords,7,guide
+local-seo,how-to-optimize-meta-tags,How Do I Optimize Meta Tags for SEO?,optimize meta tags,7,guide
+local-seo,what-is-schema-markup,What Is Schema Markup and Do I Need It?,schema markup,7,guide
+local-seo,how-to-fix-slow-website,How Do I Fix a Slow Website?,fix slow website,7,guide
+local-seo,what-is-core-web-vitals,What Are Core Web Vitals and Why Do They Matter?,core web vitals,8,guide
+local-seo,how-to-check-website-seo,How Do I Check My Website SEO?,check website seo,7,guide
+local-seo,best-free-seo-tools,What Are the Best Free SEO Tools?,best free seo tools,8,guide
+local-seo,google-search-console-guide,How Do I Use Google Search Console?,google search console guide,8,guide
+local-seo,google-analytics-for-beginners,How Do I Use Google Analytics for My Business?,google analytics beginners,8,guide
+local-seo,how-to-track-website-traffic,How Do I Track My Website Traffic?,track website traffic,7,guide
+local-seo,what-is-bounce-rate,What Is Bounce Rate and How Do I Improve It?,bounce rate,7,guide
+local-seo,what-is-conversion-rate,What Is Conversion Rate and Why Does It Matter?,conversion rate,7,guide
+local-seo,what-is-a-sales-funnel,What Is a Sales Funnel and How Does It Work?,sales funnel,8,guide
+local-seo,how-to-build-sales-funnel,How Do I Build a Sales Funnel for My Business?,build sales funnel,9,guide
+local-seo,what-is-crm,What Is a CRM and Do I Need One?,crm,7,guide
+local-seo,best-crm-for-small-business,What Is the Best CRM for Small Business?,best crm small business,9,guide
+local-seo,free-crm-options,What Are the Best Free CRM Options?,free crm options,8,guide
+local-seo,what-is-email-automation,What Is Email Automation and How Does It Work?,email automation,8,guide
+local-seo,best-email-marketing-tools,What Are the Best Email Marketing Tools?,best email marketing tools,9,guide
+local-seo,how-to-write-marketing-emails,How Do I Write Marketing Emails That Convert?,write marketing emails,8,guide
+local-seo,what-is-marketing-automation,What Is Marketing Automation?,marketing automation,8,guide
+local-seo,best-marketing-automation-tools,What Are the Best Marketing Automation Tools?,best marketing automation tools,9,guide
+local-seo,what-is-chatbot,What Is a Chatbot and Do I Need One?,chatbot,7,guide
+local-seo,best-chatbot-for-website,What Is the Best Chatbot for My Website?,best chatbot website,8,guide
+local-seo,chatbot-vs-live-chat,Chatbot vs Live Chat: Which Is Better?,chatbot vs live chat,8,comparison
+local-seo,what-is-ai-customer-service,What Is AI Customer Service?,ai customer service,7,guide
+local-seo,how-to-improve-customer-service,How Do I Improve Customer Service Online?,improve customer service,8,guide
+local-seo,how-to-build-customer-loyalty,How Do I Build Customer Loyalty?,build customer loyalty,8,guide
+local-seo,what-is-customer-retention,What Is Customer Retention and Why Does It Matter?,customer retention,8,guide
+local-seo,how-to-get-repeat-customers,How Do I Get Repeat Customers?,get repeat customers,8,guide
+local-seo,how-to-create-referral-program,How Do I Create a Referral Program?,create referral program,8,guide
+local-seo,how-to-get-word-of-mouth,How Do I Get Word of Mouth Marketing?,word of mouth marketing,8,guide
+local-seo,networking-for-small-business,How Do I Network for My Small Business?,networking small business,8,guide
+local-seo,local-business-partnerships,How Do I Build Local Business Partnerships?,local business partnerships,8,guide
+local-seo,how-to-get-local-press,How Do I Get Local Press Coverage?,get local press,8,guide
+local-seo,video-marketing-for-small-business,Is Video Marketing Worth It for Small Business?,video marketing small business,8,guide
+local-seo,instagram-for-local-business,How Do I Use Instagram for My Local Business?,instagram local business,8,guide
+local-seo,facebook-for-local-business,How Do I Use Facebook for My Local Business?,facebook local business,8,guide
+local-seo,google-ads-for-beginners,How Do I Get Started with Google Ads?,google ads beginners,9,guide
+local-seo,facebook-ads-for-beginners,How Do I Get Started with Facebook Ads?,facebook ads beginners,9,guide
+local-seo,how-much-to-spend-on-ads,How Much Should I Spend on Ads?,how much spend ads,8,guide
+local-seo,retargeting-ads-explained,What Are Retargeting Ads and How Do They Work?,retargeting ads,8,guide
+local-seo,how-to-target-local-customers,How Do I Target Local Customers with Ads?,target local customers ads,8,guide
+local-seo,how-to-write-ad-copy,How Do I Write Ad Copy That Converts?,write ad copy,8,guide
+local-seo,how-to-measure-marketing-roi,How Do I Measure Marketing ROI?,measure marketing roi,8,guide
+local-seo,how-to-create-marketing-budget,How Do I Create a Marketing Budget?,create marketing budget,8,guide
+local-seo,free-marketing-ideas,What Are Free Marketing Ideas for Small Business?,free marketing ideas,9,guide
+local-seo,low-budget-marketing,How Do I Market My Business on a Low Budget?,low budget marketing,9,guide
+local-seo,how-to-market-new-business,How Do I Market a New Business?,market new business,9,guide
+local-seo,how-to-create-marketing-plan,How Do I Create a Marketing Plan?,create marketing plan,9,guide
+local-seo,how-to-identify-target-audience,How Do I Identify My Target Audience?,identify target audience,8,guide
+local-seo,what-is-buyer-persona,What Is a Buyer Persona and How Do I Create One?,buyer persona,8,guide
+local-seo,how-to-research-competitors,How Do I Research My Competitors?,research competitors,8,guide
+local-seo,how-to-differentiate-business,How Do I Differentiate My Business?,differentiate business,8,guide
+local-seo,what-is-unique-value-proposition,What Is a Unique Value Proposition?,unique value proposition,7,guide
+local-seo,branding-for-small-business,What Is Branding for Small Business?,branding small business,8,guide
+local-seo,how-to-create-brand-identity,How Do I Create a Brand Identity?,create brand identity,8,guide
+local-seo,how-to-build-brand-awareness,How Do I Build Brand Awareness?,build brand awareness,8,guide
+local-seo,how-to-name-business,How Do I Name My Business?,name business,7,guide
+local-seo,llc-vs-sole-proprietor,LLC vs Sole Proprietor: Which Is Better?,llc vs sole proprietor,8,comparison
+local-seo,how-to-start-llc,How Do I Start an LLC?,start llc,7,guide
+local-seo,business-license-requirements,What Business Licenses Do I Need?,business license requirements,7,guide
+local-seo,business-insurance-basics,What Business Insurance Do I Need?,business insurance basics,8,guide
+local-seo,bookkeeping-for-small-business,What Is Bookkeeping for Small Business?,bookkeeping small business,8,guide
+local-seo,best-accounting-software,What Is the Best Accounting Software for Small Business?,best accounting software,9,guide
+local-seo,how-to-invoice-clients,How Do I Invoice Clients?,invoice clients,6,guide
+local-seo,best-payment-processors,What Are the Best Payment Processors?,best payment processors,8,guide
+local-seo,how-to-set-prices,How Do I Set Prices for My Services?,set prices services,8,guide
+local-seo,how-to-raise-prices,How Do I Raise Prices Without Losing Customers?,raise prices,8,guide
+local-seo,how-to-hire-first-employee,How Do I Hire My First Employee?,hire first employee,8,guide
+local-seo,employee-vs-contractor,Employee vs Contractor: Which Should I Hire?,employee vs contractor,8,comparison
+local-seo,how-to-find-freelancers,How Do I Find Good Freelancers?,find freelancers,7,guide
+local-seo,best-project-management-tools,What Are the Best Project Management Tools?,best project management tools,9,guide
+local-seo,how-to-delegate-tasks,How Do I Delegate Tasks Effectively?,delegate tasks,7,guide
+local-seo,time-management-for-business-owners,What Are the Best Time Management Tips for Business Owners?,time management business owners,8,guide
+local-seo,how-to-avoid-burnout,How Do I Avoid Burnout as a Business Owner?,avoid burnout business owner,8,guide
+local-seo,productivity-tips-small-business,What Are the Best Productivity Tips for Small Business?,productivity tips small business,8,guide
+local-seo,how-to-automate-tasks,What Tasks Should I Automate in My Business?,automate tasks business,8,guide
+local-seo,best-automation-tools,What Are the Best Automation Tools for Small Business?,best automation tools,9,guide
+local-seo,zapier-for-small-business,How Do I Use Zapier for My Business?,zapier small business,8,guide
+local-seo,how-to-systemize-business,How Do I Systemize My Business?,systemize business,8,guide
+local-seo,creating-sops,How Do I Create SOPs for My Business?,creating sops,8,guide
+local-seo,scaling-small-business,How Do I Scale My Small Business?,scaling small business,9,guide
+local-seo,when-to-expand-business,When Should I Expand My Business?,when expand business,8,guide
+local-seo,how-to-get-business-loan,How Do I Get a Business Loan?,get business loan,8,guide
+local-seo,small-business-tax-tips,What Are the Best Tax Tips for Small Business?,small business tax tips,8,guide
+local-seo,cash-flow-management,How Do I Manage Cash Flow?,cash flow management,8,guide
+local-seo,how-to-improve-cash-flow,How Do I Improve Cash Flow?,improve cash flow,8,guide
+local-seo,how-to-cut-business-costs,How Do I Cut Business Costs?,cut business costs,8,guide
+local-seo,kpis-for-small-business,What KPIs Should I Track for My Business?,kpis small business,8,guide
+local-seo,how-to-set-business-goals,How Do I Set Business Goals?,set business goals,8,guide
+local-seo,cybersecurity-small-business,What Cybersecurity Do I Need for My Business?,cybersecurity small business,8,guide
+local-seo,cloud-storage-for-business,What Is the Best Cloud Storage for Business?,cloud storage business,8,guide
+local-seo,google-workspace-vs-microsoft-365,Google Workspace vs Microsoft 365: Which Is Better?,google workspace vs microsoft 365,8,comparison
+local-seo,best-business-email,What Is the Best Business Email Provider?,best business email,7,guide
+local-seo,slack-vs-teams,Slack vs Microsoft Teams: Which Is Better?,slack vs teams,8,comparison
+local-seo,zoom-vs-google-meet,Zoom vs Google Meet: Which Is Better?,zoom vs google meet,7,comparison
+local-seo,remote-work-tools,What Tools Do I Need for Remote Work?,remote work tools,8,guide
+local-seo,scheduling-tools-small-business,What Are the Best Scheduling Tools?,scheduling tools small business,8,guide
+local-seo,calendly-vs-acuity,Calendly vs Acuity: Which Is Better?,calendly vs acuity,7,comparison
+local-seo,online-booking-for-business,How Do I Set Up Online Booking?,online booking business,7,guide
+local-seo,how-to-reduce-no-shows,How Do I Reduce No-Shows?,reduce no shows,7,guide
+local-seo,sms-marketing-for-business,What Is SMS Marketing for Business?,sms marketing business,7,guide
+local-seo,do-i-need-mobile-app,Do I Need a Mobile App for My Business?,mobile app small business,8,guide
+local-seo,qr-codes-for-business,How Do I Use QR Codes for My Business?,qr codes business,6,guide
+local-seo,e-signature-tools,What Are the Best E-Signature Tools?,e signature tools,7,guide
+local-seo,proposal-software,What Is the Best Proposal Software?,proposal software,8,guide
+local-seo,how-to-write-proposals,How Do I Write Winning Proposals?,write proposals,8,guide
+local-seo,how-to-close-deals,How Do I Close More Deals?,close deals,8,guide
+local-seo,sales-tips-small-business,What Are the Best Sales Tips for Small Business?,sales tips small business,9,guide
+local-seo,how-to-follow-up,How Do I Follow Up with Leads?,follow up leads,7,guide
+local-seo,how-to-handle-objections,How Do I Handle Sales Objections?,handle sales objections,8,guide
+local-seo,discovery-call-tips,How Do I Run a Discovery Call?,discovery call tips,7,guide
+local-seo,negotiation-tips,What Are the Best Negotiation Tips?,negotiation tips,8,guide
+local-seo,when-to-offer-discount,When Should I Offer a Discount?,when offer discount,7,guide
+local-seo,social-proof-marketing,What Is Social Proof in Marketing?,social proof marketing,7,guide
+local-seo,how-to-use-testimonials,How Do I Use Testimonials in Marketing?,use testimonials marketing,7,guide
+local-seo,case-study-marketing,How Do I Create Case Studies?,case study marketing,8,guide
+local-seo,do-i-need-professional-photography,Do I Need Professional Photography?,photography business,7,guide
+local-seo,do-i-need-video-for-business,Do I Need Video for My Business?,video business,7,guide
+local-seo,canva-for-business,How Do I Use Canva for My Business?,canva business,7,guide
+local-seo,do-i-need-business-plan,Do I Need a Business Plan?,business plan basics,8,guide
+local-seo,how-to-write-business-plan,How Do I Write a Business Plan?,write business plan,9,guide
+local-seo,how-to-do-market-research,How Do I Do Market Research?,market research,8,guide
+local-seo,how-to-validate-idea,How Do I Validate My Business Idea?,validate business idea,8,guide
+local-seo,what-is-mvp,What Is an MVP and How Do I Build One?,mvp guide,8,guide
+local-seo,notion-for-business,How Do I Use Notion for My Business?,notion business,8,guide
+local-seo,monday-vs-asana,Monday vs Asana: Which Is Better?,monday vs asana,8,comparison
+local-seo,trello-for-small-business,How Do I Use Trello for My Business?,trello small business,7,guide
+local-seo,remote-collaboration,How Do I Collaborate with Remote Teams?,remote collaboration,8,guide
+local-seo,should-i-hire-virtual-assistant,Should I Hire a Virtual Assistant?,virtual assistant tips,8,guide
+local-seo,how-to-hire-va,How Do I Hire a Virtual Assistant?,hire va,8,guide
+local-seo,what-should-i-outsource,What Tasks Should I Outsource?,what to outsource,8,guide

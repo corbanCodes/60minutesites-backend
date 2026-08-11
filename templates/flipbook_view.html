@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ book.title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: 'Inter', sans-serif; background: #17130F; color: #EDE6DF; min-height: 100vh;
+           display: flex; flex-direction: column; align-items: center; padding: 28px 12px 60px; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .hint { opacity: .6; font-size: 13px; margin-bottom: 22px; }
+    #book { touch-action: pan-y; }
+    #book .page { background: #fff; box-shadow: 0 6px 30px rgba(0,0,0,.5); }
+    #book img { width: 100%; height: 100%; object-fit: contain; display: block; background: #fff; }
+    .nav { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
+    button {
+      font-family: 'Inter', sans-serif; font-weight: 800; font-size: 14px; cursor: pointer;
+      background: #FF6B35; border: none; color: #fff; border-radius: 8px; padding: 10px 20px;
+    }
+    button:hover { background: #E55A2B; }
+    .counter { font-size: 14px; opacity: .7; min-width: 70px; text-align: center; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <h1>{{ book.title }}</h1>
+  <p class="hint">Drag a corner or use the arrows — it flips like paper.</p>
+  <div id="book">
+    {% for page in book.pages %}
+      <div class="page" data-density="{{ 'hard' if loop.first or loop.last else 'soft' }}">
+        <img src="/f/{{ book.slug }}/page/{{ page.page_num }}.png" alt="Page {{ page.page_num + 1 }}">
+      </div>
+    {% endfor %}
+  </div>
+  <div class="nav">
+    <button id="prev">← Prev</button>
+    <span class="counter"><span id="cur">1</span> / {{ book.page_count }}</span>
+    <button id="next">Next →</button>
+  </div>
+  <script src="https://unpkg.com/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+  <script>
+    var W = {{ first.width if first else 800 }}, H = {{ first.height if first else 1035 }};
+    var maxW = Math.min(window.innerWidth - 24, 520);
+    var pageW = Math.floor(maxW / ((window.innerWidth > 900) ? 1 : 1));
+    var pageH = Math.floor(pageW * H / W);
+    var flip = new St.PageFlip(document.getElementById('book'), {
+      width: pageW, height: pageH, size: 'fixed',
+      showCover: true, maxShadowOpacity: 0.35, mobileScrollSupport: true, flippingTime: 700
+    });
+    flip.loadFromHTML(document.querySelectorAll('#book .page'));
+    document.getElementById('prev').onclick = function(){ flip.flipPrev(); };
+    document.getElementById('next').onclick = function(){ flip.flipNext(); };
+    flip.on('flip', function(e){ document.getElementById('cur').textContent = e.data + 1; });
+  </script>
+</body>
+</html>

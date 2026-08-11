@@ -1,0 +1,98 @@
+industry,slug,title,keyword,read_time,article_type
+llm-optimization,how-llms-crawl-websites,How LLMs Crawl and Index Website Content,llm crawling websites,9,guide
+llm-optimization,gptbot-crawler-guide,GPTBot Crawler: Complete Guide for Website Owners,gptbot crawler,8,guide
+llm-optimization,anthropic-claude-crawler-setup,Anthropic Claude Crawler: What Website Owners Need to Know,claude crawler,8,guide
+llm-optimization,perplexity-bot-optimization,PerplexityBot Optimization: Get Cited in AI Search,perplexity bot,8,guide
+llm-optimization,ai-search-vs-traditional-seo,AI Search vs Traditional SEO: What's Different,ai search vs seo,9,comparison
+llm-optimization,robots-txt-for-ai-crawlers,Robots.txt Configuration for AI Crawlers,robots txt ai,7,guide
+llm-optimization,llm-friendly-content-structure,LLM-Friendly Content Structure That Gets Citations,llm content structure,9,guide
+llm-optimization,answer-engine-optimization-checklist,Answer Engine Optimization Checklist for 2026,aeo checklist,8,checklist
+llm-optimization,chatgpt-citation-optimization,How to Get ChatGPT to Cite Your Website,chatgpt citation,9,guide
+llm-optimization,claude-ai-content-preferences,What Content Does Claude AI Prefer to Cite,claude content preferences,8,guide
+llm-optimization,gemini-search-optimization,Gemini Search Optimization for Small Businesses,gemini search,8,guide
+llm-optimization,ai-overview-optimization-google,Google AI Overview Optimization Guide,ai overview google,9,guide
+llm-optimization,schema-markup-for-llm,Schema Markup That LLMs Actually Use,schema markup llm,8,guide
+llm-optimization,faq-schema-llm-citations,FAQ Schema for LLM Citations: Technical Guide,faq schema llm,8,guide
+llm-optimization,howto-schema-ai-search,HowTo Schema for AI Search Results,howto schema ai,7,guide
+llm-optimization,local-business-schema-ai,LocalBusiness Schema for AI Assistants,local business schema ai,8,guide
+llm-optimization,entity-recognition-llm-seo,Entity Recognition in LLM SEO,entity recognition llm,9,guide
+llm-optimization,semantic-html-ai-crawlers,Semantic HTML for AI Crawler Comprehension,semantic html ai,8,guide
+llm-optimization,content-freshness-llm-ranking,Content Freshness and LLM Ranking Factors,content freshness llm,8,guide
+llm-optimization,llm-ranking-signals,Understanding LLM Ranking Signals,llm ranking signals,9,guide
+llm-optimization,ai-citation-rate-optimization,How to Improve Your AI Citation Rate,ai citation rate,8,guide
+llm-optimization,llm-content-quality-signals,Content Quality Signals for LLM Evaluation,llm content quality,9,guide
+llm-optimization,ai-search-intent-matching,Matching AI Search Intent with Content,ai search intent,8,guide
+llm-optimization,conversational-content-optimization,Conversational Content Optimization for AI,conversational content ai,8,guide
+llm-optimization,qa-format-content-llm,Q&A Format Content for LLM Visibility,qa format llm,7,guide
+llm-optimization,llm-snippet-optimization,Optimizing Content Snippets for LLM Extraction,llm snippet optimization,8,guide
+llm-optimization,ai-assistant-visibility-guide,Complete AI Assistant Visibility Guide,ai assistant visibility,10,guide
+llm-optimization,perplexity-ranking-factors,Perplexity AI Ranking Factors Explained,perplexity ranking factors,9,guide
+llm-optimization,chatgpt-search-optimization,ChatGPT Search Optimization Strategy,chatgpt search optimization,9,guide
+llm-optimization,multi-llm-optimization-strategy,Multi-LLM Optimization Strategy for Maximum Visibility,multi llm optimization,10,guide
+llm-optimization,llm-crawl-budget-optimization,LLM Crawl Budget Optimization,llm crawl budget,8,guide
+llm-optimization,ai-crawler-access-control,AI Crawler Access Control Best Practices,ai crawler access,8,guide
+llm-optimization,llm-indexing-best-practices,LLM Indexing Best Practices for Websites,llm indexing,8,guide
+llm-optimization,ai-search-algorithm-updates,Staying Updated with AI Search Algorithm Changes,ai search updates,8,guide
+llm-optimization,content-depth-llm-preference,Content Depth and LLM Citation Preferences,content depth llm,8,guide
+llm-optimization,expertise-signals-for-llm,Expertise Signals That LLMs Look For,expertise signals llm,9,guide
+llm-optimization,trust-signals-ai-search,Trust Signals for AI Search Engines,trust signals ai,8,guide
+llm-optimization,authority-building-llm-seo,Authority Building for LLM SEO,authority building llm,9,guide
+llm-optimization,llm-friendly-url-structure,LLM-Friendly URL Structure Guide,llm url structure,7,guide
+llm-optimization,ai-crawler-sitemap-tips,Sitemap Optimization for AI Crawlers,ai crawler sitemap,7,guide
+llm-optimization,llm-content-parsing-optimization,How LLMs Parse and Understand Your Content,llm content parsing,9,guide
+llm-optimization,structured-data-ai-visibility,Structured Data for AI Visibility,structured data ai,8,guide
+llm-optimization,json-ld-llm-optimization,JSON-LD Optimization for LLM Understanding,json ld llm,8,guide
+llm-optimization,microdata-vs-jsonld-ai,Microdata vs JSON-LD for AI Crawlers,microdata jsonld ai,7,comparison
+llm-optimization,ai-search-result-types,Types of AI Search Results and How to Target Them,ai search result types,9,guide
+llm-optimization,llm-featured-snippet-optimization,Featured Snippet Optimization for LLM Results,llm featured snippets,8,guide
+llm-optimization,ai-answer-box-optimization,AI Answer Box Optimization Strategies,ai answer box,8,guide
+llm-optimization,conversational-search-optimization,Conversational Search Optimization Guide,conversational search,9,guide
+llm-optimization,voice-search-llm-optimization,Voice Search and LLM Optimization Overlap,voice search llm,8,guide
+llm-optimization,natural-language-content-ai,Natural Language Content for AI Understanding,natural language ai,8,guide
+llm-optimization,llm-content-comprehension,How LLMs Comprehend Website Content,llm comprehension,9,guide
+llm-optimization,ai-crawler-user-agent-guide,AI Crawler User Agent Guide,ai crawler user agent,7,guide
+llm-optimization,blocking-ai-crawlers-when-why,When and Why to Block AI Crawlers,blocking ai crawlers,7,guide
+llm-optimization,selective-ai-crawler-access,Selective AI Crawler Access Strategies,selective ai access,8,guide
+llm-optimization,llm-training-data-considerations,LLM Training Data Considerations for Publishers,llm training data,9,guide
+llm-optimization,ai-content-licensing,AI Content Licensing and Attribution,ai content licensing,8,guide
+llm-optimization,llm-citation-tracking,Tracking When LLMs Cite Your Content,llm citation tracking,8,guide
+llm-optimization,ai-search-analytics,AI Search Analytics: What to Measure,ai search analytics,8,guide
+llm-optimization,llm-traffic-attribution,LLM Traffic Attribution Challenges,llm traffic attribution,8,guide
+llm-optimization,measuring-ai-search-performance,Measuring AI Search Performance,ai search performance,8,guide
+llm-optimization,ai-search-roi-calculation,Calculating ROI from AI Search Visibility,ai search roi,8,guide
+llm-optimization,llm-optimization-tools,Best LLM Optimization Tools for 2026,llm optimization tools,9,comparison
+llm-optimization,ai-seo-audit-checklist,AI SEO Audit Checklist,ai seo audit,8,checklist
+llm-optimization,llm-readability-optimization,Readability Optimization for LLM Processing,llm readability,8,guide
+llm-optimization,content-structure-ai-parsing,Content Structure for AI Parsing,content structure ai,8,guide
+llm-optimization,heading-hierarchy-llm,Heading Hierarchy for LLM Understanding,heading hierarchy llm,7,guide
+llm-optimization,paragraph-structure-ai-content,Paragraph Structure for AI Content Extraction,paragraph structure ai,7,guide
+llm-optimization,list-formatting-llm-optimization,List Formatting for LLM Optimization,list formatting llm,7,guide
+llm-optimization,table-data-ai-extraction,Table Data Optimization for AI Extraction,table data ai,7,guide
+llm-optimization,code-snippet-ai-visibility,Code Snippet Visibility in AI Search,code snippet ai,8,guide
+llm-optimization,technical-content-llm-optimization,Technical Content Optimization for LLMs,technical content llm,9,guide
+llm-optimization,eeat-signals-ai-search,E-E-A-T Signals for AI Search,eeat ai search,9,guide
+llm-optimization,author-expertise-llm-ranking,Author Expertise in LLM Ranking,author expertise llm,8,guide
+llm-optimization,source-credibility-ai-search,Source Credibility in AI Search Results,source credibility ai,8,guide
+llm-optimization,fact-checking-llm-content,Fact-Checking and LLM Content Quality,fact checking llm,8,guide
+llm-optimization,citation-inclusion-strategies,Citation and Reference Strategies for LLM Trust,citation strategies llm,8,guide
+llm-optimization,data-accuracy-llm-ranking,Data Accuracy and LLM Ranking,data accuracy llm,8,guide
+llm-optimization,content-verification-ai-search,Content Verification in AI Search,content verification ai,8,guide
+llm-optimization,llm-hallucination-prevention,Helping LLMs Avoid Hallucinations About Your Business,llm hallucination,9,guide
+llm-optimization,correcting-ai-misinformation,Correcting AI Misinformation About Your Brand,ai misinformation,8,guide
+llm-optimization,brand-mentions-llm-training,Brand Mentions in LLM Training Data,brand mentions llm,8,guide
+llm-optimization,entity-disambiguation-ai,Entity Disambiguation for AI Understanding,entity disambiguation ai,8,guide
+llm-optimization,knowledge-graph-optimization,Knowledge Graph Optimization for AI Search,knowledge graph ai,9,guide
+llm-optimization,wikipedia-presence-llm-seo,Wikipedia Presence and LLM SEO,wikipedia llm seo,8,guide
+llm-optimization,wikidata-entries-ai-visibility,Wikidata Entries for AI Visibility,wikidata ai,7,guide
+llm-optimization,named-entity-optimization,Named Entity Optimization for LLMs,named entity llm,8,guide
+llm-optimization,semantic-search-optimization,Semantic Search Optimization Guide,semantic search,9,guide
+llm-optimization,topic-clustering-llm,Topic Clustering for LLM Authority,topic clustering llm,8,guide
+llm-optimization,content-hub-ai-seo,Content Hubs for AI SEO,content hub ai,8,guide
+llm-optimization,pillar-content-llm-strategy,Pillar Content Strategy for LLM Visibility,pillar content llm,9,guide
+llm-optimization,internal-linking-ai-crawlers,Internal Linking for AI Crawler Navigation,internal linking ai,8,guide
+llm-optimization,topical-authority-llm,Building Topical Authority for LLM Recognition,topical authority llm,9,guide
+llm-optimization,niche-expertise-ai-citations,Niche Expertise and AI Citation Likelihood,niche expertise ai,8,guide
+llm-optimization,comprehensive-coverage-llm,Comprehensive Topic Coverage for LLM Preference,comprehensive coverage llm,9,guide
+llm-optimization,content-freshness-ai-ranking,Content Freshness in AI Ranking Algorithms,content freshness ai,8,guide
+llm-optimization,update-frequency-llm-crawlers,Update Frequency and LLM Crawler Behavior,update frequency llm,8,guide
+llm-optimization,content-decay-ai-search,Content Decay and AI Search Visibility,content decay ai,8,guide

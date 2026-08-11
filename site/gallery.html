@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Browse 560+ professional website templates across 28 industries. Construction, salon, restaurant, real estate, fitness & more. $150 setup + $50/month.">
+  <meta name="keywords" content="website templates, business templates, web design templates, small business websites, construction website, salon website, restaurant website, real estate website">
+  <meta name="author" content="60 Minute Sites">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="560+ Website Templates | 60 Minute Sites">
+  <meta property="og:description" content="Browse 560+ professional website templates across 28 industries. $150 setup + $50/month.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://60minutesites.com/gallery.html">
+  <link rel="canonical" href="https://60minutesites.com/gallery.html">
+  <title>560+ Website Templates for Every Industry | 60 Minute Sites</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon_io (4)/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_io (4)/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon_io (4)/favicon-16x16.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-649666163"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-649666163');
+</script>
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '3728691617450623');
+fbq('track', 'PageView');
+document.addEventListener('click', function(e) {
+  var a = e.target.closest && e.target.closest('a[href^="tel:"]');
+  if (a) { fbq('trackCustom', 'PhoneTap', {content_name: 'phone_call_tap'}); }
+}, true);
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel -->
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <!-- Hero -->
+  <section class="hero" style="padding-bottom: var(--spacing-lg);">
+    <div class="container">
+      <h1>Template <span>Gallery</span></h1>
+      <p>560+ professionally designed templates across 28 industries. Find your perfect match.</p>
+
+      <!-- Search Bar -->
+      <div class="gallery-search">
+        <div class="search-wrapper">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="templateSearch" placeholder="Search templates by name, industry, or style..." autocomplete="off">
+          <button class="search-clear" id="searchClear" style="display: none;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="search-results-count" id="searchResultsCount"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section class="section">
+    <div class="container">
+      <!-- Filters -->
+      <div class="gallery-filters">
+        <button class="filter-btn active" data-filter="all">All Templates</button>
+        <button class="filter-btn" data-filter="construction">Construction</button>
+        <button class="filter-btn" data-filter="plumber">Plumber</button>
+        <button class="filter-btn" data-filter="electrician">Electrician</button>
+        <button class="filter-btn" data-filter="painter">Painter</button>
+        <button class="filter-btn" data-filter="hvac">HVAC</button>
+        <button class="filter-btn" data-filter="cleaning">Cleaning</button>
+        <button class="filter-btn" data-filter="pest-control">Pest Control</button>
+        <button class="filter-btn" data-filter="salon">Salon</button>
+        <button class="filter-btn" data-filter="spa">Spa</button>
+        <button class="filter-btn" data-filter="barber">Barber</button>
+        <button class="filter-btn" data-filter="massage">Massage</button>
+        <button class="filter-btn" data-filter="health-beauty">Health & Beauty</button>
+        <button class="filter-btn" data-filter="fitness">Fitness</button>
+        <button class="filter-btn" data-filter="business-services">Business Services</button>
+        <button class="filter-btn" data-filter="real-estate">Real Estate</button>
+        <button class="filter-btn" data-filter="insurance">Insurance</button>
+        <button class="filter-btn" data-filter="mortgage">Mortgage</button>
+        <button class="filter-btn" data-filter="architect">Architect</button>
+        <button class="filter-btn" data-filter="interior-design">Interior Design</button>
+        <button class="filter-btn" data-filter="restaurant">Restaurant</button>
+        <button class="filter-btn" data-filter="automotive">Automotive</button>
+        <button class="filter-btn" data-filter="event">Event</button>
+        <button class="filter-btn" data-filter="photography">Photography</button>
+        <button class="filter-btn" data-filter="music">Music</button>
+        <button class="filter-btn" data-filter="single-page">Single Page</button>
+        <button class="filter-btn" data-filter="landing-page">Landing Page</button>
+        <button class="filter-btn" data-filter="online-store">Online Store</button>
+        <button class="filter-btn" data-filter="full-website">Full Website</button>
+      </div>
+
+      <!-- Template Grid -->
+      <div class="template-grid" id="templateGrid">
+        <!-- Templates will be dynamically generated -->
+      </div>
+
+      <!-- Load More -->
+      <div class="text-center mt-3" id="loadMoreContainer" style="display: none;">
+        <button class="btn btn-outline" id="loadMoreBtn">Load More Templates</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="container">
+      <h2>Found a Template You Love?</h2>
+      <p>Book a demo call and we'll walk you through the customization process.</p>
+      <div class="hero-buttons">
+        <a href="book-demo.html" class="btn btn-secondary btn-lg" target="_blank">Book Your Free Demo</a>
+        <a href="tel:1-800-604-5433" class="btn btn-outline-white btn-lg">Call 1-800-60-4-LIFE</a>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Gallery-specific JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+      const templateGrid = document.getElementById('templateGrid');
+      const loadMoreBtn = document.getElementById('loadMoreBtn');
+      const loadMoreContainer = document.getElementById('loadMoreContainer');
+      const searchInput = document.getElementById('templateSearch');
+      const searchClear = document.getElementById('searchClear');
+      const searchResultsCount = document.getElementById('searchResultsCount');
+      let searchQuery = '';
+
+      // Template data
+      const categories = [
+        { id: 'construction', name: 'Construction', color: '#1a1a1a' },
+        { id: 'plumber', name: 'Plumber', color: '#0EA5E9' },
+        { id: 'electrician', name: 'Electrician', color: '#F59E0B' },
+        { id: 'painter', name: 'Painter', color: '#8B5CF6' },
+        { id: 'hvac', name: 'HVAC', color: '#06B6D4' },
+        { id: 'cleaning', name: 'Cleaning', color: '#10B981' },
+        { id: 'pest-control', name: 'Pest Control', color: '#84CC16' },
+        { id: 'salon', name: 'Salon', color: '#EC4899' },
+        { id: 'spa', name: 'Spa', color: '#14B8A6' },
+        { id: 'barber', name: 'Barber', color: '#6366F1' },
+        { id: 'massage', name: 'Massage', color: '#8B5CF6' },
+        { id: 'health-beauty', name: 'Health & Beauty', color: '#F472B6' },
+        { id: 'fitness', name: 'Fitness', color: '#EF4444' },
+        { id: 'business-services', name: 'Business Services', color: '#3B82F6' },
+        { id: 'real-estate', name: 'Real Estate', color: '#059669' },
+        { id: 'insurance', name: 'Insurance', color: '#0891B2' },
+        { id: 'mortgage', name: 'Mortgage', color: '#7C3AED' },
+        { id: 'architect', name: 'Architect', color: '#475569' },
+        { id: 'interior-design', name: 'Interior Design', color: '#D97706' },
+        { id: 'restaurant', name: 'Restaurant', color: '#DC2626' },
+        { id: 'automotive', name: 'Automotive', color: '#1F2937' },
+        { id: 'event', name: 'Event', color: '#DB2777' },
+        { id: 'photography', name: 'Photography', color: '#374151' },
+        { id: 'music', name: 'Music', color: '#7C3AED' },
+        { id: 'single-page', name: 'Single Page', color: '#2563EB' },
+        { id: 'landing-page', name: 'Landing Page', color: '#9333EA' },
+        { id: 'online-store', name: 'Online Store', color: '#059669' },
+        { id: 'full-website', name: 'Full Website', color: '#1E40AF' }
+      ];
+
+      const styles = [
+        'Modern Minimal', 'Bold & Dark', 'Classic Professional', 'Vibrant & Colorful',
+        'Elegant & Luxurious', 'Rustic & Warm', 'Tech & Futuristic', 'Clean & Corporate',
+        'Playful & Fun', 'Sophisticated & Sleek', 'Natural & Organic', 'Urban & Industrial',
+        'Vintage & Retro', 'Fresh & Bright', 'Calm & Serene', 'Dynamic & Energetic',
+        'Premium & Exclusive', 'Friendly & Approachable', 'Sharp & Geometric', 'Soft & Rounded'
+      ];
+
+      const templateNames = {
+        'construction': ['Builder Pro', 'Foundation Strong', 'Steel Frame', 'Hard Hat Heroes', 'Concrete Kings', 'Blueprint Masters', 'Site Works', 'Construct Elite', 'Build Right', 'Hammer Time', 'Framework Pro', 'Solid Ground', 'Rise Up Builds', 'Premier Construct', 'Urban Builders', 'Quality Craft', 'Pro Build', 'Master Construct', 'Summit Builders', 'Apex Construction'],
+        'plumber': ['Flow Masters', 'Pipe Dreams', 'Drain Pro', 'Water Works', 'Plumb Perfect', 'Quick Fix Plumbing', 'Reliable Pipes', 'Pro Plumb', 'Flush Right', 'Pipe Experts', 'Clear Drains', 'Master Plumbers', 'Flow Tech', 'Aqua Pro', 'Pipeline Pros', 'Drain Experts', 'Water Wise', 'Plumb Line', 'Pipe Masters', 'Blue Flow'],
+        'electrician': ['Spark Pro', 'Power Up', 'Wire Wizards', 'Volt Masters', 'Electric Elite', 'Current Solutions', 'Bright Spark', 'Power Pro', 'Circuit Masters', 'Wired Right', 'Amp Up', 'Electric Edge', 'Shock Free', 'Power Flow', 'Light Up', 'Pro Electric', 'Circuit Pro', 'Voltage Experts', 'Wire Works', 'Electric Pros'],
+        'painter': ['Color Masters', 'Fresh Coat', 'Paint Perfect', 'Brush Strokes', 'Prime Painters', 'Color Pro', 'Smooth Finish', 'Paint Pros', 'Vibrant Walls', 'Elite Painters', 'True Colors', 'Perfect Paint', 'Brush Masters', 'Color Craft', 'Pro Painters', 'Painted Right', 'Quality Coat', 'Paint Works', 'Master Painters', 'Color Edge'],
+        'hvac': ['Climate Control', 'Air Masters', 'Cool Comfort', 'Heat Pro', 'Air Flow Experts', 'Comfort Zone', 'Climate Pro', 'Air Quality', 'Temp Masters', 'Cool Air', 'Heat & Cool', 'Air Experts', 'Climate Solutions', 'Pro HVAC', 'Comfort Air', 'Air Pro', 'Climate Masters', 'Cool Zone', 'Air Comfort', 'Perfect Temp'],
+        'cleaning': ['Sparkle Clean', 'Fresh Start', 'Clean Pro', 'Spotless', 'Pure Clean', 'Shine Bright', 'Clean Masters', 'Fresh Clean', 'Pro Cleaners', 'Dust Free', 'Crystal Clean', 'Clean Sweep', 'Pristine Pro', 'Fresh Space', 'Clean Solutions', 'Tidy Pro', 'Gleam Team', 'Clean Edge', 'Pure Shine', 'Master Clean'],
+        'pest-control': ['Bug Free', 'Pest Pro', 'No More Pests', 'Critter Control', 'Pest Masters', 'Bug Busters', 'Pest Solutions', 'Safe Home', 'Pest Shield', 'Bug Out', 'Pest Free', 'Critter Pro', 'Pest Guard', 'Bug Master', 'Pest Experts', 'Control Pro', 'Pest Away', 'Bug Control', 'Safe Guard', 'Pest Defense'],
+        'salon': ['Glamour Cuts', 'Style Studio', 'Hair Haven', 'Chic Salon', 'Beauty Bar', 'Luxe Locks', 'Salon Elite', 'Hair Masters', 'Style Pro', 'Glam Studio', 'Beauty Bliss', 'Hair Artistry', 'Salon Luxe', 'Style Haven', 'Glamour Studio', 'Hair Pro', 'Beauty Elite', 'Chic Cuts', 'Salon Style', 'Hair Luxe'],
+        'spa': ['Serenity Spa', 'Bliss Retreat', 'Zen Haven', 'Pure Relaxation', 'Tranquil Touch', 'Spa Luxe', 'Calm Waters', 'Peaceful Spa', 'Harmony Haven', 'Spa Bliss', 'Serene Space', 'Relaxation Station', 'Zen Spa', 'Pure Spa', 'Tranquil Spa', 'Blissful Spa', 'Calm Spa', 'Peaceful Haven', 'Spa Serenity', 'Zen Retreat'],
+        'barber': ['Sharp Cuts', 'Classic Barber', 'The Chop Shop', 'Gentleman\'s Cut', 'Blade Masters', 'Prime Cuts', 'Barber Pro', 'Clean Cuts', 'Style Barber', 'Edge Barber', 'Classic Cuts', 'Sharp Style', 'Pro Barber', 'Blade Pro', 'Gent\'s Barber', 'Cut Masters', 'Style Edge', 'Barber Elite', 'Sharp Edge', 'Classic Style'],
+        'massage': ['Healing Hands', 'Relax & Restore', 'Touch Therapy', 'Wellness Massage', 'Calm Touch', 'Body Bliss', 'Massage Pro', 'Healing Touch', 'Restore Wellness', 'Peaceful Touch', 'Body Wellness', 'Massage Haven', 'Healing Therapy', 'Calm Hands', 'Touch Wellness', 'Body Restore', 'Massage Bliss', 'Healing Haven', 'Wellness Touch', 'Restore Massage'],
+        'health-beauty': ['Glow Up', 'Beauty Wellness', 'Radiant You', 'Pure Beauty', 'Health & Glow', 'Beauty Pro', 'Wellness Beauty', 'Glow Pro', 'Radiant Beauty', 'Pure Glow', 'Health Radiance', 'Beauty Bliss', 'Wellness Glow', 'Glow Beauty', 'Radiant Health', 'Pure Wellness', 'Beauty Radiance', 'Health Bliss', 'Wellness Pro', 'Glow Wellness'],
+        'fitness': ['Peak Performance', 'Fit Life', 'Power Gym', 'Strength Zone', 'Fitness Pro', 'Active Life', 'Gym Masters', 'Fit Zone', 'Power Pro', 'Strength Pro', 'Fitness Elite', 'Active Fit', 'Gym Pro', 'Peak Fitness', 'Power Zone', 'Strength Elite', 'Fitness Zone', 'Active Pro', 'Gym Elite', 'Peak Pro'],
+        'business-services': ['Pro Solutions', 'Business Elite', 'Corporate Pro', 'Success Partners', 'Business Masters', 'Pro Business', 'Elite Solutions', 'Corporate Edge', 'Success Pro', 'Business Pro', 'Solutions Elite', 'Corporate Masters', 'Success Edge', 'Pro Corporate', 'Elite Business', 'Solutions Pro', 'Business Edge', 'Corporate Success', 'Pro Elite', 'Business Solutions'],
+        'real-estate': ['Prime Properties', 'Dream Homes', 'Elite Realty', 'Home Masters', 'Property Pro', 'Real Estate Elite', 'Dream Realty', 'Prime Realty', 'Home Pro', 'Property Elite', 'Realty Masters', 'Dream Properties', 'Elite Properties', 'Home Realty', 'Property Masters', 'Prime Homes', 'Realty Pro', 'Dream Elite', 'Property Homes', 'Elite Homes'],
+        'insurance': ['Secure Insurance', 'Shield Pro', 'Coverage Masters', 'Safe Guard Insurance', 'Protect Pro', 'Insurance Elite', 'Secure Shield', 'Coverage Pro', 'Safe Insurance', 'Shield Masters', 'Protect Elite', 'Insurance Pro', 'Secure Pro', 'Coverage Elite', 'Safe Shield', 'Protect Insurance', 'Shield Elite', 'Secure Coverage', 'Safe Pro', 'Insurance Masters'],
+        'mortgage': ['Home Loans Pro', 'Mortgage Masters', 'Finance Home', 'Loan Pro', 'Mortgage Elite', 'Home Finance', 'Loan Masters', 'Mortgage Pro', 'Finance Pro', 'Home Mortgage', 'Loan Elite', 'Mortgage Solutions', 'Finance Elite', 'Home Loans', 'Loan Solutions', 'Mortgage Home', 'Finance Masters', 'Home Solutions', 'Loan Finance', 'Mortgage Finance'],
+        'architect': ['Design Masters', 'Blueprint Pro', 'Arch Studio', 'Structure Elite', 'Design Pro', 'Architect Elite', 'Blueprint Masters', 'Studio Arch', 'Structure Pro', 'Design Elite', 'Arch Pro', 'Blueprint Elite', 'Studio Design', 'Structure Masters', 'Architect Pro', 'Design Studio', 'Blueprint Studio', 'Arch Elite', 'Structure Design', 'Studio Elite'],
+        'interior-design': ['Design Space', 'Interior Pro', 'Style Masters', 'Space Design', 'Interior Elite', 'Design Interiors', 'Space Pro', 'Style Elite', 'Interior Masters', 'Design Elite', 'Space Style', 'Interior Design Pro', 'Style Pro', 'Space Elite', 'Interior Style', 'Design Style', 'Space Masters', 'Style Interiors', 'Design Pro', 'Interior Space'],
+        'restaurant': ['Taste Haven', 'Dine Fine', 'Food Masters', 'Culinary Elite', 'Taste Pro', 'Restaurant Elite', 'Fine Dining', 'Food Pro', 'Culinary Pro', 'Taste Elite', 'Dine Pro', 'Food Elite', 'Culinary Masters', 'Taste Masters', 'Restaurant Pro', 'Fine Food', 'Dining Elite', 'Food Taste', 'Culinary Taste', 'Restaurant Masters'],
+        'automotive': ['Auto Pro', 'Drive Masters', 'Car Elite', 'Motor Pro', 'Auto Elite', 'Drive Pro', 'Car Masters', 'Motor Elite', 'Auto Masters', 'Drive Elite', 'Car Pro', 'Motor Masters', 'Auto Drive', 'Car Drive', 'Motor Drive', 'Pro Motors', 'Elite Auto', 'Masters Auto', 'Pro Drive', 'Elite Motors'],
+        'event': ['Event Pro', 'Celebrate Elite', 'Party Masters', 'Event Elite', 'Celebrate Pro', 'Party Pro', 'Event Masters', 'Celebrate Masters', 'Party Elite', 'Pro Events', 'Elite Celebrations', 'Masters Party', 'Pro Celebrate', 'Elite Events', 'Masters Events', 'Pro Party', 'Elite Party', 'Masters Celebrate', 'Events Elite', 'Celebrations Pro'],
+        'photography': ['Capture Pro', 'Photo Masters', 'Lens Elite', 'Image Pro', 'Capture Elite', 'Photo Pro', 'Lens Masters', 'Image Elite', 'Capture Masters', 'Photo Elite', 'Lens Pro', 'Image Masters', 'Pro Capture', 'Elite Photo', 'Masters Lens', 'Pro Image', 'Elite Capture', 'Masters Photo', 'Pro Lens', 'Elite Image'],
+        'music': ['Sound Pro', 'Music Masters', 'Beat Elite', 'Audio Pro', 'Sound Elite', 'Music Pro', 'Beat Masters', 'Audio Elite', 'Sound Masters', 'Music Elite', 'Beat Pro', 'Audio Masters', 'Pro Sound', 'Elite Music', 'Masters Beat', 'Pro Audio', 'Elite Sound', 'Masters Music', 'Pro Beat', 'Elite Audio'],
+        'single-page': ['One Page Pro', 'Single Pro', 'Simple Site', 'One Page Elite', 'Single Elite', 'Simple Pro', 'One Page Masters', 'Single Masters', 'Simple Elite', 'Pro Single', 'Elite One Page', 'Masters Simple', 'Pro One Page', 'Elite Single', 'Masters One Page', 'Pro Simple', 'Elite Simple', 'Masters Single', 'Single Simple', 'One Simple'],
+        'landing-page': ['Convert Pro', 'Landing Elite', 'Lead Masters', 'Convert Elite', 'Landing Pro', 'Lead Pro', 'Convert Masters', 'Landing Masters', 'Lead Elite', 'Pro Convert', 'Elite Landing', 'Masters Lead', 'Pro Landing', 'Elite Convert', 'Masters Landing', 'Pro Lead', 'Elite Lead', 'Masters Convert', 'Convert Lead', 'Landing Lead'],
+        'online-store': ['Shop Pro', 'Store Elite', 'E-Commerce Masters', 'Shop Elite', 'Store Pro', 'E-Commerce Pro', 'Shop Masters', 'Store Masters', 'E-Commerce Elite', 'Pro Shop', 'Elite Store', 'Masters E-Commerce', 'Pro Store', 'Elite Shop', 'Masters Store', 'Pro E-Commerce', 'Elite E-Commerce', 'Masters Shop', 'Shop Store', 'Store Shop'],
+        'full-website': ['Complete Pro', 'Full Site Elite', 'Website Masters', 'Complete Elite', 'Full Site Pro', 'Website Pro', 'Complete Masters', 'Full Site Masters', 'Website Elite', 'Pro Complete', 'Elite Full Site', 'Masters Website', 'Pro Full Site', 'Elite Complete', 'Masters Full Site', 'Pro Website', 'Elite Website', 'Masters Complete', 'Complete Website', 'Full Complete']
+      };
+
+      // Generate all templates
+      let allTemplates = [];
+      categories.forEach(cat => {
+        const names = templateNames[cat.id] || [];
+        for (let i = 0; i < 20; i++) {
+          allTemplates.push({
+            id: `${cat.id}-${i + 1}`,
+            name: names[i] || `${cat.name} Template ${i + 1}`,
+            category: cat.id,
+            categoryName: cat.name,
+            style: styles[i],
+            color: cat.color,
+            folder: `templates/${cat.id}/${String(i + 1).padStart(2, '0')}-${(names[i] || `template-${i + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+          });
+        }
+      });
+
+      let displayedCount = 0;
+      const batchSize = 24;
+      let currentFilter = 'all';
+
+      function getFilteredTemplates() {
+        let filtered = allTemplates;
+
+        // Apply category filter
+        if (currentFilter !== 'all') {
+          filtered = filtered.filter(t => t.category === currentFilter);
+        }
+
+        // Apply search filter
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase().trim();
+          filtered = filtered.filter(t =>
+            t.name.toLowerCase().includes(query) ||
+            t.categoryName.toLowerCase().includes(query) ||
+            t.style.toLowerCase().includes(query) ||
+            t.category.toLowerCase().includes(query)
+          );
+        }
+
+        return filtered;
+      }
+
+      function updateResultsCount() {
+        const filtered = getFilteredTemplates();
+        const total = allTemplates.length;
+        if (searchQuery.trim() || currentFilter !== 'all') {
+          searchResultsCount.textContent = `Showing ${filtered.length} of ${total} templates`;
+          searchResultsCount.style.display = 'block';
+        } else {
+          searchResultsCount.style.display = 'none';
+        }
+      }
+
+      function renderTemplates(startIndex, count) {
+        const filtered = getFilteredTemplates();
+        const endIndex = Math.min(startIndex + count, filtered.length);
+
+        for (let i = startIndex; i < endIndex; i++) {
+          const template = filtered[i];
+          // Generate image seed using category and template name (matches template hero images)
+          const imageSeed = `${template.category}-${template.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-hero`;
+          const card = document.createElement('div');
+          card.className = 'template-card';
+          card.dataset.category = template.category;
+          card.innerHTML = `
+            <div class="template-preview">
+              <img src="https://picsum.photos/seed/${imageSeed}/400/300" alt="${template.name}" loading="lazy">
+              <div class="template-overlay">
+                <span class="preview-btn"><i class="fas fa-eye"></i> Preview</span>
+              </div>
+            </div>
+            <div class="template-info">
+              <span class="category-badge">${template.categoryName}</span>
+              <h4 class="template-name">${template.name}</h4>
+              <p class="template-category">${template.style}</p>
+            </div>
+          `;
+          card.addEventListener('click', () => {
+            window.location.href = `${template.folder}/index.html`;
+          });
+          card.style.cursor = 'pointer';
+          templateGrid.appendChild(card);
+        }
+
+        displayedCount = endIndex;
+        updateResultsCount();
+
+        // Show/hide load more button
+        if (displayedCount < filtered.length) {
+          loadMoreContainer.style.display = 'block';
+        } else {
+          loadMoreContainer.style.display = 'none';
+        }
+      }
+
+      function adjustColor(hex, percent) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+      }
+
+      // Initial render
+      renderTemplates(0, batchSize);
+
+      // Load more
+      loadMoreBtn.addEventListener('click', () => {
+        renderTemplates(displayedCount, batchSize);
+      });
+
+      // Filter handling
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          filterBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilter = btn.dataset.filter;
+          templateGrid.innerHTML = '';
+          displayedCount = 0;
+          renderTemplates(0, batchSize);
+        });
+      });
+
+      // Handle URL filter parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const filterParam = urlParams.get('filter');
+      if (filterParam) {
+        const filterBtn = document.querySelector(`[data-filter="${filterParam}"]`);
+        if (filterBtn) {
+          filterBtn.click();
+        }
+      }
+
+      // Search functionality
+      let searchTimeout;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchQuery = e.target.value;
+
+        // Show/hide clear button
+        searchClear.style.display = searchQuery ? 'flex' : 'none';
+
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+          templateGrid.innerHTML = '';
+          displayedCount = 0;
+          renderTemplates(0, batchSize);
+        }, 300);
+      });
+
+      // Clear search
+      searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchQuery = '';
+        searchClear.style.display = 'none';
+        templateGrid.innerHTML = '';
+        displayedCount = 0;
+        renderTemplates(0, batchSize);
+        searchInput.focus();
+      });
+
+      // Handle enter key in search
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          clearTimeout(searchTimeout);
+          templateGrid.innerHTML = '';
+          displayedCount = 0;
+          renderTemplates(0, batchSize);
+        }
+      });
+    });
+  </script>
+  <script src="js/components.js"></script>
+</body>
+</html>

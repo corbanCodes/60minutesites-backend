@@ -1,0 +1,191 @@
+industry,slug,title,keyword,read_time,article_type
+qa-social,how-do-i-use-facebook-for-business,How Do I Use Facebook for My Business,facebook business,7,qa
+qa-social,how-do-i-use-instagram-for-business,How Do I Use Instagram for My Business,instagram business,7,qa
+qa-social,how-do-i-get-more-followers,How Do I Get More Social Media Followers,more followers,7,qa
+qa-social,how-often-should-i-post,How Often Should I Post on Social Media,how often post,6,qa
+qa-social,what-should-i-post-on-social-media,What Should I Post on Social Media,what to post,7,qa
+qa-social,how-do-i-respond-to-negative-comments,How Do I Respond to Negative Comments,negative comments,6,qa
+qa-social,should-i-use-tiktok-for-business,Should I Use TikTok for My Business,tiktok business,7,qa
+qa-social,how-do-i-run-social-media-ads,How Do I Run Social Media Ads,social media ads,7,qa
+qa-social,how-do-i-measure-social-media-roi,How Do I Measure Social Media ROI,social media roi,7,qa
+qa-social,how-do-i-create-social-media-content,How Do I Create Social Media Content,create social content,7,qa
+qa-reviews,how-do-i-get-more-google-reviews,How Do I Get More Google Reviews,more google reviews,7,qa
+qa-reviews,how-do-i-respond-to-bad-reviews,How Do I Respond to Bad Reviews,respond bad reviews,7,qa
+qa-reviews,can-i-delete-bad-reviews,Can I Delete Bad Google Reviews,delete bad reviews,6,qa
+qa-reviews,how-do-i-report-fake-reviews,How Do I Report Fake Reviews,report fake reviews,6,qa
+qa-reviews,how-many-reviews-do-i-need,How Many Reviews Do I Need,how many reviews,6,qa
+qa-reviews,should-i-respond-to-all-reviews,Should I Respond to All Reviews,respond all reviews,6,qa
+qa-reviews,how-do-i-ask-for-reviews,How Do I Ask Customers for Reviews,ask for reviews,7,qa
+qa-reviews,what-review-sites-matter,What Review Sites Matter for My Business,review sites matter,7,qa
+qa-reviews,how-do-reviews-affect-seo,How Do Reviews Affect SEO,reviews affect seo,7,qa
+qa-reviews,how-do-i-showcase-reviews,How Do I Showcase Reviews on My Website,showcase reviews,6,qa
+qa-advertising,should-i-use-google-ads,Should I Use Google Ads for My Business,should use google ads,7,qa
+qa-advertising,how-much-should-i-spend-on-ads,How Much Should I Spend on Advertising,how much spend ads,7,qa
+qa-advertising,google-ads-vs-facebook-ads,Google Ads vs Facebook Ads: Which Is Better,google vs facebook ads,8,comparison
+qa-advertising,how-do-i-target-local-customers,How Do I Target Local Customers with Ads,target local customers,7,qa
+qa-advertising,what-is-retargeting,What Is Retargeting and Should I Use It,what is retargeting,7,qa
+qa-advertising,how-do-i-write-ad-copy,How Do I Write Effective Ad Copy,write ad copy,7,qa
+qa-advertising,how-do-i-track-ad-performance,How Do I Track Ad Performance,track ad performance,7,qa
+qa-advertising,why-arent-my-ads-working,Why Aren't My Ads Working,ads not working,7,qa
+qa-advertising,how-long-before-ads-work,How Long Before Ads Start Working,how long ads work,6,qa
+qa-advertising,should-i-hire-ad-agency,Should I Hire an Ad Agency,hire ad agency,7,qa
+qa-email,how-do-i-start-email-marketing,How Do I Start Email Marketing,start email marketing,7,qa
+qa-email,how-do-i-build-email-list,How Do I Build an Email List,build email list,7,qa
+qa-email,how-often-should-i-email,How Often Should I Email My List,how often email,6,qa
+qa-email,what-should-i-email-about,What Should I Email My Customers About,what to email,7,qa
+qa-email,how-do-i-write-email-subject-lines,How Do I Write Email Subject Lines,email subject lines,6,qa
+qa-email,how-do-i-avoid-spam-folder,How Do I Avoid the Spam Folder,avoid spam folder,6,qa
+qa-email,what-is-email-automation,What Is Email Automation,email automation,7,qa
+qa-email,how-do-i-segment-my-list,How Do I Segment My Email List,segment email list,7,qa
+qa-email,what-email-platform-should-i-use,What Email Platform Should I Use,email platform,7,qa
+qa-email,how-do-i-measure-email-success,How Do I Measure Email Marketing Success,measure email success,7,qa
+qa-content,how-do-i-start-a-blog,How Do I Start a Blog for My Business,start business blog,7,qa
+qa-content,what-should-i-blog-about,What Should I Blog About,what to blog about,7,qa
+qa-content,how-often-should-i-blog,How Often Should I Blog,how often blog,6,qa
+qa-content,how-long-should-blog-posts-be,How Long Should Blog Posts Be,blog post length,6,qa
+qa-content,how-do-i-come-up-with-content-ideas,How Do I Come Up with Content Ideas,content ideas,7,qa
+qa-content,should-i-use-ai-for-content,Should I Use AI for Content Creation,ai content creation,7,qa
+qa-content,how-do-i-repurpose-content,How Do I Repurpose Content,repurpose content,7,qa
+qa-content,what-is-content-marketing,What Is Content Marketing,content marketing,7,qa
+qa-content,how-do-i-optimize-content-for-seo,How Do I Optimize Content for SEO,optimize content seo,7,qa
+qa-content,how-do-i-measure-content-performance,How Do I Measure Content Performance,measure content performance,7,qa
+qa-leads,how-do-i-generate-more-leads,How Do I Generate More Leads,generate more leads,8,qa
+qa-leads,what-is-a-lead-magnet,What Is a Lead Magnet,what is lead magnet,7,qa
+qa-leads,how-do-i-qualify-leads,How Do I Qualify Leads,qualify leads,7,qa
+qa-leads,how-do-i-follow-up-with-leads,How Do I Follow Up with Leads,follow up leads,7,qa
+qa-leads,how-do-i-convert-leads-to-customers,How Do I Convert Leads to Customers,convert leads,8,qa
+qa-leads,what-is-lead-nurturing,What Is Lead Nurturing,lead nurturing,7,qa
+qa-leads,how-do-i-track-leads,How Do I Track Leads,track leads,7,qa
+qa-leads,how-do-i-score-leads,How Do I Score Leads,score leads,7,qa
+qa-leads,how-do-i-automate-lead-follow-up,How Do I Automate Lead Follow-Up,automate lead follow up,7,qa
+qa-leads,how-do-i-reduce-lead-response-time,How Do I Reduce Lead Response Time,reduce response time,7,qa
+qa-automation,what-can-i-automate-in-my-business,What Can I Automate in My Business,what to automate,8,qa
+qa-automation,how-do-i-automate-customer-follow-up,How Do I Automate Customer Follow-Up,automate follow up,7,qa
+qa-automation,how-do-i-automate-appointment-reminders,How Do I Automate Appointment Reminders,automate reminders,6,qa
+qa-automation,how-do-i-automate-invoicing,How Do I Automate Invoicing,automate invoicing,6,qa
+qa-automation,how-do-i-automate-social-media,How Do I Automate Social Media Posting,automate social media,7,qa
+qa-automation,what-is-workflow-automation,What Is Workflow Automation,workflow automation,7,qa
+qa-automation,how-do-i-choose-automation-tools,How Do I Choose Automation Tools,choose automation tools,7,qa
+qa-automation,how-much-time-can-automation-save,How Much Time Can Automation Save,time automation saves,7,qa
+qa-automation,what-is-zapier,What Is Zapier and How Do I Use It,what is zapier,7,qa
+qa-automation,how-do-i-automate-review-requests,How Do I Automate Review Requests,automate review requests,7,qa
+advanced-seo,schema-markup-local-business,Schema Markup for Local Business,schema markup local,8,guide
+advanced-seo,core-web-vitals-guide,Core Web Vitals Guide for Small Business,core web vitals,8,guide
+advanced-seo,local-seo-audit-checklist,Local SEO Audit Checklist,local seo audit,8,checklist
+advanced-seo,google-search-console-guide,Google Search Console Guide for Small Business,google search console,8,guide
+advanced-seo,google-analytics-4-guide,Google Analytics 4 Guide for Small Business,google analytics 4,8,guide
+advanced-seo,local-keyword-research-advanced,Advanced Local Keyword Research,advanced keyword research,8,guide
+advanced-seo,local-link-building-advanced,Advanced Local Link Building Strategies,advanced link building,8,guide
+advanced-seo,google-business-profile-advanced,Advanced Google Business Profile Optimization,advanced gbp,8,guide
+advanced-seo,local-content-strategy,Local Content Strategy for SEO,local content strategy,8,guide
+advanced-seo,multi-location-seo,Multi-Location SEO Strategy,multi location seo,9,guide
+advanced-websites,website-personalization,Website Personalization for Small Business,website personalization,8,guide
+advanced-websites,ab-testing-websites,A/B Testing for Small Business Websites,ab testing websites,8,guide
+advanced-websites,website-accessibility-guide,Website Accessibility Guide,website accessibility,8,guide
+advanced-websites,progressive-web-apps,Progressive Web Apps for Small Business,progressive web apps,8,guide
+advanced-websites,website-chatbots,Website Chatbots for Small Business,website chatbots,7,guide
+advanced-websites,website-video-integration,Website Video Integration Best Practices,website video,7,guide
+advanced-websites,website-forms-optimization,Website Forms Optimization,website forms,7,guide
+advanced-websites,website-search-functionality,Website Search Functionality,website search,7,guide
+advanced-websites,website-internationalization,Website Internationalization for Business,website internationalization,7,guide
+advanced-websites,headless-cms-explained,Headless CMS Explained for Small Business,headless cms,8,guide
+advanced-marketing,omnichannel-marketing,Omnichannel Marketing for Small Business,omnichannel marketing,8,guide
+advanced-marketing,customer-journey-mapping,Customer Journey Mapping for Small Business,customer journey mapping,8,guide
+advanced-marketing,marketing-attribution,Marketing Attribution for Small Business,marketing attribution,8,guide
+advanced-marketing,predictive-analytics-marketing,Predictive Analytics for Marketing,predictive analytics,8,guide
+advanced-marketing,marketing-automation-advanced,Advanced Marketing Automation Strategies,advanced marketing automation,8,guide
+advanced-marketing,account-based-marketing,Account-Based Marketing for Local Business,account based marketing,8,guide
+advanced-marketing,influencer-marketing-local,Influencer Marketing for Local Business,influencer marketing local,8,guide
+advanced-marketing,podcast-marketing,Podcast Marketing for Small Business,podcast marketing,7,guide
+advanced-marketing,webinar-marketing,Webinar Marketing for Small Business,webinar marketing,7,guide
+advanced-marketing,community-building-online,Online Community Building for Business,community building,8,guide
+ai-tools-deep,chatgpt-for-small-business,ChatGPT for Small Business: Complete Guide,chatgpt small business,9,guide
+ai-tools-deep,ai-customer-service,AI Customer Service for Small Business,ai customer service,8,guide
+ai-tools-deep,ai-content-creation-tools,AI Content Creation Tools Comparison,ai content tools,8,comparison
+ai-tools-deep,ai-image-generation-business,AI Image Generation for Business,ai image generation,7,guide
+ai-tools-deep,ai-video-creation-tools,AI Video Creation Tools for Business,ai video tools,7,guide
+ai-tools-deep,ai-social-media-tools,AI Social Media Tools for Business,ai social media tools,7,guide
+ai-tools-deep,ai-email-writing-tools,AI Email Writing Tools for Business,ai email tools,7,guide
+ai-tools-deep,ai-analytics-tools,AI Analytics Tools for Small Business,ai analytics tools,7,guide
+ai-tools-deep,ai-scheduling-tools,AI Scheduling Tools for Business,ai scheduling tools,7,guide
+ai-tools-deep,ai-crm-features,AI CRM Features You Should Use,ai crm features,7,guide
+future-business,voice-search-optimization,Voice Search Optimization for Local Business,voice search optimization,8,guide
+future-business,visual-search-optimization,Visual Search Optimization for Business,visual search optimization,7,guide
+future-business,augmented-reality-business,Augmented Reality for Small Business,augmented reality business,7,guide
+future-business,virtual-reality-business,Virtual Reality for Small Business,virtual reality business,7,guide
+future-business,blockchain-small-business,Blockchain for Small Business: What to Know,blockchain small business,7,guide
+future-business,cryptocurrency-payments,Cryptocurrency Payments for Small Business,cryptocurrency payments,7,guide
+future-business,iot-small-business,IoT for Small Business,iot small business,7,guide
+future-business,5g-impact-business,5G Impact on Small Business,5g impact business,7,guide
+future-business,sustainability-marketing,Sustainability Marketing for Small Business,sustainability marketing,7,guide
+future-business,remote-work-future,Remote Work Future for Small Business,remote work future,7,guide
+local-specific,neighborhood-marketing,Neighborhood Marketing Strategies,neighborhood marketing,7,guide
+local-specific,hyperlocal-seo,Hyperlocal SEO Strategies,hyperlocal seo,8,guide
+local-specific,local-event-marketing,Local Event Marketing for Business,local event marketing,7,guide
+local-specific,local-partnership-marketing,Local Partnership Marketing,local partnership marketing,7,guide
+local-specific,local-influencer-partnerships,Local Influencer Partnerships,local influencer,7,guide
+local-specific,local-media-relations,Local Media Relations for Business,local media relations,7,guide
+local-specific,local-charity-marketing,Local Charity Marketing for Business,local charity marketing,7,guide
+local-specific,local-sports-sponsorship,Local Sports Sponsorship Marketing,local sports sponsorship,7,guide
+local-specific,local-school-partnerships,Local School Partnerships for Business,local school partnerships,7,guide
+local-specific,local-community-events,Hosting Local Community Events,local community events,7,guide
+conversion-deep,landing-page-optimization,Landing Page Optimization Guide,landing page optimization,9,guide
+conversion-deep,call-to-action-optimization,Call-to-Action Optimization,call to action optimization,7,guide
+conversion-deep,form-optimization-guide,Form Optimization Guide,form optimization,7,guide
+conversion-deep,trust-signals-website,Trust Signals for Your Website,trust signals website,7,guide
+conversion-deep,social-proof-strategies,Social Proof Strategies for Websites,social proof strategies,7,guide
+conversion-deep,urgency-scarcity-tactics,Urgency and Scarcity Tactics,urgency scarcity,7,guide
+conversion-deep,pricing-page-optimization,Pricing Page Optimization,pricing page optimization,7,guide
+conversion-deep,checkout-optimization,Checkout Optimization for Conversions,checkout optimization,7,guide
+conversion-deep,exit-intent-strategies,Exit Intent Strategies,exit intent strategies,7,guide
+conversion-deep,micro-conversions-tracking,Micro-Conversions Tracking,micro conversions,7,guide
+reputation-management,online-reputation-management,Online Reputation Management Guide,online reputation management,9,guide
+reputation-management,brand-monitoring-tools,Brand Monitoring Tools for Business,brand monitoring tools,7,guide
+reputation-management,crisis-management-online,Crisis Management Online for Business,crisis management online,8,guide
+reputation-management,negative-press-handling,Handling Negative Press Online,negative press handling,7,guide
+reputation-management,reputation-recovery,Reputation Recovery Strategies,reputation recovery,8,guide
+reputation-management,proactive-reputation-building,Proactive Reputation Building,proactive reputation,7,guide
+reputation-management,employee-advocacy,Employee Advocacy for Reputation,employee advocacy,7,guide
+reputation-management,thought-leadership-building,Building Thought Leadership,thought leadership,8,guide
+reputation-management,media-training-basics,Media Training Basics for Business Owners,media training,7,guide
+reputation-management,public-relations-local,Public Relations for Local Business,public relations local,8,guide
+video-marketing,video-marketing-strategy,Video Marketing Strategy for Small Business,video marketing strategy,9,guide
+video-marketing,youtube-strategy-local,YouTube Strategy for Local Business,youtube strategy local,8,guide
+video-marketing,video-testimonials-guide,Video Testimonials Guide,video testimonials,7,guide
+video-marketing,behind-scenes-videos,Behind the Scenes Videos for Business,behind scenes videos,6,guide
+video-marketing,how-to-videos-business,How-To Videos for Business,how to videos,7,guide
+video-marketing,live-streaming-business,Live Streaming for Business,live streaming business,7,guide
+video-marketing,video-seo-optimization,Video SEO Optimization,video seo,7,guide
+video-marketing,video-equipment-budget,Video Equipment on a Budget,video equipment budget,6,guide
+video-marketing,video-editing-basics,Video Editing Basics for Business,video editing basics,6,guide
+video-marketing,video-distribution-strategy,Video Distribution Strategy,video distribution,7,guide
+mobile-marketing,sms-marketing-guide,SMS Marketing Guide for Small Business,sms marketing,8,guide
+mobile-marketing,mobile-app-vs-website,Mobile App vs Website for Business,mobile app vs website,7,comparison
+mobile-marketing,mobile-advertising-local,Mobile Advertising for Local Business,mobile advertising local,7,guide
+mobile-marketing,location-based-marketing,Location-Based Marketing Strategies,location based marketing,8,guide
+mobile-marketing,push-notifications-business,Push Notifications for Business,push notifications,7,guide
+mobile-marketing,qr-codes-business,QR Codes for Business Marketing,qr codes business,6,guide
+mobile-marketing,mobile-wallet-marketing,Mobile Wallet Marketing,mobile wallet marketing,7,guide
+mobile-marketing,mobile-first-design,Mobile-First Design Principles,mobile first design,7,guide
+mobile-marketing,app-store-optimization,App Store Optimization Basics,app store optimization,7,guide
+mobile-marketing,mobile-payment-options,Mobile Payment Options for Business,mobile payment options,7,guide
+ecommerce-local,local-ecommerce-setup,Local E-commerce Setup Guide,local ecommerce setup,8,guide
+ecommerce-local,online-ordering-restaurants,Online Ordering for Restaurants,online ordering restaurants,7,guide
+ecommerce-local,service-booking-online,Service Booking Online Setup,service booking online,7,guide
+ecommerce-local,gift-cards-online,Selling Gift Cards Online,gift cards online,6,guide
+ecommerce-local,local-delivery-setup,Local Delivery Setup for Business,local delivery setup,7,guide
+ecommerce-local,curbside-pickup-setup,Curbside Pickup Setup Guide,curbside pickup,6,guide
+ecommerce-local,inventory-management-local,Inventory Management for Local Business,inventory management local,7,guide
+ecommerce-local,shipping-local-business,Shipping for Local Business,shipping local business,7,guide
+ecommerce-local,returns-policy-local,Returns Policy for Local Business,returns policy local,6,guide
+ecommerce-local,payment-processing-local,Payment Processing for Local E-commerce,payment processing local,7,guide
+seasonal-deep,holiday-marketing-calendar,Holiday Marketing Calendar for Business,holiday marketing calendar,8,guide
+seasonal-deep,black-friday-marketing,Black Friday Marketing for Local Business,black friday marketing,7,guide
+seasonal-deep,small-business-saturday,Small Business Saturday Marketing,small business saturday,7,guide
+seasonal-deep,new-year-marketing,New Year Marketing Strategies,new year marketing,7,guide
+seasonal-deep,valentines-day-marketing,Valentine's Day Marketing for Business,valentines day marketing,6,guide
+seasonal-deep,mothers-day-marketing,Mother's Day Marketing Strategies,mothers day marketing,6,guide
+seasonal-deep,fathers-day-marketing,Father's Day Marketing Strategies,fathers day marketing,6,guide
+seasonal-deep,back-to-school-marketing,Back to School Marketing,back to school marketing,6,guide
+seasonal-deep,summer-marketing-strategies,Summer Marketing Strategies,summer marketing,7,guide
+seasonal-deep,winter-marketing-strategies,Winter Marketing Strategies,winter marketing,7,guide

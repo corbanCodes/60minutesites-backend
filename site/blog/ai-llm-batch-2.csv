@@ -1,0 +1,100 @@
+industry,slug,title,keyword,read_time,article_type
+llm-optimization,local-business-ai-search,Local Business Optimization for AI Search,local business ai search,9,guide
+llm-optimization,service-area-pages-llm,Service Area Pages for LLM Visibility,service area llm,8,guide
+llm-optimization,local-keywords-ai-search,Local Keywords in AI Search Results,local keywords ai,8,guide
+llm-optimization,nap-consistency-ai-crawlers,NAP Consistency for AI Crawler Accuracy,nap consistency ai,7,guide
+llm-optimization,local-schema-ai-assistants,Local Schema Markup for AI Assistants,local schema ai,8,guide
+llm-optimization,google-business-ai-integration,Google Business Profile and AI Integration,gbp ai integration,8,guide
+llm-optimization,local-reviews-llm-ranking,Local Reviews and LLM Ranking Signals,local reviews llm,8,guide
+llm-optimization,geo-specific-content-ai,Geo-Specific Content for AI Search,geo content ai,8,guide
+llm-optimization,multi-location-llm-seo,Multi-Location LLM SEO Strategy,multi location llm,9,guide
+llm-optimization,city-pages-ai-optimization,City Pages Optimization for AI Search,city pages ai,8,guide
+llm-optimization,ai-powered-local-search,Understanding AI-Powered Local Search,ai local search,9,guide
+llm-optimization,proximity-factors-ai-search,Proximity Factors in AI Local Search,proximity ai search,8,guide
+llm-optimization,local-intent-ai-queries,Local Intent in AI Search Queries,local intent ai,8,guide
+llm-optimization,neighborhood-content-llm,Neighborhood Content for LLM Visibility,neighborhood content llm,7,guide
+llm-optimization,local-landing-pages-ai,Local Landing Pages for AI Optimization,local landing ai,8,guide
+llm-optimization,industry-specific-llm-seo,Industry-Specific LLM SEO Strategies,industry llm seo,9,guide
+llm-optimization,contractor-ai-search-optimization,Contractor AI Search Optimization Guide,contractor ai search,8,guide
+llm-optimization,restaurant-llm-visibility,Restaurant LLM Visibility Strategies,restaurant llm,8,guide
+llm-optimization,healthcare-ai-search-seo,Healthcare AI Search SEO,healthcare ai search,9,guide
+llm-optimization,legal-services-llm-optimization,Legal Services LLM Optimization,legal llm optimization,9,guide
+llm-optimization,real-estate-ai-search,Real Estate AI Search Optimization,real estate ai search,8,guide
+llm-optimization,ecommerce-llm-optimization,E-commerce LLM Optimization Guide,ecommerce llm,9,guide
+llm-optimization,saas-ai-search-visibility,SaaS AI Search Visibility,saas ai search,9,guide
+llm-optimization,b2b-llm-content-strategy,B2B LLM Content Strategy,b2b llm content,9,guide
+llm-optimization,b2c-ai-search-optimization,B2C AI Search Optimization,b2c ai search,8,guide
+llm-optimization,professional-services-llm,Professional Services LLM SEO,professional services llm,8,guide
+llm-optimization,home-services-ai-search,Home Services AI Search Optimization,home services ai,8,guide
+llm-optimization,automotive-llm-seo,Automotive Industry LLM SEO,automotive llm seo,8,guide
+llm-optimization,fitness-ai-search-optimization,Fitness Business AI Search Optimization,fitness ai search,8,guide
+llm-optimization,beauty-salon-llm-visibility,Beauty Salon LLM Visibility,beauty salon llm,8,guide
+llm-optimization,technical-writing-ai-optimization,Technical Writing for AI Optimization,technical writing ai,9,guide
+llm-optimization,api-documentation-llm-friendly,API Documentation That LLMs Love,api docs llm,8,guide
+llm-optimization,developer-content-ai-search,Developer Content for AI Search,developer content ai,8,guide
+llm-optimization,tutorial-content-llm-citations,Tutorial Content for LLM Citations,tutorial llm citations,8,guide
+llm-optimization,how-to-guides-ai-search,How-To Guides for AI Search Results,how to guides ai,8,guide
+llm-optimization,step-by-step-content-llm,Step-by-Step Content for LLM Extraction,step by step llm,7,guide
+llm-optimization,comparison-content-ai-search,Comparison Content for AI Search,comparison content ai,8,guide
+llm-optimization,product-reviews-llm-visibility,Product Reviews and LLM Visibility,product reviews llm,8,guide
+llm-optimization,listicle-optimization-ai,Listicle Optimization for AI Search,listicle ai,7,guide
+llm-optimization,definitive-guides-llm-authority,Definitive Guides for LLM Authority,definitive guides llm,9,guide
+llm-optimization,case-study-ai-citations,Case Studies and AI Citation Potential,case study ai,8,guide
+llm-optimization,data-driven-content-llm,Data-Driven Content for LLM Trust,data driven llm,9,guide
+llm-optimization,original-research-ai-search,Original Research and AI Search Rankings,original research ai,9,guide
+llm-optimization,statistics-content-llm-citations,Statistics Content for LLM Citations,statistics llm,8,guide
+llm-optimization,survey-results-ai-visibility,Survey Results and AI Visibility,survey results ai,8,guide
+llm-optimization,infographic-content-llm,Infographic Content and LLM Processing,infographic llm,7,guide
+llm-optimization,video-transcript-ai-search,Video Transcripts for AI Search,video transcript ai,8,guide
+llm-optimization,podcast-show-notes-llm,Podcast Show Notes for LLM Visibility,podcast show notes llm,7,guide
+llm-optimization,webinar-content-ai-optimization,Webinar Content AI Optimization,webinar ai optimization,8,guide
+llm-optimization,ebook-content-llm-extraction,E-book Content and LLM Extraction,ebook llm,8,guide
+llm-optimization,whitepaper-ai-search-visibility,Whitepaper AI Search Visibility,whitepaper ai search,9,guide
+llm-optimization,press-release-llm-optimization,Press Release LLM Optimization,press release llm,7,guide
+llm-optimization,news-content-ai-search,News Content for AI Search,news content ai,8,guide
+llm-optimization,evergreen-content-llm-strategy,Evergreen Content LLM Strategy,evergreen llm,9,guide
+llm-optimization,trending-topics-ai-search,Trending Topics and AI Search,trending topics ai,8,guide
+llm-optimization,seasonal-content-llm-visibility,Seasonal Content and LLM Visibility,seasonal content llm,7,guide
+llm-optimization,ai-content-calendar-strategy,AI-Optimized Content Calendar Strategy,ai content calendar,8,guide
+llm-optimization,content-gap-analysis-llm,Content Gap Analysis for LLM SEO,content gap llm,9,guide
+llm-optimization,competitor-llm-analysis,Competitor LLM Visibility Analysis,competitor llm analysis,9,guide
+llm-optimization,ai-search-keyword-research,Keyword Research for AI Search,ai keyword research,9,guide
+llm-optimization,question-based-keywords-llm,Question-Based Keywords for LLM Optimization,question keywords llm,8,guide
+llm-optimization,long-tail-keywords-ai-search,Long-Tail Keywords in AI Search,long tail ai search,8,guide
+llm-optimization,intent-matching-llm-content,Intent Matching in LLM Content Strategy,intent matching llm,9,guide
+llm-optimization,query-understanding-ai-search,Query Understanding in AI Search,query understanding ai,9,guide
+llm-optimization,natural-language-queries-llm,Natural Language Queries and LLM Results,natural language queries llm,8,guide
+llm-optimization,conversational-keywords-ai,Conversational Keywords for AI Search,conversational keywords ai,8,guide
+llm-optimization,ai-search-serp-features,AI Search SERP Features to Target,ai search serp,8,guide
+llm-optimization,zero-click-ai-search,Zero-Click Results in AI Search,zero click ai,8,guide
+llm-optimization,ai-direct-answers,Optimizing for AI Direct Answers,ai direct answers,8,guide
+llm-optimization,llm-summarization-optimization,Content Optimization for LLM Summarization,llm summarization,8,guide
+llm-optimization,ai-snippet-extraction,AI Snippet Extraction Optimization,ai snippet extraction,8,guide
+llm-optimization,passage-ranking-llm,Passage Ranking in LLM Search,passage ranking llm,8,guide
+llm-optimization,sentence-level-optimization-ai,Sentence-Level Optimization for AI,sentence level ai,7,guide
+llm-optimization,paragraph-relevance-llm,Paragraph Relevance for LLM Selection,paragraph relevance llm,8,guide
+llm-optimization,content-chunking-ai-search,Content Chunking for AI Search,content chunking ai,8,guide
+llm-optimization,information-density-llm,Information Density for LLM Processing,information density llm,8,guide
+llm-optimization,concise-writing-ai-citations,Concise Writing for AI Citations,concise writing ai,7,guide
+llm-optimization,clarity-in-ai-content,Clarity in AI-Optimized Content,clarity ai content,7,guide
+llm-optimization,jargon-free-llm-content,Jargon-Free Content for LLM Understanding,jargon free llm,7,guide
+llm-optimization,accessible-content-ai-search,Accessible Content for AI Search,accessible content ai,8,guide
+llm-optimization,multilingual-llm-seo,Multilingual LLM SEO Strategies,multilingual llm seo,9,guide
+llm-optimization,international-ai-search,International AI Search Optimization,international ai search,9,guide
+llm-optimization,hreflang-ai-crawlers,Hreflang Implementation for AI Crawlers,hreflang ai,7,guide
+llm-optimization,language-specific-llm-content,Language-Specific LLM Content Strategy,language specific llm,8,guide
+llm-optimization,translation-quality-ai-search,Translation Quality in AI Search,translation quality ai,8,guide
+llm-optimization,localization-llm-optimization,Localization for LLM Optimization,localization llm,8,guide
+llm-optimization,cultural-context-ai-content,Cultural Context in AI Content,cultural context ai,8,guide
+llm-optimization,regional-variations-llm,Regional Content Variations for LLMs,regional variations llm,8,guide
+llm-optimization,global-brand-ai-visibility,Global Brand AI Visibility Strategy,global brand ai,9,guide
+llm-optimization,cross-border-llm-seo,Cross-Border LLM SEO,cross border llm,8,guide
+llm-optimization,mobile-first-ai-crawling,Mobile-First Indexing and AI Crawling,mobile first ai,8,guide
+llm-optimization,page-speed-llm-ranking,Page Speed Impact on LLM Ranking,page speed llm,8,guide
+llm-optimization,core-web-vitals-ai-search,Core Web Vitals and AI Search,core web vitals ai,8,guide
+llm-optimization,technical-seo-ai-crawlers,Technical SEO for AI Crawlers,technical seo ai,9,guide
+llm-optimization,javascript-rendering-llm,JavaScript Rendering and LLM Crawling,javascript llm,8,guide
+llm-optimization,dynamic-content-ai-indexing,Dynamic Content AI Indexing,dynamic content ai,8,guide
+llm-optimization,spa-llm-optimization,Single Page App LLM Optimization,spa llm,8,guide
+llm-optimization,server-side-rendering-ai,Server-Side Rendering for AI Crawlers,ssr ai crawlers,8,guide
+llm-optimization,crawlability-ai-bots,Crawlability Optimization for AI Bots,crawlability ai,8,guide

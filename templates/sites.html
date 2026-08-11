@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set active = 'sites' %}
+{% block title %}Sites | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Website Builder</h1>
+  <a class="btn" href="/admin/sites/new">+ New site</a>
+</div>
+{% if rows %}
+<table>
+  <tr><th>Business</th><th>Live link</th><th>Style</th><th>Updated</th><th></th></tr>
+  {% for site in rows %}
+  <tr>
+    <td><a class="rowlink" href="/admin/sites/{{ site.id }}">{{ site.business_name }}</a></td>
+    <td><a href="/s/{{ site.slug }}" target="_blank">/s/{{ site.slug }}</a></td>
+    <td>{{ site.style }} · <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:{{ site.color }};vertical-align:middle"></span></td>
+    <td class="muted">{{ site.updated_at.strftime("%b %-d") }}</td>
+    <td><a class="btn ghost sm" href="/admin/sites/{{ site.id }}">Edit</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card muted">No sites yet. Build one during a call — business name + a few lines and it's live at a shareable link.</div>
+{% endif %}
+{% endblock %}

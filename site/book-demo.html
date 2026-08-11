@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Schedule a free consultation with 60 Minute Sites. Let's discuss how we can build your professional website in under 60 minutes.">
+  <title>Book a Demo | 60 Minute Sites</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon_io (4)/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_io (4)/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon_io (4)/favicon-16x16.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .demo-page {
+      padding-top: 70px;
+      min-height: calc(100vh - 70px);
+      background: var(--off-white);
+    }
+    .demo-header {
+      text-align: center;
+      padding: 40px 20px 20px;
+      background: linear-gradient(135deg, var(--black) 0%, var(--dark-gray) 100%);
+      color: var(--white);
+    }
+    .demo-header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      color: var(--white);
+    }
+    .demo-header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .calendly-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+    }
+    .calendly-inline-widget {
+      min-width: 320px;
+      height: 700px;
+    }
+    @media (max-width: 768px) {
+      .demo-header h1 {
+        font-size: 2rem;
+      }
+      .calendly-inline-widget {
+        height: 800px;
+      }
+    }
+  </style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-649666163"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-649666163');
+</script>
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '3728691617450623');
+fbq('track', 'PageView');
+document.addEventListener('click', function(e) {
+  var a = e.target.closest && e.target.closest('a[href^="tel:"]');
+  if (a) { fbq('trackCustom', 'PhoneTap', {content_name: 'phone_call_tap'}); }
+}, true);
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel -->
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <div class="demo-page">
+    <div class="demo-header">
+      <h1>Book a Free Consultation</h1>
+      <p>Schedule a quick call and let's discuss how we can get your professional website live in under 60 minutes.</p>
+    </div>
+
+    <div class="calendly-container">
+      <div class="calendly-inline-widget" data-url="https://calendly.com/corban-leadsprinter/new-meeting?hide_gdpr_banner=1&background_color=ffffff&text_color=1a1a1a&primary_color=ff6b35"></div>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="js/main.js"></script>
+  <script src="js/components.js"></script>
+  <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
+<script>
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.event === 'calendly.event_scheduled') {
+    if (window.fbq) fbq('track', 'Schedule', {content_name: 'calendly_booking'});
+  }
+});
+</script>
+</body>
+</html>

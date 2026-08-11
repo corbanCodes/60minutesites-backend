@@ -1,0 +1,48 @@
+# 60 Minute Sites - robots.txt
+
+# ===== AI/LLM Crawlers - Welcome =====
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# ===== Standard Crawlers =====
+User-agent: *
+Allow: /
+Allow: /blog/
+Allow: /templates/
+
+# Block checkout/payment pages from all bots
+Disallow: /checkout.html
+Disallow: /checkout-information.html
+Disallow: /thank-you-for-your-purchase.html
+
+# Block any admin or private areas
+Disallow: /admin/
+Disallow: /private/
+Disallow: /.claude/
+
+# Sitemap location
+Sitemap: https://60minutesites.com/sitemap.xml

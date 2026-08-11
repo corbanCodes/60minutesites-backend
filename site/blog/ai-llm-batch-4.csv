@@ -1,0 +1,97 @@
+industry,slug,title,keyword,read_time,article_type
+llm-optimization,chart-data-ai-extraction,Chart Data AI Extraction Tips,chart data ai,7,guide
+llm-optimization,graph-content-llm-understanding,Graph Content for LLM Understanding,graph content llm,7,guide
+llm-optimization,visual-data-ai-accessibility,Visual Data AI Accessibility,visual data ai,7,guide
+llm-optimization,interactive-content-llm-indexing,Interactive Content LLM Indexing,interactive llm,8,guide
+llm-optimization,dynamic-elements-ai-crawling,Dynamic Elements and AI Crawling,dynamic elements ai,8,guide
+llm-optimization,javascript-content-llm-access,JavaScript Content LLM Access,js content llm,8,guide
+llm-optimization,client-side-rendering-ai,Client-Side Rendering AI Issues,client side ai,8,guide
+llm-optimization,prerendering-llm-bots,Prerendering for LLM Bots,prerendering llm,8,guide
+llm-optimization,static-site-ai-optimization,Static Site AI Optimization,static site ai,8,guide
+llm-optimization,jamstack-llm-seo,JAMstack LLM SEO Guide,jamstack llm,8,guide
+llm-optimization,headless-cms-ai-crawling,Headless CMS and AI Crawling,headless cms ai,8,guide
+llm-optimization,wordpress-llm-optimization,WordPress LLM Optimization Guide,wordpress llm,9,guide
+llm-optimization,shopify-ai-search-seo,Shopify AI Search SEO,shopify ai seo,8,guide
+llm-optimization,wix-llm-optimization,Wix LLM Optimization Tips,wix llm,7,guide
+llm-optimization,squarespace-ai-search,Squarespace AI Search Optimization,squarespace ai,7,guide
+llm-optimization,webflow-llm-seo,Webflow LLM SEO Guide,webflow llm,8,guide
+llm-optimization,drupal-ai-search-optimization,Drupal AI Search Optimization,drupal ai,8,guide
+llm-optimization,magento-llm-ecommerce,Magento LLM E-commerce SEO,magento llm,8,guide
+llm-optimization,ghost-blog-ai-visibility,Ghost Blog AI Visibility,ghost blog ai,7,guide
+llm-optimization,medium-vs-own-site-llm,Medium vs Own Site for LLM Visibility,medium vs own llm,8,comparison
+llm-optimization,substack-ai-search-presence,Substack AI Search Presence,substack ai,7,guide
+llm-optimization,linkedin-articles-llm-visibility,LinkedIn Articles LLM Visibility,linkedin llm,7,guide
+llm-optimization,social-signals-ai-search,Social Signals in AI Search,social signals ai,8,guide
+llm-optimization,social-proof-llm-trust,Social Proof and LLM Trust Signals,social proof llm,8,guide
+llm-optimization,engagement-metrics-ai-ranking,Engagement Metrics in AI Ranking,engagement ai ranking,8,guide
+llm-optimization,user-behavior-llm-signals,User Behavior Signals for LLMs,user behavior llm,8,guide
+llm-optimization,dwell-time-ai-search,Dwell Time in AI Search Ranking,dwell time ai,7,guide
+llm-optimization,bounce-rate-llm-implications,Bounce Rate LLM Implications,bounce rate llm,7,guide
+llm-optimization,click-through-ai-search,Click-Through Rate in AI Search,ctr ai search,8,guide
+llm-optimization,return-visits-llm-authority,Return Visits and LLM Authority,return visits llm,7,guide
+llm-optimization,brand-searches-ai-signals,Brand Searches as AI Signals,brand searches ai,8,guide
+llm-optimization,direct-traffic-llm-ranking,Direct Traffic LLM Ranking Factor,direct traffic llm,8,guide
+llm-optimization,referral-traffic-ai-trust,Referral Traffic and AI Trust,referral traffic ai,7,guide
+llm-optimization,backlinks-llm-authority-2026,Backlinks and LLM Authority in 2026,backlinks llm,9,guide
+llm-optimization,link-quality-ai-ranking,Link Quality in AI Ranking,link quality ai,8,guide
+llm-optimization,anchor-text-llm-context,Anchor Text LLM Context Signals,anchor text llm,7,guide
+llm-optimization,internal-links-ai-topical,Internal Links for AI Topical Understanding,internal links ai,8,guide
+llm-optimization,outbound-links-llm-credibility,Outbound Links and LLM Credibility,outbound links llm,7,guide
+llm-optimization,citation-links-ai-trust,Citation Links for AI Trust,citation links ai,8,guide
+llm-optimization,reference-links-llm-authority,Reference Links and LLM Authority,reference links llm,8,guide
+llm-optimization,nofollow-links-ai-crawlers,Nofollow Links and AI Crawlers,nofollow ai,6,guide
+llm-optimization,ugc-links-llm-handling,UGC Links LLM Handling,ugc links llm,6,guide
+llm-optimization,sponsored-links-ai-search,Sponsored Links in AI Search,sponsored links ai,6,guide
+llm-optimization,link-building-llm-era,Link Building in the LLM Era,link building llm,9,guide
+llm-optimization,digital-pr-ai-visibility,Digital PR for AI Visibility,digital pr ai,9,guide
+llm-optimization,press-coverage-llm-authority,Press Coverage and LLM Authority,press coverage llm,8,guide
+llm-optimization,media-mentions-ai-search,Media Mentions in AI Search,media mentions ai,8,guide
+llm-optimization,thought-leadership-llm-seo,Thought Leadership LLM SEO,thought leadership llm,9,guide
+llm-optimization,expert-contributions-ai-citations,Expert Contributions for AI Citations,expert contributions ai,8,guide
+llm-optimization,guest-posting-llm-strategy,Guest Posting LLM Strategy,guest posting llm,8,guide
+llm-optimization,podcast-appearances-ai-visibility,Podcast Appearances AI Visibility,podcast ai visibility,7,guide
+llm-optimization,speaking-engagements-llm-authority,Speaking Engagements LLM Authority,speaking llm,8,guide
+llm-optimization,conference-content-ai-search,Conference Content AI Search,conference ai search,7,guide
+llm-optimization,webinar-promotion-llm,Webinar Promotion for LLM Visibility,webinar llm,7,guide
+llm-optimization,collaborative-content-ai,Collaborative Content for AI,collaborative ai,8,guide
+llm-optimization,co-marketing-llm-benefits,Co-Marketing LLM Benefits,co marketing llm,8,guide
+llm-optimization,partnership-content-ai-authority,Partnership Content AI Authority,partnership ai,8,guide
+llm-optimization,industry-associations-llm,Industry Associations and LLM Trust,industry assoc llm,7,guide
+llm-optimization,certifications-ai-credibility,Certifications for AI Credibility,certifications ai,7,guide
+llm-optimization,awards-recognition-llm-signals,Awards and Recognition LLM Signals,awards llm,7,guide
+llm-optimization,testimonials-ai-trust,Testimonials for AI Trust Signals,testimonials ai trust,7,guide
+llm-optimization,case-studies-llm-credibility,Case Studies for LLM Credibility,case studies llm,8,guide
+llm-optimization,success-stories-ai-citations,Success Stories for AI Citations,success stories ai,8,guide
+llm-optimization,client-results-llm-trust,Client Results and LLM Trust,client results llm,8,guide
+llm-optimization,portfolio-content-ai-search,Portfolio Content AI Search,portfolio ai search,7,guide
+llm-optimization,work-samples-llm-authority,Work Samples and LLM Authority,work samples llm,7,guide
+llm-optimization,project-documentation-ai,Project Documentation for AI,project docs ai,8,guide
+llm-optimization,methodology-content-llm,Methodology Content for LLM Trust,methodology llm,8,guide
+llm-optimization,process-documentation-ai-credibility,Process Documentation AI Credibility,process docs ai,8,guide
+llm-optimization,transparency-llm-trust,Transparency and LLM Trust Signals,transparency llm,8,guide
+llm-optimization,about-page-ai-entity,About Page AI Entity Recognition,about page ai,8,guide
+llm-optimization,team-pages-llm-expertise,Team Pages for LLM Expertise Signals,team pages llm,7,guide
+llm-optimization,author-bios-ai-authority,Author Bios for AI Authority,author bios ai,8,guide
+llm-optimization,credentials-display-llm,Credentials Display for LLM Trust,credentials llm,7,guide
+llm-optimization,expertise-showcasing-ai,Expertise Showcasing for AI,expertise showcase ai,8,guide
+llm-optimization,industry-experience-llm,Industry Experience and LLM Authority,industry exp llm,8,guide
+llm-optimization,years-in-business-ai-trust,Years in Business AI Trust Signal,years business ai,6,guide
+llm-optimization,customer-count-llm-credibility,Customer Count LLM Credibility,customer count llm,6,guide
+llm-optimization,project-count-ai-authority,Project Count AI Authority,project count ai,6,guide
+llm-optimization,service-area-display-llm,Service Area Display for LLM Local,service area llm display,7,guide
+llm-optimization,location-pages-ai-optimization,Location Pages AI Optimization,location pages ai,8,guide
+llm-optimization,contact-information-llm-trust,Contact Information LLM Trust,contact info llm,7,guide
+llm-optimization,phone-number-schema-ai,Phone Number Schema for AI,phone schema ai,6,guide
+llm-optimization,email-display-llm-credibility,Email Display LLM Credibility,email display llm,6,guide
+llm-optimization,address-markup-ai-local,Address Markup for AI Local,address markup ai,7,guide
+llm-optimization,hours-of-operation-llm,Hours of Operation LLM Schema,hours operation llm,6,guide
+llm-optimization,booking-integration-ai-search,Booking Integration AI Search,booking ai search,8,guide
+llm-optimization,pricing-display-llm-transparency,Pricing Display LLM Transparency,pricing display llm,8,guide
+llm-optimization,service-descriptions-ai-optimization,Service Descriptions AI Optimization,service desc ai,8,guide
+llm-optimization,product-descriptions-llm-ecommerce,Product Descriptions LLM E-commerce,product desc llm,8,guide
+llm-optimization,feature-lists-ai-extraction,Feature Lists AI Extraction,feature lists ai,7,guide
+llm-optimization,comparison-tables-llm-optimization,Comparison Tables LLM Optimization,comparison tables llm,8,guide
+llm-optimization,specs-tables-ai-search,Specs Tables for AI Search,specs tables ai,7,guide
+llm-optimization,technical-specs-llm-indexing,Technical Specs LLM Indexing,tech specs llm,7,guide
+llm-optimization,faq-content-ai-citations,FAQ Content for AI Citations,faq content ai,8,guide
+llm-optimization,question-answering-llm-optimization,Question Answering LLM Optimization,qa llm optimization,9,guide

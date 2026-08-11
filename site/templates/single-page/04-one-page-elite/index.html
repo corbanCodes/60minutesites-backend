@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="One Page Elite - Professional Business services. Everything you need on one beautiful, effective page">
+    <meta name="keywords" content="Business, single-page, professional services, local business, quality service">
+    <meta name="author" content="60 Minute Sites">
+    <meta property="og:title" content="One Page Elite | Professional Business">
+    <meta property="og:description" content="Everything you need on one beautiful, effective page">
+    <meta property="og:type" content="website">
+    <title>One Page Elite | Professional Business</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="../../../favicon_io (4)/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../../../favicon_io (4)/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../../../favicon_io (4)/favicon-16x16.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+<style>
+.announcement-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1100;
+    background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+    color: #fff;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+.announcement-bar.hidden { display: none; }
+.announcement-bar a { color: #fff; text-decoration: underline; font-weight: 600; }
+.announcement-bar a:hover { text-decoration: none; }
+.announcement-bar .announcement-close {
+    position: absolute;
+    right: 15px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+.announcement-bar .announcement-close:hover { background: rgba(255,255,255,0.3); }
+body.has-announcement .header { top: 44px; }
+body.has-announcement .hero { padding-top: calc(6rem + 114px); }
+</style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-649666163"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-649666163');
+</script>
+</head>
+<body>
+<!-- Announcement Bar -->
+    <div class="announcement-bar" id="announcementBar">
+        <span>Get your professional website today!</span>
+        <a href="https://calendly.com/corban-leadsprinter/new-meeting" target="_blank">Schedule Free Consultation</a>
+        <span>|</span>
+        <a href="../../../checkout.html" target="_blank">Start Now - $50/mo</a>
+        <button class="announcement-close" onclick="closeAnnouncement()" aria-label="Close announcement"><i class="fas fa-times"></i></button>
+    </div>
+    <script>
+    function closeAnnouncement() {
+        document.getElementById("announcementBar").classList.add("hidden");
+        document.body.classList.remove("has-announcement");
+        localStorage.setItem("announcementClosed", "true");
+    }
+    if (!localStorage.getItem("announcementClosed")) {
+        document.body.classList.add("has-announcement");
+    } else {
+        document.getElementById("announcementBar").classList.add("hidden");
+    }
+    </script>
+
+    <!-- Navigation -->
+    <header class="header" id="header">
+        <nav class="nav container">
+            <a href="#" class="logo">One Page Elite</a>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="#services">Services</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#portfolio">Portfolio</a></li>
+                <li><a href="#testimonials">Reviews</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="tel:1-800-604-5433" class="btn btn-outline btn-sm"><i class="fas fa-phone"></i> Call Now</a>
+                <a href="https://calendly.com/corban-leadsprinter/new-meeting" target="_blank" class="btn btn-primary btn-sm">Book Online</a>
+            </div>
+            <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-bg" style="background-image: url('https://picsum.photos/seed/single-page-one-page-elite-hero/1920/1080')"></div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content container">
+            <span class="hero-badge">Trusted Business Professionals</span>
+            <h1>One Page Elite</h1>
+            <p class="hero-subtitle">Everything you need on one beautiful, effective page</p>
+            <div class="hero-buttons">
+                <a href="#contact" class="btn btn-primary btn-lg"><i class="fas fa-paper-plane"></i> Get Free Quote</a>
+                <a href="https://calendly.com/corban-leadsprinter/new-meeting" target="_blank" class="btn btn-outline-light btn-lg"><i class="fas fa-calendar-check"></i> Schedule Consultation</a>
+            </div>
+            <div class="hero-features">
+                <div class="hero-feature"><i class="fas fa-check-circle"></i> Licensed & Insured</div>
+                <div class="hero-feature"><i class="fas fa-check-circle"></i> Free Estimates</div>
+                <div class="hero-feature"><i class="fas fa-check-circle"></i> Satisfaction Guaranteed</div>
+            </div>
+        </div>
+        <a href="#services" class="scroll-indicator"><i class="fas fa-chevron-down"></i></a>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services section" id="services">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">What We Offer</span>
+                <h2>Our Services</h2>
+                <p>Comprehensive Business solutions tailored to your needs</p>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-bullseye"></i></div>
+                    <h3>Our Services</h3>
+                    <p>Professional solutions tailored to your specific needs.</p>
+                    <a href="#contact" class="service-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-star"></i></div>
+                    <h3>Quality Work</h3>
+                    <p>Excellence and attention to detail in everything we do.</p>
+                    <a href="#contact" class="service-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-handshake"></i></div>
+                    <h3>Customer Focus</h3>
+                    <p>Your satisfaction is always our top priority.</p>
+                    <a href="#contact" class="service-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><i class="fas fa-award"></i></div>
+                    <h3>Experience</h3>
+                    <p>Years of expertise working for you.</p>
+                    <a href="#contact" class="service-link">Learn More <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <div class="services-cta">
+                <p>Need something specific? We customize our services to fit your project.</p>
+                <a href="#contact" class="btn btn-primary">Discuss Your Project</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats section-dark">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" data-count="500">0</div>
+                    <div class="stat-label">Projects Completed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-count="15">0</div>
+                    <div class="stat-label">Years Experience</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-count="98">0</div>
+                    <div class="stat-label">% Satisfaction Rate</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" data-count="24">0</div>
+                    <div class="stat-label">Hour Support</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about section" id="about">
+        <div class="container">
+            <div class="about-grid">
+                <div class="about-image">
+                    <img src="https://picsum.photos/seed/single-page-one-page-elite-about/600/700" alt="About One Page Elite">
+                    <div class="about-badge">
+                        <span class="badge-number">15+</span>
+                        <span class="badge-text">Years of Excellence</span>
+                    </div>
+                </div>
+                <div class="about-content">
+                    <span class="section-badge">Who We Are</span>
+                    <h2>Your Trusted Business Partner</h2>
+                    <p class="lead">We are dedicated Business professionals committed to delivering exceptional results that exceed expectations.</p>
+                    <p>With over 15 years of experience serving our community, we've built our reputation on quality workmanship, honest communication, and customer satisfaction. Our team of skilled professionals brings expertise and attention to detail to every project.</p>
+                    <ul class="about-list">
+                        <li><i class="fas fa-check"></i> Fully licensed, bonded, and insured</li>
+                        <li><i class="fas fa-check"></i> Background-checked professionals</li>
+                        <li><i class="fas fa-check"></i> Transparent pricing with no hidden fees</li>
+                        <li><i class="fas fa-check"></i> Satisfaction guarantee on all work</li>
+                    </ul>
+                    <a href="https://calendly.com/corban-leadsprinter/new-meeting" target="_blank" class="btn btn-primary"><i class="fas fa-calendar"></i> Schedule a Consultation</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section class="process section section-alt">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">How It Works</span>
+                <h2>Our Simple Process</h2>
+                <p>Getting started is easy. Here's what to expect.</p>
+            </div>
+            <div class="process-grid">
+                <div class="process-step">
+                    <div class="process-number">1</div>
+                    <div class="process-icon"><i class="fas fa-phone-alt"></i></div>
+                    <h3>Contact Us</h3>
+                    <p>Reach out by phone or schedule a free consultation online.</p>
+                </div>
+                <div class="process-connector"></div>
+                <div class="process-step">
+                    <div class="process-number">2</div>
+                    <div class="process-icon"><i class="fas fa-clipboard-list"></i></div>
+                    <h3>Free Assessment</h3>
+                    <p>We evaluate your needs and provide a detailed, no-obligation quote.</p>
+                </div>
+                <div class="process-connector"></div>
+                <div class="process-step">
+                    <div class="process-number">3</div>
+                    <div class="process-icon"><i class="fas fa-tools"></i></div>
+                    <h3>Expert Service</h3>
+                    <p>Our skilled team delivers quality work on your schedule.</p>
+                </div>
+                <div class="process-connector"></div>
+                <div class="process-step">
+                    <div class="process-number">4</div>
+                    <div class="process-icon"><i class="fas fa-smile"></i></div>
+                    <h3>Your Satisfaction</h3>
+                    <p>We ensure you're completely happy with the results.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section class="portfolio section" id="portfolio">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Our Work</span>
+                <h2>Recent Projects</h2>
+                <p>Browse our portfolio of completed Business projects</p>
+            </div>
+            <div class="portfolio-grid">
+                <div class="portfolio-item" data-category="all">
+                    <img src="https://picsum.photos/seed/single-page-one-page-elite-work1/600/400" alt="Project 1">
+                    <div class="portfolio-overlay">
+                        <h4>Project Title</h4>
+                        <p>Quality Business work</p>
+                        <button class="btn btn-sm btn-light" onclick="openLightbox(this)"><i class="fas fa-expand"></i></button>
+                    </div>
+                </div>
+                <div class="portfolio-item" data-category="all">
+                    <img src="https://picsum.photos/seed/single-page-one-page-elite-work2/600/400" alt="Project 2">
+                    <div class="portfolio-overlay">
+                        <h4>Project Title</h4>
+                        <p>Quality Business work</p>
+                        <button class="btn btn-sm btn-light" onclick="openLightbox(this)"><i class="fas fa-expand"></i></button>
+                    </div>
+                </div>
+                <div class="portfolio-item" data-category="all">
+                    <img src="https://picsum.photos/seed/single-page-one-page-elite-work3/600/400" alt="Project 3">
+                    <div class="portfolio-overlay">
+                        <h4>Project Title</h4>
+                        <p>Quality Business work</p>
+                        <button class="btn btn-sm btn-light" onclick="openLightbox(this)"><i class="fas fa-expand"></i></button>
+                    </div>
+                </div>
+                <div class="portfolio-item" data-category="all">
+                    <img src="https://picsum.photos/seed/single-page-one-page-elite-work4/600/400" alt="Project 4">
+                    <div class="portfolio-overlay">
+                        <h4>Project Title</h4>
+                        <p>Quality Business work</p>
+                        <button class="btn btn-sm btn-light" onclick="openLightbox(this)"><i class="fas fa-expand"></i></button>
+                    </div>
+                </div>
+                <div class="portfolio-item" data-category="all">
+                    <img src="https://picsum.photos/seed/single-page-one-page-elite-work5/600/400" alt="Project 5">
+                    <div class="portfolio-overlay">
+                        <h4>Project Title</h4>
+                        <p>Quality Business work</p>
+                        <button class="btn btn-sm btn-light" onclick="openLightbox(this)"><i class="fas fa-expand"></i></button>
+                    </div>
+                </div>
+                <div class="portfolio-item" data-category="all">
+                    <img src="https://picsum.photos/seed/single-page-one-page-elite-work6/600/400" alt="Project 6">
+                    <div class="portfolio-overlay">
+                        <h4>Project Title</h4>
+                        <p>Quality Business work</p>
+                        <button class="btn btn-sm btn-light" onclick="openLightbox(this)"><i class="fas fa-expand"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox">
+        <button class="lightbox-close" onclick="closeLightbox()"><i class="fas fa-times"></i></button>
+        <img src="" alt="Lightbox Image" id="lightbox-img">
+    </div>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials section section-dark" id="testimonials">
+        <div class="container">
+            <div class="section-header light">
+                <span class="section-badge">Testimonials</span>
+                <h2>What Our Clients Say</h2>
+                <p>Don't just take our word for it</p>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="testimonial-text">"Absolutely outstanding service! The team was professional, punctual, and the quality of work exceeded our expectations. Highly recommend!"</p>
+                    <div class="testimonial-author">
+                        <img src="https://picsum.photos/seed/single-page-one-page-elite-review1/100/100" alt="Client">
+                        <div>
+                            <strong>Sarah Johnson</strong>
+                            <span>Homeowner</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="testimonial-text">"From start to finish, the experience was seamless. Fair pricing, excellent communication, and beautiful results. Will definitely use again!"</p>
+                    <div class="testimonial-author">
+                        <img src="https://picsum.photos/seed/single-page-one-page-elite-review2/100/100" alt="Client">
+                        <div>
+                            <strong>Michael Chen</strong>
+                            <span>Business Owner</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="testimonial-rating">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <p class="testimonial-text">"These folks are true professionals. They took the time to understand exactly what we needed and delivered beyond what we imagined."</p>
+                    <div class="testimonial-author">
+                        <img src="https://picsum.photos/seed/single-page-one-page-elite-review3/100/100" alt="Client">
+                        <div>
+                            <strong>Emily Rodriguez</strong>
+                            <span>Property Manager</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-bg" style="background-image: url('https://picsum.photos/seed/single-page-one-page-elite-cta/1920/600')"></div>
+        <div class="cta-overlay"></div>
+        <div class="container">
+            <div class="cta-content">
+                <h2>Ready to Get Started?</h2>
+                <p>Schedule your free consultation today and let's discuss your project.</p>
+                <div class="cta-buttons">
+                    <a href="https://calendly.com/corban-leadsprinter/new-meeting" target="_blank" class="btn btn-primary btn-lg"><i class="fas fa-calendar-check"></i> Book Free Consultation</a>
+                    <a href="tel:1-800-604-5433" class="btn btn-outline-light btn-lg"><i class="fas fa-phone"></i> 1-800-60-4-LIFE</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq section" id="faq">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">FAQ</span>
+                <h2>Frequently Asked Questions</h2>
+                <p>Quick answers to common questions</p>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>How do I get a quote?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Getting a quote is easy! Simply call us at 1-800-60-4-LIFE or schedule a free consultation through our online booking system. We'll assess your needs and provide a detailed, no-obligation estimate.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Are you licensed and insured?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! We are fully licensed, bonded, and insured. We carry comprehensive liability insurance and workers' compensation coverage for your complete peace of mind.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>What areas do you serve?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>We proudly serve the greater metropolitan area and surrounding communities. Contact us to confirm service availability in your specific location.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Do you offer warranties?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Absolutely! We stand behind our work with comprehensive warranties. Specific warranty terms vary by service type and will be clearly outlined in your service agreement.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>What payment methods do you accept?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>We accept all major credit cards, checks, and bank transfers. Financing options may be available for larger projects. We'll discuss payment terms during your consultation.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>How quickly can you start?</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Our scheduling depends on current workload, but we typically can begin within 1-2 weeks for most projects. Emergency services are available for urgent situations.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact section section-alt" id="contact">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-badge">Contact Us</span>
+                <h2>Get In Touch</h2>
+                <p>Ready to start your project? Reach out today!</p>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-info-card">
+                    <h3>Contact Information</h3>
+                    <div class="contact-info-item">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <strong>Phone</strong>
+                            <a href="tel:1-800-604-5433">1-800-60-4-LIFE</a>
+                        </div>
+                    </div>
+                    <div class="contact-info-item">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <strong>Email</strong>
+                            <a href="mailto:info@example.com">info@example.com</a>
+                        </div>
+                    </div>
+                    <div class="contact-info-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <strong>Hours</strong>
+                            <span>Mon-Fri: 8am - 6pm<br>Sat: 9am - 2pm</span>
+                        </div>
+                    </div>
+                    <div class="contact-info-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <strong>Service Area</strong>
+                            <span>Greater Metro Area</span>
+                        </div>
+                    </div>
+                    <div class="contact-social">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" aria-label="Yelp"><i class="fab fa-yelp"></i></a>
+                    </div>
+                    <a href="https://calendly.com/corban-leadsprinter/new-meeting" target="_blank" class="btn btn-primary btn-block"><i class="fas fa-calendar-check"></i> Book Online</a>
+                </div>
+                <div class="contact-form-card">
+                    <h3>Send Us a Message</h3>
+                    <form action="https://formspree.io/f/xojeqvng" method="POST" class="contact-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="name">Full Name *</label>
+                                <input type="text" id="name" name="name" required placeholder="John Smith">
+                            </div>
+                            <div class="form-group">
+                                <label for="phone">Phone Number</label>
+                                <input type="tel" id="phone" name="phone" placeholder="(555) 123-4567">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address *</label>
+                            <input type="email" id="email" name="email" required placeholder="john@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="service">Service Needed</label>
+                            <select id="service" name="service">
+                                <option value="">Select a service...</option>
+                                <option value="consultation">Free Consultation</option>
+                                <option value="quote">Request Quote</option>
+                                <option value="service">Schedule Service</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Message *</label>
+                            <textarea id="message" name="message" rows="4" required placeholder="Tell us about your project..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-paper-plane"></i> Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="footer-logo">One Page Elite</a>
+                    <p>Professional Business services you can trust. Quality workmanship, fair pricing, and customer satisfaction guaranteed.</p>
+                    <div class="footer-social">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#services">Services</a></li>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#portfolio">Portfolio</a></li>
+                        <li><a href="#testimonials">Reviews</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="#services">Our Services</a></li>
+                        <li><a href="#services">Quality Work</a></li>
+                        <li><a href="#services">Customer Focus</a></li>
+                        <li><a href="#services">Experience</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact Us</h4>
+                    <p><i class="fas fa-phone"></i> <a href="tel:1-800-604-5433">1-800-60-4-LIFE</a></p>
+                    <p><i class="fas fa-envelope"></i> <a href="mailto:info@example.com">info@example.com</a></p>
+                    <p><i class="fas fa-clock"></i> Mon-Fri: 8am - 6pm</p>
+                    <a href="https://calendly.com/corban-leadsprinter/new-meeting" target="_blank" class="btn btn-primary btn-sm">Book Now</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 One Page Elite. All rights reserved.</p>
+                <p>Website by <a href="https://60minutesites.com" target="_blank">60 Minute Sites</a></p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

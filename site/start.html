@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Answer 3 quick questions and grab a time — we'll build your website free, live on one 60-minute call.">
+  <meta name="robots" content="noindex, follow">
+  <title>Get Your Website | 60 Minute Sites</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon_io (4)/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_io (4)/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon_io (4)/favicon-16x16.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+
+  <!-- Meta Pixel -->
+  <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '3728691617450623');
+  fbq('track', 'PageView');
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[href^="tel:"]');
+    if (a) { fbq('trackCustom', 'PhoneTap', {content_name: 'phone_call_tap'}); }
+  });
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></noscript>
+
+  <style>
+    .start-page {
+      padding-top: 70px;
+      min-height: calc(100vh - 70px);
+      background: var(--off-white);
+    }
+    .start-hero {
+      text-align: center;
+      padding: 48px 20px 8px;
+    }
+    .start-hero h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+    }
+    .start-hero h1 span { color: var(--primary); }
+    .start-hero p {
+      color: var(--gray);
+      font-size: 1.1rem;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    .quiz-card {
+      max-width: 560px;
+      margin: 28px auto 60px;
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 32px 28px 36px;
+    }
+    .quiz-progress {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .quiz-progress .dot {
+      width: 34px; height: 6px;
+      border-radius: var(--radius-full);
+      background: var(--light-gray);
+      transition: background var(--transition-normal);
+    }
+    .quiz-progress .dot.active { background: var(--primary); }
+    .quiz-step { display: none; }
+    .quiz-step.active { display: block; animation: stepIn 250ms ease; }
+    @keyframes stepIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    .quiz-step h2 {
+      font-size: 1.35rem;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .quiz-options { display: grid; gap: 12px; }
+    .quiz-option {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      text-align: left;
+      font-family: var(--font-primary);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--black);
+      background: var(--white);
+      border: 2px solid var(--light-gray);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+    }
+    .quiz-option i {
+      color: var(--primary);
+      font-size: 1.2rem;
+      width: 24px;
+      text-align: center;
+    }
+    .quiz-option:hover, .quiz-option:focus-visible {
+      border-color: var(--primary);
+      background: #FFF4EF;
+      transform: translateY(-1px);
+    }
+    .quiz-back {
+      background: none;
+      border: none;
+      color: var(--gray);
+      font-family: var(--font-primary);
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-top: 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .quiz-back:hover { color: var(--black); }
+    .contact-fields .form-group { margin-bottom: 14px; }
+    .contact-error {
+      display: none;
+      color: #C0392B;
+      font-size: 0.9rem;
+      margin: 4px 0 10px;
+    }
+    .contact-error.show { display: block; }
+    .fine-print {
+      color: var(--gray);
+      font-size: 0.8rem;
+      text-align: center;
+      margin: 10px 0 0;
+    }
+    #booking { display: none; padding: 0 20px 60px; }
+    #booking .section-header { margin-bottom: 8px; }
+    #booking .section-header h2 { font-size: 1.6rem; }
+    #booking .section-header p { color: var(--gray); }
+    .calendly-inline-widget { min-width: 320px; height: 700px; }
+    .start-trust {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 18px;
+      padding: 0 20px 40px;
+      color: var(--gray);
+      font-size: 0.9rem;
+    }
+    .start-trust span { display: inline-flex; align-items: center; gap: 7px; }
+    .start-trust i { color: var(--primary); }
+    @media (max-width: 600px) {
+      .start-hero h1 { font-size: 1.7rem; }
+      .quiz-card { margin-left: 16px; margin-right: 16px; padding: 24px 18px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <main class="start-page">
+    <section class="start-hero">
+      <h1>Your Free Website, Live in <span>60 Minutes</span></h1>
+      <p>Answer 3 quick questions, then grab a time. We build it with you on one free call — it's live before you hang up.</p>
+    </section>
+
+    <div class="quiz-card" id="quiz">
+      <div class="quiz-progress" aria-hidden="true">
+        <div class="dot active" data-dot="1"></div>
+        <div class="dot" data-dot="2"></div>
+        <div class="dot" data-dot="3"></div>
+        <div class="dot" data-dot="4"></div>
+      </div>
+
+      <div class="quiz-step active" data-step="1">
+        <h2>What kind of business do you run?</h2>
+        <div class="quiz-options">
+          <button class="quiz-option" data-q="business_type" data-a="Home Services (plumbing, HVAC, electrical...)"><i class="fas fa-wrench"></i>Home services — plumbing, HVAC, electrical...</button>
+          <button class="quiz-option" data-q="business_type" data-a="Beauty & Wellness (salon, spa, fitness...)"><i class="fas fa-spa"></i>Beauty &amp; wellness — salon, spa, fitness...</button>
+          <button class="quiz-option" data-q="business_type" data-a="Professional Services (real estate, legal, insurance...)"><i class="fas fa-briefcase"></i>Professional services — real estate, legal...</button>
+          <button class="quiz-option" data-q="business_type" data-a="Restaurant / Retail / Online Store"><i class="fas fa-store"></i>Restaurant, retail, or online store</button>
+          <button class="quiz-option" data-q="business_type" data-a="Something else"><i class="fas fa-lightbulb"></i>Something else</button>
+        </div>
+      </div>
+
+      <div class="quiz-step" data-step="2">
+        <h2>Do you already have a website?</h2>
+        <div class="quiz-options">
+          <button class="quiz-option" data-q="current_website" data-a="No website yet"><i class="fas fa-times-circle"></i>Nope — I need one</button>
+          <button class="quiz-option" data-q="current_website" data-a="Yes, but it's outdated / embarrassing"><i class="fas fa-face-grimace"></i>Yes, but it's outdated or embarrassing</button>
+          <button class="quiz-option" data-q="current_website" data-a="Yes, DIY builder I gave up on"><i class="fas fa-hammer"></i>I started a DIY builder... and gave up</button>
+        </div>
+        <button class="quiz-back" data-back="1"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+
+      <div class="quiz-step" data-step="3">
+        <h2>How soon do you want to be live?</h2>
+        <div class="quiz-options">
+          <button class="quiz-option" data-q="timeline" data-a="ASAP - this week"><i class="fas fa-bolt"></i>ASAP — this week</button>
+          <button class="quiz-option" data-q="timeline" data-a="Within the month"><i class="fas fa-calendar-days"></i>Sometime this month</button>
+          <button class="quiz-option" data-q="timeline" data-a="Just looking around"><i class="fas fa-binoculars"></i>Just looking around</button>
+        </div>
+        <button class="quiz-back" data-back="2"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+
+      <div class="quiz-step" data-step="4">
+        <h2>Last step — who are we building this for?</h2>
+        <div class="contact-fields">
+          <div class="form-group">
+            <label for="lead-name" class="form-label">Your Name *</label>
+            <input type="text" id="lead-name" class="form-input" placeholder="John Smith" autocomplete="name" required>
+          </div>
+          <div class="form-group">
+            <label for="lead-phone" class="form-label">Cell Number *</label>
+            <input type="tel" id="lead-phone" class="form-input" placeholder="(555) 123-4567" autocomplete="tel" required>
+          </div>
+          <div class="form-group">
+            <label for="lead-email" class="form-label">Email *</label>
+            <input type="email" id="lead-email" class="form-input" placeholder="john@smithplumbing.com" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label for="lead-business" class="form-label">Business Name</label>
+            <input type="text" id="lead-business" class="form-input" placeholder="Smith Plumbing" autocomplete="organization">
+          </div>
+          <input type="text" name="_gotcha" id="lead-gotcha" style="display:none !important" tabindex="-1" autocomplete="off">
+          <p class="contact-error" id="contact-error">Please add your name, a cell number we can text, and a valid email.</p>
+          <button type="button" class="btn btn-primary btn-lg" id="contact-submit" style="width: 100%;">See Available Times</button>
+          <p class="fine-print">Only used to confirm your booking. No spam, no list, ever.</p>
+        </div>
+        <button class="quiz-back" data-back="3"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+    </div>
+
+    <section id="booking">
+      <div class="container">
+        <div class="section-header">
+          <h2>Perfect — pick your time. <span style="color: var(--primary);">We'll build it together.</span></h2>
+          <p>Free call — we'll plan your site and get you live in 60 minutes.</p>
+        </div>
+        <div class="calendly-inline-widget" data-url="https://calendly.com/corban-leadsprinter/new-meeting?hide_gdpr_banner=1" style="min-width:320px;height:700px;"></div>
+      </div>
+    </section>
+
+    <div class="start-trust">
+      <span><i class="fas fa-clock"></i> Live in 60 minutes</span>
+      <span><i class="fas fa-user"></i> Built by a real person</span>
+      <span><i class="fas fa-gift"></i> Free — no card, no catch</span>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="js/components.js"></script>
+  <script>
+  (function(){
+    var answers = {};
+    var t0 = Date.now();
+
+    function utm(name){
+      var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+      return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+    }
+
+    function showStep(n){
+      document.querySelectorAll('.quiz-step').forEach(function(s){
+        s.classList.toggle('active', s.getAttribute('data-step') === String(n));
+      });
+      document.querySelectorAll('.quiz-progress .dot').forEach(function(d){
+        d.classList.toggle('active', Number(d.getAttribute('data-dot')) <= n);
+      });
+    }
+
+    function submitToFormspree(contact){
+      var data = {
+        name: contact.name,
+        phone: contact.phone,
+        email: contact.email,
+        _replyto: contact.email,
+        business: contact.business,
+        business_type: answers.business_type || '',
+        current_website: answers.current_website || '',
+        timeline: answers.timeline || '',
+        fill_seconds: Math.round((Date.now() - t0) / 1000),
+        traffic_source: utm('utm_source') || document.referrer || 'direct',
+        utm_campaign: utm('utm_campaign'),
+        utm_content: utm('utm_content'),
+        landing_page: '/start.html',
+        _gotcha: document.getElementById('lead-gotcha').value,
+        _subject: 'New Qualified Lead - Ad Funnel (start.html)'
+      };
+      fetch('https://formspree.io/f/xojeqvng', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(function(){ /* booking still shown; Calendly re-captures contact info */ });
+    }
+
+    function finishQuiz(contact){
+      submitToFormspree(contact);
+      if (window.fbq) {
+        fbq('track', 'Lead', {
+          content_name: 'qualify_form',
+          content_category: answers.business_type || '',
+          status: answers.timeline || ''
+        });
+      }
+      document.getElementById('quiz').style.display = 'none';
+      document.querySelector('.start-hero').style.display = 'none';
+      var booking = document.getElementById('booking');
+      var container = booking.querySelector('.calendly-inline-widget');
+      if (window.Calendly && container) {
+        container.innerHTML = '';
+        Calendly.initInlineWidget({
+          url: 'https://calendly.com/corban-leadsprinter/new-meeting?hide_gdpr_banner=1',
+          parentElement: container,
+          prefill: { name: contact.name, email: contact.email }
+        });
+      }
+      booking.style.display = 'block';
+      booking.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.querySelectorAll('.quiz-option').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var step = Number(btn.closest('.quiz-step').getAttribute('data-step'));
+        answers[btn.getAttribute('data-q')] = btn.getAttribute('data-a');
+        if (window.fbq) fbq('trackCustom', 'QualifyStep', { step: step, answer: btn.getAttribute('data-a') });
+        showStep(step + 1);
+      });
+    });
+
+    document.getElementById('contact-submit').addEventListener('click', function(){
+      var contact = {
+        name: document.getElementById('lead-name').value.trim(),
+        phone: document.getElementById('lead-phone').value.trim(),
+        email: document.getElementById('lead-email').value.trim(),
+        business: document.getElementById('lead-business').value.trim()
+      };
+      var err = document.getElementById('contact-error');
+      if (!contact.name || contact.phone.replace(/\D/g, '').length < 7 || !/^\S+@\S+\.\S+$/.test(contact.email)) {
+        err.classList.add('show');
+        return;
+      }
+      err.classList.remove('show');
+      if (window.fbq) fbq('trackCustom', 'QualifyStep', { step: 4, answer: 'contact_submitted' });
+      finishQuiz(contact);
+    });
+
+    document.querySelectorAll('.quiz-back').forEach(function(btn){
+      btn.addEventListener('click', function(){ showStep(Number(btn.getAttribute('data-back'))); });
+    });
+
+    // Calendly booking completed -> Schedule conversion
+    window.addEventListener('message', function(e){
+      if (e.data && e.data.event === 'calendly.event_scheduled') {
+        if (window.fbq) fbq('track', 'Schedule', { content_name: 'calendly_booking' });
+      }
+    });
+  })();
+  </script>
+  <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
+</body>
+</html>

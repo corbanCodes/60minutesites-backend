@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set active = 'sites' %}
+{% block title %}{{ 'Edit' if site else 'New' }} site | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>{{ 'Edit: ' + site.business_name if site else 'New site' }}</h1>
+  <div>
+    {% if site %}<a class="btn ghost sm" href="/s/{{ site.slug }}" target="_blank">View live ↗</a>{% endif %}
+    <a class="btn ghost sm" href="/admin/sites">← Back</a>
+  </div>
+</div>
+<form class="form card" method="post">
+  <div class="row2">
+    <div><label>Business name *</label><input type="text" name="business_name" required value="{{ site.business_name if site }}"></div>
+    <div><label>Tagline</label><input type="text" name="tagline" placeholder="Plumbing done right, since 1998" value="{{ site.tagline if site }}"></div>
+  </div>
+  <div class="row2">
+    <div><label>Phone</label><input type="tel" name="phone" value="{{ site.phone if site }}"></div>
+    <div><label>Email</label><input type="email" name="email" value="{{ site.email if site }}"></div>
+  </div>
+  <div>
+    <label>Services (one per line)</label>
+    <textarea name="services" placeholder="Drain cleaning&#10;Water heaters&#10;Emergency repairs">{{ site.services if site }}</textarea>
+  </div>
+  <div>
+    <label>About</label>
+    <textarea name="about" placeholder="Two sentences about the business…">{{ site.about if site }}</textarea>
+  </div>
+  <div class="row2">
+    <div><label>Brand color</label><input type="color" name="color" value="{{ site.color if site else '#FF6B35' }}" style="width:100%;height:42px;border:1.5px solid var(--line);border-radius:8px;background:#fff"></div>
+    <div>
+      <label>Style</label>
+      <select name="style">
+        <option value="clean" {{ 'selected' if site and site.style == 'clean' }}>Clean (light)</option>
+        <option value="bold" {{ 'selected' if site and site.style == 'bold' }}>Bold (dark)</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn" type="submit">{{ 'Save changes' if site else 'Create site' }}</button>
+</form>
+{% if site %}
+<form method="post" style="margin-top:14px" onsubmit="return confirm('Delete this site? The public link will stop working.')">
+  <input type="hidden" name="action" value="delete">
+  <button class="btn danger sm" type="submit">Delete site</button>
+</form>
+{% endif %}
+{% endblock %}

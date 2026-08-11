@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set active = 'leads' %}
+{% block title %}Add lead | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>Add lead</h1><a class="btn ghost" href="/admin/leads">← Back</a></div>
+<form class="form card" method="post">
+  <div class="row2">
+    <div><label>Name *</label><input type="text" name="name" required autofocus></div>
+    <div><label>Business</label><input type="text" name="business"></div>
+  </div>
+  <div class="row2">
+    <div><label>Cell</label><input type="tel" name="phone"></div>
+    <div><label>Email</label><input type="email" name="email"></div>
+  </div>
+  <div class="row2">
+    <div><label>Business type</label><input type="text" name="business_type" placeholder="Home services, salon…"></div>
+    <div><label>Source</label><input type="text" name="source" placeholder="billboard, casual-video, referral…" value="manual"></div>
+  </div>
+  <div>
+    <label>Status</label>
+    <select name="status">{% for s in STATUSES %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+  </div>
+  <button class="btn" type="submit">Save lead</button>
+</form>
+{% endblock %}

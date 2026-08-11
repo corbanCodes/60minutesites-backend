@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Get a professional salon website live in 60 minutes. Your salon website live in 60 minutes. Showcase your stylists, display your services, and let client...">
+  <meta name="robots" content="noindex">
+  <title>Professional Salon Websites | Live in 60 Minutes | 60 Minute Sites</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io (4)/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io (4)/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io (4)/favicon-16x16.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.20"></script>
+  <style>
+    .lp-hero {
+      padding: 100px 0 60px;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: var(--white);
+      text-align: center;
+    }
+    .lp-hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+      color: var(--white);
+      line-height: 1.2;
+    }
+    .lp-hero h1 span {
+      color: var(--primary);
+    }
+    .lp-hero .subtitle {
+      font-size: 1.25rem;
+      opacity: 0.9;
+      max-width: 700px;
+      margin: 0 auto 2rem;
+    }
+    .lp-hero-cta {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    .lp-hero-trust {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    .lp-hero-trust span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .lp-hero-trust i {
+      color: var(--primary);
+    }
+
+    .lp-video-section {
+      padding: 60px 0;
+      background: var(--off-white);
+    }
+    .lp-video-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .lp-video-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .lp-video-copy h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .lp-video-copy p {
+      font-size: 1.1rem;
+      color: var(--gray);
+      margin-bottom: 1.5rem;
+    }
+    .lp-video-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 2rem 0;
+    }
+    .lp-video-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
+    }
+    .lp-video-list li i {
+      color: var(--primary);
+      margin-top: 4px;
+    }
+    .lp-video-player {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+    }
+    .video-container {
+      position: relative;
+      background: #000;
+    }
+    .video-container video {
+      width: 100%;
+      display: block;
+    }
+    .video-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.4);
+      cursor: pointer;
+    }
+    .video-overlay.hidden {
+      display: none;
+    }
+    .play-btn-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: none;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+    .play-btn-large:hover {
+      transform: scale(1.1);
+    }
+    .play-btn-large i {
+      margin-left: 5px;
+    }
+
+    .lp-benefits {
+      padding: 60px 0;
+      background: var(--white);
+    }
+    .lp-benefits h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 3rem;
+    }
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+    @media (max-width: 768px) {
+      .benefits-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .benefit-card {
+      text-align: center;
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      background: var(--off-white);
+    }
+    .benefit-icon {
+      width: 60px;
+      height: 60px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin: 0 auto 1rem;
+    }
+    .benefit-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .benefit-card p {
+      color: var(--gray);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    .lp-templates {
+      padding: 60px 0;
+      background: var(--off-white);
+    }
+    .lp-templates h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .lp-templates .section-subtitle {
+      text-align: center;
+      color: var(--gray);
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+    .templates-preview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .templates-preview {
+        grid-template-columns: 1fr;
+      }
+    }
+    .template-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .template-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+    .template-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+    .template-card-info {
+      padding: 1rem;
+      text-align: center;
+    }
+    .template-card-info h4 {
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+    .template-card-info span {
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+
+    .lp-why-us {
+      padding: 60px 0;
+      background: var(--off-white);
+    }
+    .lp-why-us h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .lp-why-us .section-subtitle {
+      text-align: center;
+      color: var(--gray);
+      max-width: 700px;
+      margin: 0 auto 3rem;
+      font-size: 1.1rem;
+    }
+    .why-us-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
+    @media (max-width: 768px) {
+      .why-us-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .why-us-card {
+      background: var(--white);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+    .why-us-card h3 {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .why-us-card h3 i {
+      color: var(--primary);
+    }
+    .why-us-card p {
+      color: var(--gray);
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    .lp-pricing {
+      padding: 60px 0;
+      background: var(--white);
+    }
+    .lp-pricing h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .lp-pricing .section-subtitle {
+      text-align: center;
+      color: var(--gray);
+      margin-bottom: 2rem;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    @media (max-width: 768px) {
+      .pricing-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .pricing-card {
+      background: var(--white);
+      border: 2px solid var(--light-gray);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .pricing-card.featured {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+    .pricing-card.featured::before {
+      content: 'Best Value';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary);
+      color: white;
+      padding: 0.25rem 1rem;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .pricing-card .plan-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .pricing-card .price {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .pricing-card .price span {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--gray);
+    }
+    .pricing-card .price-note {
+      font-size: 0.9rem;
+      color: var(--gray);
+      margin-bottom: 1.5rem;
+    }
+    .pricing-features {
+      text-align: left;
+      margin-bottom: 1.5rem;
+    }
+    .pricing-features li {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--light-gray);
+      font-size: 0.95rem;
+    }
+    .pricing-features li:last-child {
+      border-bottom: none;
+    }
+    .pricing-features li i {
+      color: #22c55e;
+    }
+
+    .lp-contact {
+      padding: 60px 0;
+      background: var(--off-white);
+    }
+    .lp-contact h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    .lp-contact .section-subtitle {
+      text-align: center;
+      color: var(--gray);
+      margin-bottom: 2rem;
+    }
+    .lp-contact-form {
+      max-width: 600px;
+      margin: 0 auto;
+      background: var(--white);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+    .lp-contact-form .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 500px) {
+      .lp-contact-form .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    .lp-contact-form .form-group {
+      margin-bottom: 1rem;
+    }
+    .lp-contact-form label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+    .lp-contact-form input,
+    .lp-contact-form textarea {
+      font-family: inherit;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--light-gray);
+      border-radius: var(--radius);
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+    }
+    .lp-contact-form input:focus,
+    .lp-contact-form textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .lp-contact-form textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    .lp-contact-form button {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    .lp-final-cta {
+      padding: 80px 0;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: var(--white);
+      text-align: center;
+    }
+    .lp-final-cta h2 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--white);
+    }
+    .lp-final-cta p {
+      font-size: 1.25rem;
+      opacity: 0.95;
+      max-width: 600px;
+      margin: 0 auto 2rem;
+    }
+    .lp-final-cta .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .lp-sticky-cta {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--white);
+      padding: 1rem;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      z-index: 100;
+      display: none;
+    }
+    .lp-sticky-cta.visible {
+      display: block;
+    }
+    .lp-sticky-cta .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .lp-sticky-cta .sticky-text {
+      font-weight: 600;
+    }
+    .lp-sticky-cta .sticky-text span {
+      color: var(--primary);
+    }
+    .lp-sticky-cta .sticky-close {
+      position: absolute;
+      top: 50%;
+      right: 1rem;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      color: var(--gray);
+      cursor: pointer;
+      padding: 0.5rem;
+      line-height: 1;
+    }
+    .lp-sticky-cta .sticky-close:hover {
+      color: var(--black);
+    }
+    .lp-sticky-cta.dismissed {
+      display: none !important;
+    }
+    @media (max-width: 600px) {
+      .lp-sticky-cta .container {
+        justify-content: center;
+        text-align: center;
+      }
+      .lp-sticky-cta .sticky-text {
+        width: 100%;
+      }
+    }
+  </style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-649666163"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-649666163');
+</script>
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '3728691617450623');
+fbq('track', 'PageView');
+document.addEventListener('click', function(e) {
+  var a = e.target.closest && e.target.closest('a[href^="tel:"]');
+  if (a) { fbq('trackCustom', 'PhoneTap', {content_name: 'phone_call_tap'}); }
+}, true);
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel -->
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <!-- Hero Section -->
+  <section class="lp-hero">
+    <div class="container">
+      <h1>Attract More <span>Salon Clients</span> With a Stunning Website</h1>
+      <p class="subtitle">Your salon website live in 60 minutes. Showcase your stylists, display your services, and let clients book appointments online.</p>
+      <div class="lp-hero-cta">
+        <a href="/book-demo.html" class="btn btn-primary btn-lg"><i class="fas fa-calendar-check"></i> Book Free Demo</a>
+        <a href="tel:1-800-604-5433" class="btn btn-outline-white btn-lg"><i class="fas fa-phone"></i> 1-800-60-4-LIFE</a>
+      </div>
+      <div class="lp-hero-trust">
+        <span><i class="fas fa-clock"></i> Live in 60 Minutes</span>
+        <span><i class="fas fa-dollar-sign"></i> From $50/month</span>
+        <span><i class="fas fa-file-contract"></i> No Contracts</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Video Section -->
+  <section class="lp-video-section">
+    <div class="container">
+      <div class="lp-video-grid">
+        <div class="lp-video-copy">
+          <h2>See How It Works</h2>
+          <p>Watch how we take your salon business from idea to live website in under 60 minutes. No technical skills required.</p>
+          <ul class="lp-video-list">
+            <li><i class="fas fa-check"></i> Choose from 20+ salon-specific templates</li>
+            <li><i class="fas fa-check"></i> One call to gather your content</li>
+            <li><i class="fas fa-check"></i> We handle all the technical work</li>
+            <li><i class="fas fa-check"></i> Live and ready to attract clients</li>
+          </ul>
+          <a href="/book-demo.html" class="btn btn-primary">Book Your Free Demo</a>
+        </div>
+        <div class="lp-video-player">
+          <div class="video-container">
+            <video id="demo-video" controls playsinline poster="https://customer-394md8sxxno51fu2.cloudflarestream.com/43862ff626c736ec00da633790b51100/thumbnails/thumbnail.jpg"></video>
+            <div class="video-overlay" id="video-overlay">
+              <button class="play-btn-large" id="play-btn-large">
+                <i class="fas fa-play"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Benefits Section -->
+  <section class="lp-benefits">
+    <div class="container">
+      <h2>Why Salon Businesses Choose 60 Minute Sites</h2>
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <div class="benefit-icon"><i class="fas fa-calendar-check"></i></div>
+          <h3>Enable Online Booking</h3>
+          <p>Let clients book appointments 24/7 with integrated scheduling that syncs with your calendar.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon"><i class="fas fa-images"></i></div>
+          <h3>Showcase Your Work</h3>
+          <p>Beautiful galleries to display your stylists' best work and attract clients who love your style.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon"><i class="fas fa-list-alt"></i></div>
+          <h3>Display Your Services</h3>
+          <p>Professional service menus with pricing that help clients choose the right services for them.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Templates Preview -->
+  <section class="lp-templates">
+    <div class="container">
+      <h2>Salon Website Templates</h2>
+      <p class="section-subtitle">Professional designs built specifically for salon businesses. Each one fully customizable.</p>
+      <div class="templates-preview">
+        <a href="/gallery.html?filter=salon" class="template-card">
+          <img src="https://picsum.photos/seed/salon-template1-hero/600/400" alt="Glamour Salon Template">
+          <div class="template-card-info">
+            <h4>Glamour</h4>
+            <span>Elegant & Modern</span>
+          </div>
+        </a>
+        <a href="/gallery.html?filter=salon" class="template-card">
+          <img src="https://picsum.photos/seed/salon-template2-hero/600/400" alt="Style Studio Salon Template">
+          <div class="template-card-info">
+            <h4>Style Studio</h4>
+            <span>Bold & Creative</span>
+          </div>
+        </a>
+        <a href="/gallery.html?filter=salon" class="template-card">
+          <img src="https://picsum.photos/seed/salon-template3-hero/600/400" alt="Beauty Bar Salon Template">
+          <div class="template-card-info">
+            <h4>Beauty Bar</h4>
+            <span>Clean & Sophisticated</span>
+          </div>
+        </a>
+      </div>
+      <div class="text-center mt-3">
+        <a href="/gallery.html?filter=salon" class="btn btn-outline">View All Salon Templates</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Work With Us Section -->
+  <section class="lp-why-us">
+    <div class="container">
+      <h2>Work One-on-One With Website Experts</h2>
+      <p class="section-subtitle">You're not getting a template and a tutorial. You're getting a dedicated professional who handles everything while you focus on running your business.</p>
+      <div class="why-us-grid">
+        <div class="why-us-card">
+          <h3><i class="fas fa-user-tie"></i> Dedicated Expert, Not a Chatbot</h3>
+          <p>You'll work directly with a real person who understands your industry. We'll guide you through the entire process, answer your questions, and make sure your website actually represents your business the way you want it to.</p>
+        </div>
+        <div class="why-us-card">
+          <h3><i class="fas fa-hands-helping"></i> We Do the Work, You Provide Input</h3>
+          <p>No DIY headaches. You tell us about your business, share your photos and content, and we handle all the technical stuff. Design, hosting, SSL, mobile optimization - it's all taken care of.</p>
+        </div>
+        <div class="why-us-card">
+          <h3><i class="fas fa-comments"></i> Real Conversations, Not Tickets</h3>
+          <p>Have a question? Pick up the phone or send an email. You'll get a real response from someone who knows your project, not a canned reply from a support queue. We're your web team.</p>
+        </div>
+        <div class="why-us-card">
+          <h3><i class="fas fa-lightbulb"></i> Strategic Guidance Included</h3>
+          <p>We don't just build what you ask for - we offer suggestions based on what actually works. From layout decisions to calls-to-action, you get the benefit of our experience helping hundreds of businesses succeed online.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section class="lp-pricing">
+    <div class="container">
+      <h2>Simple, Transparent Pricing</h2>
+      <p class="section-subtitle">Everything you need to get your plumbing website online.</p>
+      <div class="pricing-grid">
+        <!-- Monthly Plan -->
+        <div class="pricing-card">
+          <div class="plan-name">Website</div>
+          <div class="price">$50<span>/mo</span></div>
+          <div class="price-note">+ $150 one-time setup fee</div>
+          <ul class="pricing-features">
+            <li><i class="fas fa-check"></i> Professional salon template</li>
+            <li><i class="fas fa-check"></i> 1-hour onboarding call</li>
+            <li><i class="fas fa-check"></i> Full customization</li>
+            <li><i class="fas fa-check"></i> Mobile-responsive design</li>
+            <li><i class="fas fa-check"></i> Industry-specific features</li>
+            <li><i class="fas fa-check"></i> Premium hosting & SSL</li>
+            <li><i class="fas fa-check"></i> Cancel anytime</li>
+          </ul>
+          <a href="/checkout.html" class="btn btn-outline btn-lg" style="width: 100%;">Get Started - $200 Today</a>
+        </div>
+        <!-- Annual Plan -->
+        <div class="pricing-card featured">
+          <div class="plan-name">Website + Growth</div>
+          <div class="price">$200<span>/mo</span></div>
+          <div class="price-note">No setup fee • early-access pricing</div>
+          <ul class="pricing-features">
+            <li><i class="fas fa-check"></i> Everything in the Website plan</li>
+            <li><i class="fas fa-check"></i> Missed-call text-back for your business</li>
+            <li><i class="fas fa-check"></i> Instant text follow-up for new leads</li>
+            <li><i class="fas fa-check"></i> 5-star Google review funnel</li>
+            <li><i class="fas fa-check"></i> Online booking with reminders</li>
+            <li><i class="fas fa-check"></i> Priority same-day changes</li>
+          </ul>
+          <a href="/book-demo.html" class="btn btn-primary btn-lg" style="width: 100%;">Book a Call to Claim a Spot</a>
+        </div>
+      </div>
+      <p style="text-align:center;margin-top:1.6rem;font-size:1.1rem;">Fastest way to start: call <a href="tel:1-800-604-5433" style="font-weight:700;color:var(--primary);white-space:nowrap;">1-800-60-4-LIFE</a> and watch your site get built before we hang up.</p>
+      <p style="text-align: center; margin-top: 2rem; color: var(--gray);"><i class="fas fa-shield-alt" style="color: #22c55e;"></i> 100% Satisfaction Guarantee &nbsp;•&nbsp; <i class="fas fa-file-contract" style="color: var(--primary);"></i> No Long-Term Contracts</p>
+    </div>
+  </section>
+
+  <!-- Contact Form Section -->
+  <section class="lp-contact">
+    <div class="container">
+      <h2>Have Questions? Let's Talk</h2>
+      <p class="section-subtitle">Send us a message and we'll get back to you within 24 hours.</p>
+      <form action="https://formspree.io/f/xojeqvng" method="POST" class="lp-contact-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="name">Your Name *</label>
+            <input type="text" id="name" name="name" placeholder="John Smith" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address *</label>
+            <input type="email" id="email" name="email" placeholder="john@example.com" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="(555) 123-4567">
+          </div>
+          <div class="form-group">
+            <label for="business">Business Name</label>
+            <input type="text" id="business" name="business" placeholder="Your Business Name">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="message">How can we help? *</label>
+          <textarea id="message" name="message" placeholder="Tell us about your business and what you're looking for..." required></textarea>
+        </div>
+        <input type="text" name="_gotcha" style="display:none !important" tabindex="-1" autocomplete="off">
+            <input type="hidden" name="_subject" value="Landing Page Inquiry - 60 Minute Sites">
+        <input type="hidden" name="_next" value="/thank-you-form-submission.html">
+        <button type="submit" class="btn btn-primary btn-lg">Send Message</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="lp-final-cta">
+    <div class="container">
+      <h2>Ready to Grow Your Salon Business?</h2>
+      <p>Get your professional website live today. Start booking more clients and showcasing your talent online.</p>
+      <div class="cta-buttons">
+        <a href="/book-demo.html" class="btn btn-secondary btn-lg"><i class="fas fa-calendar-check"></i> Book Free Demo</a>
+        <a href="/checkout.html" class="btn btn-outline-white btn-lg">Get Started Now</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sticky CTA -->
+  <div class="lp-sticky-cta" id="sticky-cta">
+    <div class="container">
+      <div class="sticky-text">Salon websites from <span>$50/mo</span></div>
+      <a href="tel:1-800-604-5433" class="btn btn-outline" style="margin-right:10px;"><i class="fas fa-phone"></i> 1-800-60-4-LIFE</a>
+      <a href="tel:1-800-604-5433" class="btn btn-primary"><i class="fas fa-phone"></i> Call Now</a>
+    </div>
+    <button class="sticky-close" id="sticky-close" aria-label="Close"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div id="site-footer"></div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/components.js"></script>
+  <script>
+    // Video player functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const demoVideo = document.getElementById('demo-video');
+      const demoSrc = 'https://customer-394md8sxxno51fu2.cloudflarestream.com/43862ff626c736ec00da633790b51100/manifest/video.m3u8';
+      const overlay = document.getElementById('video-overlay');
+      const playBtnLarge = document.getElementById('play-btn-large');
+
+      let demoHls;
+
+      if (Hls.isSupported()) {
+        demoHls = new Hls();
+        demoHls.loadSource(demoSrc);
+        demoHls.attachMedia(demoVideo);
+      } else if (demoVideo.canPlayType('application/vnd.apple.mpegurl')) {
+        demoVideo.src = demoSrc;
+      }
+
+      function playVideo() {
+        overlay.classList.add('hidden');
+        demoVideo.play();
+      }
+
+      playBtnLarge.addEventListener('click', playVideo);
+      overlay.addEventListener('click', playVideo);
+
+      demoVideo.addEventListener('ended', function() {
+        overlay.classList.remove('hidden');
+      });
+
+      // Sticky CTA visibility
+      const stickyCta = document.getElementById('sticky-cta');
+      const heroSection = document.querySelector('.lp-hero');
+      const stickyClose = document.getElementById('sticky-close');
+
+      window.addEventListener('scroll', function() {
+        const heroBottom = heroSection.offsetTop + heroSection.offsetHeight;
+        if (window.scrollY > heroBottom && !stickyCta.classList.contains('dismissed')) {
+          stickyCta.classList.add('visible');
+        } else {
+          stickyCta.classList.remove('visible');
+        }
+      });
+
+      stickyClose.addEventListener('click', function() {
+        stickyCta.classList.add('dismissed');
+        stickyCta.classList.remove('visible');
+      });
+    });
+  </script>
+<script>
+(function(){
+  var t0 = Date.now();
+  document.addEventListener('submit', function(e){
+    var f = e.target;
+    if (!f.action || f.action.indexOf('formspree') === -1) return;
+    ['fill_seconds','traffic_source'].forEach(function(n){
+      if (!f.querySelector('[name="'+n+'"]')){
+        var i = document.createElement('input'); i.type='hidden'; i.name=n; f.appendChild(i);
+      }
+    });
+    f.querySelector('[name="fill_seconds"]').value = Math.round((Date.now()-t0)/1000);
+    f.querySelector('[name="traffic_source"]').value = (location.search || 'direct') + ' | ref: ' + (document.referrer || 'none');
+  }, true);
+})();
+</script>
+</body>
+</html>

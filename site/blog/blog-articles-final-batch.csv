@@ -1,0 +1,151 @@
+industry,slug,title,keyword,read_time,article_type
+llm-optimization,how-to-optimize-website-for-ai-search,How to Optimize Your Website for AI Search Engines,optimize website ai search,10,guide
+llm-optimization,what-is-answer-engine-optimization,What Is Answer Engine Optimization (AEO) and Why It Matters,answer engine optimization,9,guide
+llm-optimization,how-chatgpt-finds-local-businesses,How ChatGPT and AI Assistants Find Local Businesses,chatgpt local business,8,guide
+llm-optimization,structured-data-for-llm-visibility,Structured Data That Makes AI Assistants Recommend Your Business,structured data llm,9,guide
+llm-optimization,faq-schema-for-ai-search,FAQ Schema: The Secret to Getting Cited by AI,faq schema ai,7,guide
+llm-optimization,how-perplexity-ranks-websites,How Perplexity AI Ranks and Recommends Websites,perplexity ranking,8,guide
+llm-optimization,ai-crawlability-checklist,AI Crawlability Checklist for Small Business Websites,ai crawlability,8,checklist
+llm-optimization,semantic-html-for-llm,Semantic HTML That AI Assistants Love,semantic html llm,7,guide
+llm-optimization,content-structure-for-ai-citation,Content Structure That Gets Your Business Cited by AI,content structure ai,9,guide
+llm-optimization,local-business-ai-visibility,Local Business Visibility in the Age of AI Search,local business ai,8,guide
+lead-generation,what-is-lead-sprinter,What Is Lead Sprinter and How Does It Generate Leads,lead sprinter,8,guide
+lead-generation,automated-lead-generation-small-business,Automated Lead Generation for Small Businesses,automated lead generation,9,guide
+lead-generation,ai-lead-generation-tools,AI Lead Generation Tools That Actually Work,ai lead generation,8,comparison
+lead-generation,how-to-automate-customer-acquisition,How to Automate Customer Acquisition for Your Business,automate customer acquisition,9,guide
+lead-generation,lead-generation-vs-lead-nurturing,Lead Generation vs Lead Nurturing: What's the Difference,lead generation nurturing,7,comparison
+lead-generation,best-lead-capture-forms,Best Lead Capture Forms for Small Business Websites,lead capture forms,7,guide
+lead-generation,how-to-qualify-leads-automatically,How to Qualify Leads Automatically with AI,qualify leads ai,8,guide
+lead-generation,lead-scoring-for-small-business,Lead Scoring for Small Business: A Practical Guide,lead scoring,8,guide
+lead-generation,crm-integration-for-lead-gen,CRM Integration for Better Lead Generation,crm integration leads,7,guide
+lead-generation,email-automation-lead-nurturing,Email Automation for Lead Nurturing,email automation leads,8,guide
+blog-automation,how-to-automate-blog-content,How to Automate Blog Content Creation with AI,automate blog content,9,guide
+blog-automation,ai-blog-writing-tools-comparison,AI Blog Writing Tools Comparison: Which One Is Best,ai blog writing tools,8,comparison
+blog-automation,content-calendar-automation,Content Calendar Automation for Small Business,content calendar automation,7,guide
+blog-automation,seo-content-automation,SEO Content Automation: Scale Your Blog Without Sacrificing Quality,seo content automation,9,guide
+blog-automation,ai-content-editing-workflow,AI Content Editing Workflow for Busy Business Owners,ai content editing,7,guide
+blog-automation,repurposing-content-with-ai,Repurposing Content with AI: One Piece Into Many,repurposing content ai,8,guide
+blog-automation,blog-post-scheduling-automation,Blog Post Scheduling Automation Tools,blog scheduling automation,6,comparison
+blog-automation,ai-generated-content-best-practices,AI Generated Content Best Practices for Business Blogs,ai content best practices,8,guide
+blog-automation,human-ai-content-collaboration,Human-AI Content Collaboration: The Best of Both Worlds,human ai content,8,guide
+blog-automation,measuring-automated-content-performance,Measuring Automated Content Performance,automated content metrics,7,guide
+custom-development,custom-website-vs-template,Custom Website vs Template: Which Is Right for Your Business,custom vs template website,9,comparison
+custom-development,benefits-of-custom-web-development,Benefits of Custom Web Development for Growing Businesses,custom web development benefits,8,guide
+custom-development,when-to-invest-in-custom-software,When Should You Invest in Custom Software,when custom software,8,guide
+custom-development,custom-crm-vs-off-the-shelf,Custom CRM vs Off-the-Shelf: Making the Right Choice,custom crm comparison,8,comparison
+custom-development,api-integrations-for-small-business,API Integrations That Transform Small Business Operations,api integrations small business,9,guide
+custom-development,custom-booking-system-benefits,Custom Booking System: Why Generic Solutions Fall Short,custom booking system,8,guide
+custom-development,headless-cms-for-small-business,Headless CMS for Small Business: Is It Worth It,headless cms small business,8,guide
+custom-development,progressive-web-apps-for-local-business,Progressive Web Apps for Local Businesses,pwa local business,8,guide
+custom-development,custom-ecommerce-vs-shopify,Custom E-commerce vs Shopify: A Detailed Comparison,custom ecommerce shopify,9,comparison
+custom-development,database-driven-websites-explained,Database-Driven Websites Explained for Business Owners,database driven websites,8,guide
+ai-business-tools,ai-tools-for-small-business-2026,Best AI Tools for Small Business in 2026,ai tools small business,10,comparison
+ai-business-tools,chatbot-for-small-business-website,Chatbot for Small Business Website: Complete Guide,chatbot small business,9,guide
+ai-business-tools,ai-customer-service-automation,AI Customer Service Automation for Small Business,ai customer service,8,guide
+ai-business-tools,ai-appointment-scheduling,AI Appointment Scheduling That Saves Hours Every Week,ai appointment scheduling,7,guide
+ai-business-tools,ai-invoice-and-billing-automation,AI Invoice and Billing Automation,ai invoice automation,7,guide
+ai-business-tools,ai-social-media-management,AI Social Media Management for Small Business,ai social media,8,guide
+ai-business-tools,ai-email-marketing-automation,AI Email Marketing Automation That Converts,ai email marketing,8,guide
+ai-business-tools,ai-analytics-for-small-business,AI Analytics for Small Business: Understanding Your Data,ai analytics small business,8,guide
+ai-business-tools,voice-ai-for-business,Voice AI for Business: Answering Calls Automatically,voice ai business,8,guide
+ai-business-tools,ai-review-management,AI Review Management: Automate Your Reputation,ai review management,7,guide
+website-strategy,website-roi-calculator,Website ROI Calculator: Is Your Site Paying for Itself,website roi calculator,8,guide
+website-strategy,website-conversion-optimization,Website Conversion Optimization for Small Business,website conversion optimization,9,guide
+website-strategy,above-the-fold-optimization,Above the Fold Optimization: What Visitors See First,above the fold,7,guide
+website-strategy,website-trust-signals,Website Trust Signals That Convert Visitors to Customers,website trust signals,8,guide
+website-strategy,mobile-first-website-design,Mobile-First Website Design: Why It Matters More Than Ever,mobile first design,8,guide
+website-strategy,website-speed-optimization,Website Speed Optimization: Every Second Counts,website speed optimization,8,guide
+website-strategy,website-accessibility-basics,Website Accessibility Basics for Small Business,website accessibility,8,guide
+website-strategy,website-analytics-setup,Website Analytics Setup: Track What Matters,website analytics setup,7,guide
+website-strategy,landing-page-vs-homepage,Landing Page vs Homepage: When to Use Each,landing page homepage,7,comparison
+website-strategy,website-maintenance-checklist,Website Maintenance Checklist for Small Business,website maintenance,7,checklist
+local-marketing,google-local-services-ads,Google Local Services Ads: Complete Guide for Small Business,google local services ads,9,guide
+local-marketing,facebook-ads-for-local-business,Facebook Ads for Local Business: A Practical Guide,facebook ads local,8,guide
+local-marketing,nextdoor-marketing-for-local-business,Nextdoor Marketing for Local Business,nextdoor marketing,7,guide
+local-marketing,local-influencer-marketing,Local Influencer Marketing for Small Business,local influencer marketing,7,guide
+local-marketing,community-event-marketing,Community Event Marketing for Local Businesses,community event marketing,7,guide
+local-marketing,local-partnership-marketing,Local Partnership Marketing: Grow Together,local partnership marketing,7,guide
+local-marketing,local-email-marketing,Local Email Marketing Strategies That Work,local email marketing,8,guide
+local-marketing,local-sms-marketing,Local SMS Marketing for Small Business,local sms marketing,7,guide
+local-marketing,local-retargeting-ads,Local Retargeting Ads: Bring Visitors Back,local retargeting,7,guide
+local-marketing,reputation-marketing-local,Reputation Marketing for Local Businesses,reputation marketing,8,guide
+industry-ai,ai-for-restaurants,AI for Restaurants: Automation That Saves Time and Money,ai restaurants,8,guide
+industry-ai,ai-for-contractors,AI for Contractors: Tools That Win More Jobs,ai contractors,8,guide
+industry-ai,ai-for-salons,AI for Salons: Automate Booking and Marketing,ai salons,8,guide
+industry-ai,ai-for-real-estate,AI for Real Estate: Lead Generation and Follow-Up,ai real estate,8,guide
+industry-ai,ai-for-fitness,AI for Fitness Businesses: Member Engagement Automation,ai fitness,8,guide
+industry-ai,ai-for-healthcare,AI for Healthcare Practices: Patient Communication,ai healthcare,8,guide
+industry-ai,ai-for-legal,AI for Law Firms: Client Intake Automation,ai legal,8,guide
+industry-ai,ai-for-automotive,AI for Auto Shops: Service Reminders and Reviews,ai automotive,8,guide
+industry-ai,ai-for-cleaning,AI for Cleaning Businesses: Scheduling and Quotes,ai cleaning,8,guide
+industry-ai,ai-for-photography,AI for Photographers: Booking and Delivery Automation,ai photography,8,guide
+technical-seo,core-web-vitals-explained,Core Web Vitals Explained for Small Business Owners,core web vitals,8,guide
+technical-seo,website-indexing-guide,Website Indexing Guide: Get Found by Google,website indexing,7,guide
+technical-seo,xml-sitemap-guide,XML Sitemap Guide for Small Business Websites,xml sitemap,6,guide
+technical-seo,robots-txt-explained,Robots.txt Explained: Control What Search Engines See,robots txt,6,guide
+technical-seo,canonical-urls-explained,Canonical URLs Explained: Avoid Duplicate Content,canonical urls,6,guide
+technical-seo,https-ssl-for-small-business,HTTPS and SSL for Small Business: Security Basics,https ssl,6,guide
+technical-seo,image-optimization-seo,Image Optimization for SEO: Complete Guide,image optimization seo,7,guide
+technical-seo,internal-linking-strategy,Internal Linking Strategy for Small Business Websites,internal linking,7,guide
+technical-seo,breadcrumb-navigation-seo,Breadcrumb Navigation for SEO and User Experience,breadcrumb navigation,6,guide
+technical-seo,schema-markup-types,Schema Markup Types Every Local Business Should Use,schema markup types,8,guide
+business-growth,scaling-service-business,Scaling a Service Business: When and How to Grow,scaling service business,9,guide
+business-growth,hiring-first-employee,Hiring Your First Employee: A Small Business Guide,hiring first employee,8,guide
+business-growth,outsourcing-for-small-business,Outsourcing for Small Business: What to Delegate,outsourcing small business,8,guide
+business-growth,recurring-revenue-models,Recurring Revenue Models for Service Businesses,recurring revenue,8,guide
+business-growth,raising-prices-guide,Raising Prices Without Losing Customers,raising prices,7,guide
+business-growth,customer-retention-strategies,Customer Retention Strategies for Small Business,customer retention,8,guide
+business-growth,referral-program-setup,Referral Program Setup for Small Business,referral program,7,guide
+business-growth,upselling-cross-selling,Upselling and Cross-Selling for Service Businesses,upselling cross selling,7,guide
+business-growth,business-automation-roadmap,Business Automation Roadmap: Where to Start,business automation roadmap,9,guide
+business-growth,work-life-balance-business-owner,Work-Life Balance for Small Business Owners,work life balance business,7,guide
+qa-local-seo,how-long-does-local-seo-take,How Long Does Local SEO Take to Show Results,how long local seo,7,qa
+qa-local-seo,how-much-does-local-seo-cost,How Much Does Local SEO Cost in 2026,local seo cost,8,qa
+qa-local-seo,can-i-do-local-seo-myself,Can I Do Local SEO Myself or Do I Need an Expert,diy local seo,7,qa
+qa-local-seo,why-is-my-business-not-showing-on-google,Why Is My Business Not Showing on Google Maps,business not on google,7,qa
+qa-local-seo,how-do-i-get-more-google-reviews,How Do I Get More Google Reviews for My Business,get more google reviews,7,qa
+qa-local-seo,what-are-local-citations,What Are Local Citations and Why Do They Matter,what are local citations,6,qa
+qa-local-seo,how-often-should-i-post-on-google-business,How Often Should I Post on Google Business Profile,google business posting,6,qa
+qa-local-seo,do-i-need-a-blog-for-local-seo,Do I Need a Blog for Local SEO,blog for local seo,6,qa
+qa-local-seo,how-do-i-rank-for-near-me-searches,How Do I Rank for Near Me Searches,near me searches,7,qa
+qa-local-seo,what-is-the-google-local-pack,What Is the Google Local Pack and How Do I Get In,google local pack,7,qa
+qa-websites,how-much-should-a-small-business-website-cost,How Much Should a Small Business Website Cost,small business website cost,8,qa
+qa-websites,how-long-does-it-take-to-build-a-website,How Long Does It Take to Build a Small Business Website,how long build website,7,qa
+qa-websites,do-i-need-a-custom-website,Do I Need a Custom Website or Is a Template Fine,custom vs template,7,qa
+qa-websites,what-pages-does-my-website-need,What Pages Does My Small Business Website Need,website pages needed,7,qa
+qa-websites,how-do-i-update-my-website,How Do I Update My Website Without Breaking It,update website safely,6,qa
+qa-websites,why-is-my-website-slow,Why Is My Website Slow and How Do I Fix It,website slow fix,7,qa
+qa-websites,how-do-i-add-online-booking,How Do I Add Online Booking to My Website,add online booking,7,qa
+qa-websites,should-i-show-prices-on-my-website,Should I Show Prices on My Business Website,show prices website,6,qa
+qa-websites,how-do-i-get-more-leads-from-my-website,How Do I Get More Leads From My Website,more website leads,8,qa
+qa-websites,what-is-website-hosting,What Is Website Hosting and Do I Need It,website hosting explained,6,qa
+qa-ai-business,will-ai-replace-my-job,Will AI Replace Small Business Owners,ai replace business owners,7,qa
+qa-ai-business,is-ai-content-bad-for-seo,Is AI Content Bad for SEO,ai content seo,7,qa
+qa-ai-business,how-do-i-start-using-ai-in-my-business,How Do I Start Using AI in My Small Business,start using ai business,8,qa
+qa-ai-business,what-ai-tools-are-free,What AI Tools Are Free for Small Business,free ai tools business,7,qa
+qa-ai-business,can-ai-write-my-blog-posts,Can AI Write My Blog Posts,ai write blog posts,6,qa
+qa-ai-business,how-do-i-train-ai-on-my-business,How Do I Train AI on My Business Information,train ai business,7,qa
+qa-ai-business,is-chatgpt-safe-for-business,Is ChatGPT Safe for Business Use,chatgpt safe business,6,qa
+qa-ai-business,what-is-prompt-engineering,What Is Prompt Engineering for Business,prompt engineering business,7,qa
+qa-ai-business,how-do-i-automate-customer-follow-up,How Do I Automate Customer Follow-Up,automate customer follow up,7,qa
+qa-ai-business,can-ai-answer-my-business-phone,Can AI Answer My Business Phone Calls,ai answer phone,7,qa
+60minutesites,why-choose-60-minute-sites,Why Choose 60 Minute Sites for Your Business Website,why 60 minute sites,7,guide
+60minutesites,60-minute-sites-vs-wix,60 Minute Sites vs Wix: Which Is Better for Small Business,60 minute sites vs wix,8,comparison
+60minutesites,60-minute-sites-vs-squarespace,60 Minute Sites vs Squarespace: Honest Comparison,60 minute sites vs squarespace,8,comparison
+60minutesites,60-minute-sites-vs-wordpress,60 Minute Sites vs WordPress: Which Should You Choose,60 minute sites vs wordpress,8,comparison
+60minutesites,60-minute-sites-pricing-explained,60 Minute Sites Pricing Explained,60 minute sites pricing,6,guide
+60minutesites,how-60-minute-sites-works,How 60 Minute Sites Works: From Signup to Launch,how 60 minute sites works,7,guide
+60minutesites,60-minute-sites-for-contractors,60 Minute Sites for Contractors: Industry-Specific Features,60 minute sites contractors,7,guide
+60minutesites,60-minute-sites-for-restaurants,60 Minute Sites for Restaurants: Menu and Booking Integration,60 minute sites restaurants,7,guide
+60minutesites,60-minute-sites-for-salons,60 Minute Sites for Salons: Booking and Gallery Features,60 minute sites salons,7,guide
+60minutesites,60-minute-sites-seo-features,60 Minute Sites SEO Features: Built-In Optimization,60 minute sites seo,7,guide
+leadsprinter,what-is-leadsprinter,What Is LeadSprinter and How Does It Work,what is leadsprinter,8,guide
+leadsprinter,leadsprinter-vs-hubspot,LeadSprinter vs HubSpot: Which Is Right for Small Business,leadsprinter vs hubspot,8,comparison
+leadsprinter,leadsprinter-vs-salesforce,LeadSprinter vs Salesforce: Small Business Comparison,leadsprinter vs salesforce,8,comparison
+leadsprinter,leadsprinter-pricing,LeadSprinter Pricing: Plans for Every Business Size,leadsprinter pricing,6,guide
+leadsprinter,leadsprinter-for-contractors,LeadSprinter for Contractors: Win More Jobs,leadsprinter contractors,7,guide
+leadsprinter,leadsprinter-for-real-estate,LeadSprinter for Real Estate: Automate Your Pipeline,leadsprinter real estate,7,guide
+leadsprinter,leadsprinter-automation-features,LeadSprinter Automation Features Explained,leadsprinter automation,7,guide
+leadsprinter,leadsprinter-crm-integration,LeadSprinter CRM Integration Guide,leadsprinter crm,6,guide
+leadsprinter,leadsprinter-email-sequences,LeadSprinter Email Sequences: Nurture Leads Automatically,leadsprinter email,7,guide
+leadsprinter,leadsprinter-roi-calculator,LeadSprinter ROI Calculator: Is It Worth It,leadsprinter roi,7,guide

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Professional websites for every industry. Find your industry and get a custom website live in 60 minutes.">
+  <title>Industries We Serve | Professional Websites for Every Business | 60 Minute Sites</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon_io (4)/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon_io (4)/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon_io (4)/favicon-16x16.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <style>
+    .industries-hero {
+      padding: 120px 0 60px;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: var(--white);
+      text-align: center;
+    }
+    .industries-hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+      color: var(--white);
+    }
+    .industries-hero h1 span {
+      color: var(--primary);
+    }
+    .industries-hero p {
+      font-size: 1.25rem;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .industries-section {
+      padding: 60px 0;
+    }
+    .industries-section:nth-child(even) {
+      background: var(--off-white);
+    }
+    .industries-section h2 {
+      font-size: 1.75rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .industries-section h2 i {
+      color: var(--primary);
+    }
+
+    .industries-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .industry-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.25rem 1.5rem;
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--light-gray);
+      text-decoration: none;
+      color: var(--black);
+      transition: all 0.2s ease;
+    }
+    .industry-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary);
+    }
+    .industry-card i {
+      font-size: 1.5rem;
+      color: var(--primary);
+      width: 40px;
+      text-align: center;
+    }
+    .industry-card-content h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .industry-card-content span {
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+
+    .cta-section {
+      padding: 80px 0;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: var(--white);
+      text-align: center;
+    }
+    .cta-section h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: var(--white);
+    }
+    .cta-section p {
+      font-size: 1.1rem;
+      opacity: 0.95;
+      max-width: 500px;
+      margin: 0 auto 2rem;
+    }
+    .cta-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  </style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-649666163"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-649666163');
+</script>
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '3728691617450623');
+fbq('track', 'PageView');
+document.addEventListener('click', function(e) {
+  var a = e.target.closest && e.target.closest('a[href^="tel:"]');
+  if (a) { fbq('trackCustom', 'PhoneTap', {content_name: 'phone_call_tap'}); }
+}, true);
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel -->
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <!-- Hero -->
+  <section class="industries-hero">
+    <div class="container">
+      <h1>Professional Websites for <span>Every Industry</span></h1>
+      <p>Find your industry below and see how we can help you get online in 60 minutes.</p>
+    </div>
+  </section>
+
+  <!-- Home Services -->
+  <section class="industries-section">
+    <div class="container">
+      <h2><i class="fas fa-home"></i> Home Services</h2>
+      <div class="industries-grid">
+        <a href="/landing-pages/plumber.html" class="industry-card">
+          <i class="fas fa-wrench"></i>
+          <div class="industry-card-content">
+            <h3>Plumber</h3>
+            <span>Capture emergency calls 24/7</span>
+          </div>
+        </a>
+        <a href="/landing-pages/electrician.html" class="industry-card">
+          <i class="fas fa-bolt"></i>
+          <div class="industry-card-content">
+            <h3>Electrician</h3>
+            <span>Display credentials & services</span>
+          </div>
+        </a>
+        <a href="/landing-pages/hvac.html" class="industry-card">
+          <i class="fas fa-snowflake"></i>
+          <div class="industry-card-content">
+            <h3>HVAC</h3>
+            <span>Heating & cooling services</span>
+          </div>
+        </a>
+        <a href="/landing-pages/painter.html" class="industry-card">
+          <i class="fas fa-paint-roller"></i>
+          <div class="industry-card-content">
+            <h3>Painter</h3>
+            <span>Showcase your work</span>
+          </div>
+        </a>
+        <a href="/landing-pages/cleaning.html" class="industry-card">
+          <i class="fas fa-spray-can"></i>
+          <div class="industry-card-content">
+            <h3>Cleaning</h3>
+            <span>Book more cleaning jobs</span>
+          </div>
+        </a>
+        <a href="/landing-pages/pest-control.html" class="industry-card">
+          <i class="fas fa-bug"></i>
+          <div class="industry-card-content">
+            <h3>Pest Control</h3>
+            <span>Emergency extermination calls</span>
+          </div>
+        </a>
+        <a href="/landing-pages/construction.html" class="industry-card">
+          <i class="fas fa-hard-hat"></i>
+          <div class="industry-card-content">
+            <h3>Construction</h3>
+            <span>Win more contracts</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Beauty & Wellness -->
+  <section class="industries-section">
+    <div class="container">
+      <h2><i class="fas fa-spa"></i> Beauty & Wellness</h2>
+      <div class="industries-grid">
+        <a href="/landing-pages/salon.html" class="industry-card">
+          <i class="fas fa-cut"></i>
+          <div class="industry-card-content">
+            <h3>Salon</h3>
+            <span>Showcase stylists & book online</span>
+          </div>
+        </a>
+        <a href="/landing-pages/spa.html" class="industry-card">
+          <i class="fas fa-spa"></i>
+          <div class="industry-card-content">
+            <h3>Spa</h3>
+            <span>Relaxing online presence</span>
+          </div>
+        </a>
+        <a href="/landing-pages/barber.html" class="industry-card">
+          <i class="fas fa-cut"></i>
+          <div class="industry-card-content">
+            <h3>Barber</h3>
+            <span>Fill your chair</span>
+          </div>
+        </a>
+        <a href="/landing-pages/massage.html" class="industry-card">
+          <i class="fas fa-hands"></i>
+          <div class="industry-card-content">
+            <h3>Massage</h3>
+            <span>Grow your practice</span>
+          </div>
+        </a>
+        <a href="/landing-pages/health-beauty.html" class="industry-card">
+          <i class="fas fa-heart"></i>
+          <div class="industry-card-content">
+            <h3>Health & Beauty</h3>
+            <span>Wellness services</span>
+          </div>
+        </a>
+        <a href="/landing-pages/fitness.html" class="industry-card">
+          <i class="fas fa-dumbbell"></i>
+          <div class="industry-card-content">
+            <h3>Fitness</h3>
+            <span>Get more gym members</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Professional Services -->
+  <section class="industries-section">
+    <div class="container">
+      <h2><i class="fas fa-briefcase"></i> Professional Services</h2>
+      <div class="industries-grid">
+        <a href="/landing-pages/real-estate.html" class="industry-card">
+          <i class="fas fa-home"></i>
+          <div class="industry-card-content">
+            <h3>Real Estate</h3>
+            <span>Showcase listings & build brand</span>
+          </div>
+        </a>
+        <a href="/landing-pages/insurance.html" class="industry-card">
+          <i class="fas fa-shield-alt"></i>
+          <div class="industry-card-content">
+            <h3>Insurance</h3>
+            <span>Generate qualified leads</span>
+          </div>
+        </a>
+        <a href="/landing-pages/mortgage.html" class="industry-card">
+          <i class="fas fa-file-invoice-dollar"></i>
+          <div class="industry-card-content">
+            <h3>Mortgage</h3>
+            <span>Close more loans</span>
+          </div>
+        </a>
+        <a href="/landing-pages/architect.html" class="industry-card">
+          <i class="fas fa-drafting-compass"></i>
+          <div class="industry-card-content">
+            <h3>Architect</h3>
+            <span>Portfolio & project showcase</span>
+          </div>
+        </a>
+        <a href="/landing-pages/interior-design.html" class="industry-card">
+          <i class="fas fa-couch"></i>
+          <div class="industry-card-content">
+            <h3>Interior Design</h3>
+            <span>Attract dream clients</span>
+          </div>
+        </a>
+        <a href="/landing-pages/business-services.html" class="industry-card">
+          <i class="fas fa-building"></i>
+          <div class="industry-card-content">
+            <h3>Business Services</h3>
+            <span>B2B lead generation</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Food & Hospitality -->
+  <section class="industries-section">
+    <div class="container">
+      <h2><i class="fas fa-utensils"></i> Food & Hospitality</h2>
+      <div class="industries-grid">
+        <a href="/landing-pages/restaurant.html" class="industry-card">
+          <i class="fas fa-utensils"></i>
+          <div class="industry-card-content">
+            <h3>Restaurant</h3>
+            <span>Menus & reservations</span>
+          </div>
+        </a>
+        <a href="/landing-pages/event.html" class="industry-card">
+          <i class="fas fa-champagne-glasses"></i>
+          <div class="industry-card-content">
+            <h3>Event Planning</h3>
+            <span>Book more events</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Creative & Entertainment -->
+  <section class="industries-section">
+    <div class="container">
+      <h2><i class="fas fa-palette"></i> Creative & Entertainment</h2>
+      <div class="industries-grid">
+        <a href="/landing-pages/photography.html" class="industry-card">
+          <i class="fas fa-camera"></i>
+          <div class="industry-card-content">
+            <h3>Photography</h3>
+            <span>Stunning portfolio site</span>
+          </div>
+        </a>
+        <a href="/landing-pages/music.html" class="industry-card">
+          <i class="fas fa-music"></i>
+          <div class="industry-card-content">
+            <h3>Music</h3>
+            <span>Get more gigs & fans</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Automotive -->
+  <section class="industries-section">
+    <div class="container">
+      <h2><i class="fas fa-car"></i> Automotive</h2>
+      <div class="industries-grid">
+        <a href="/landing-pages/automotive.html" class="industry-card">
+          <i class="fas fa-car"></i>
+          <div class="industry-card-content">
+            <h3>Auto Shop</h3>
+            <span>Fill your service bays</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Website Types -->
+  <section class="industries-section">
+    <div class="container">
+      <h2><i class="fas fa-globe"></i> Website Types</h2>
+      <div class="industries-grid">
+        <a href="/landing-pages/single-page.html" class="industry-card">
+          <i class="fas fa-file"></i>
+          <div class="industry-card-content">
+            <h3>Single Page</h3>
+            <span>Focused & effective</span>
+          </div>
+        </a>
+        <a href="/landing-pages/landing-page.html" class="industry-card">
+          <i class="fas fa-bullseye"></i>
+          <div class="industry-card-content">
+            <h3>Landing Page</h3>
+            <span>Conversion-optimized</span>
+          </div>
+        </a>
+        <a href="/landing-pages/online-store.html" class="industry-card">
+          <i class="fas fa-shopping-cart"></i>
+          <div class="industry-card-content">
+            <h3>Online Store</h3>
+            <span>Start selling online</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="container">
+      <h2>Don't See Your Industry?</h2>
+      <p>We build websites for all types of businesses. Book a free demo and we'll show you what we can do.</p>
+      <div class="cta-buttons">
+        <a href="/book-demo.html" class="btn btn-secondary btn-lg"><i class="fas fa-calendar-check"></i> Book Free Demo</a>
+        <a href="/gallery.html" class="btn btn-outline-white btn-lg">View All Templates</a>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="/js/main.js"></script>
+  <script src="/js/components.js"></script>
+</body>
+</html>

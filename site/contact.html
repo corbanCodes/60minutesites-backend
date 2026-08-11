@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Contact 60 Minute Sites. Book a demo, send us a message, or call us directly. We're here to help.">
+  <meta name="keywords" content="contact 60 minute sites, book demo, web design contact">
+  <meta name="author" content="60 Minute Sites">
+  <meta property="og:title" content="Contact | 60 Minute Sites">
+  <meta property="og:description" content="Contact 60 Minute Sites. Book a demo or send us a message.">
+  <meta property="og:type" content="website">
+  <title>Contact | 60 Minute Sites</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="favicon_io (4)/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon_io (4)/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon_io (4)/favicon-16x16.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-649666163"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-649666163');
+</script>
+<!-- Meta Pixel -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '3728691617450623');
+fbq('track', 'PageView');
+document.addEventListener('click', function(e) {
+  var a = e.target.closest && e.target.closest('a[href^="tel:"]');
+  if (a) { fbq('trackCustom', 'PhoneTap', {content_name: 'phone_call_tap'}); }
+}, true);
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel -->
+</head>
+<body>
+  <div id="site-header"></div>
+
+  <!-- Hero -->
+  <section class="hero" style="padding-bottom: var(--spacing-lg);">
+    <div class="container">
+      <h1>Get In <span>Touch</span></h1>
+      <p>Have questions? Ready to get started? We're here to help.</p>
+    </div>
+  </section>
+
+  <!-- Contact Options -->
+  <section class="section">
+    <div class="container">
+      <div class="grid grid-3" style="margin-bottom: var(--spacing-xl);" data-animate>
+        <div class="card">
+          <div class="card-body text-center">
+            <h3 style="color: var(--primary);">Call Us</h3>
+            <p class="card-text">Prefer to talk? Give us a call during business hours.</p>
+            <a href="tel:1-800-604-5433" class="btn btn-primary" style="margin-top: var(--spacing-sm);">1-800-60-4-LIFE</a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body text-center">
+            <h3 style="color: var(--primary);">Book a Demo</h3>
+            <p class="card-text">Schedule a free call to see how we can help your business.</p>
+            <a href="book-demo.html" class="btn btn-primary" style="margin-top: var(--spacing-sm);" target="_blank">Schedule Now</a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body text-center">
+            <h3 style="color: var(--primary);">Email Us</h3>
+            <p class="card-text">Send us a message and we'll get back to you soon.</p>
+            <a href="mailto:hello@60minute-sites.com" class="btn btn-primary" style="margin-top: var(--spacing-sm);">Send Email</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Book a Demo Section -->
+  <section class="section section-gray">
+    <div class="container">
+      <div class="section-header">
+        <h2>Book Your Free Demo</h2>
+        <p>Choose a time that works for you. We'll walk you through our templates and answer any questions.</p>
+      </div>
+      <!-- Calendly inline widget -->
+      <div class="calendly-inline-widget" data-url="https://calendly.com/corban-leadsprinter/new-meeting" style="min-width:320px;height:700px;"></div>
+      <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
+    </div>
+  </section>
+
+  <!-- Contact Form -->
+  <section class="section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Send Us a Message</h2>
+        <p>Fill out the form below and we'll get back to you within 24 hours.</p>
+      </div>
+      <form action="https://formspree.io/f/xojeqvng" method="POST" class="contact-form" data-animate>
+        <div class="form-group">
+          <label for="name" class="form-label">Your Name *</label>
+          <input type="text" id="name" name="name" class="form-input" placeholder="John Smith" required>
+        </div>
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address *</label>
+          <input type="email" id="email" name="email" class="form-input" placeholder="john@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="phone" class="form-label">Phone Number</label>
+          <input type="tel" id="phone" name="phone" class="form-input" placeholder="(555) 123-4567">
+        </div>
+        <div class="form-group">
+          <label for="business" class="form-label">Business Name</label>
+          <input type="text" id="business" name="business" class="form-input" placeholder="Your Business Name">
+        </div>
+        <div class="form-group">
+          <label for="industry" class="form-label">Industry</label>
+          <select id="industry" name="industry" class="form-input">
+            <option value="">Select your industry...</option>
+            <option value="Construction">Construction</option>
+            <option value="Plumber">Plumber</option>
+            <option value="Electrician">Electrician</option>
+            <option value="Painter">Painter</option>
+            <option value="HVAC">HVAC</option>
+            <option value="Cleaning">Cleaning</option>
+            <option value="Pest Control">Pest Control</option>
+            <option value="Salon">Salon</option>
+            <option value="Spa">Spa</option>
+            <option value="Barber">Barber</option>
+            <option value="Massage">Massage</option>
+            <option value="Health & Beauty">Health & Beauty</option>
+            <option value="Fitness">Fitness</option>
+            <option value="Business Services">Business Services</option>
+            <option value="Real Estate">Real Estate</option>
+            <option value="Insurance">Insurance</option>
+            <option value="Mortgage">Mortgage</option>
+            <option value="Architect">Architect</option>
+            <option value="Interior Design">Interior Design</option>
+            <option value="Restaurant">Restaurant</option>
+            <option value="Automotive">Automotive</option>
+            <option value="Event">Event</option>
+            <option value="Photography">Photography</option>
+            <option value="Music">Music</option>
+            <option value="Online Store">Online Store</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="message" class="form-label">Message *</label>
+          <textarea id="message" name="message" class="form-textarea" placeholder="Tell us about your business and what you're looking for..." required></textarea>
+        </div>
+        <input type="text" name="_gotcha" style="display:none !important" tabindex="-1" autocomplete="off">
+            <input type="hidden" name="_subject" value="New Contact from 60 Minute Sites">
+        <input type="hidden" name="_next" value="/thank-you-form-submission.html">
+        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">Send Message</button>
+      </form>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/main.js"></script>
+  <script src="js/components.js"></script>
+<script>
+(function(){
+  var t0 = Date.now();
+  document.addEventListener('submit', function(e){
+    var f = e.target;
+    if (!f.action || f.action.indexOf('formspree') === -1) return;
+    ['fill_seconds','traffic_source'].forEach(function(n){
+      if (!f.querySelector('[name="'+n+'"]')){
+        var i = document.createElement('input'); i.type='hidden'; i.name=n; f.appendChild(i);
+      }
+    });
+    f.querySelector('[name="fill_seconds"]').value = Math.round((Date.now()-t0)/1000);
+    f.querySelector('[name="traffic_source"]').value = (location.search || 'direct') + ' | ref: ' + (document.referrer || 'none');
+  }, true);
+})();
+</script>
+</body>
+</html>

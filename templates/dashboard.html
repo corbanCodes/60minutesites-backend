@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% set active = 'dashboard' %}
+{% block title %}Dashboard | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Dashboard</h1>
+  <a class="btn" href="/admin/leads/new">+ Add lead</a>
+</div>
+<div class="cards">
+  <div class="card stat"><div class="num">{{ stats.leads }}</div><div class="label">Leads</div></div>
+  <div class="card stat"><div class="num">{{ stats.booked }}</div><div class="label">Booked+</div></div>
+  <div class="card stat"><div class="num">{{ stats.sites }}</div><div class="label">Sites built</div></div>
+  <div class="card stat"><div class="num">{{ stats.flipbooks }}</div><div class="label">Flipbooks</div></div>
+</div>
+<h2>Latest leads</h2>
+{% if recent %}
+<table>
+  <tr><th>Name</th><th>Business</th><th>Phone</th><th>Source</th><th>Status</th><th>Added</th></tr>
+  {% for lead in recent %}
+  <tr>
+    <td><a class="rowlink" href="/admin/leads/{{ lead.id }}">{{ lead.name }}</a></td>
+    <td>{{ lead.business or "—" }}</td>
+    <td>{{ lead.phone or "—" }}</td>
+    <td>{{ lead.source }}</td>
+    <td><span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}">{{ lead.status }}</span></td>
+    <td class="muted">{{ lead.created_at.strftime("%b %-d") }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card muted">No leads yet — add your first one (looking at you, Todd).</div>
+{% endif %}
+{% endblock %}

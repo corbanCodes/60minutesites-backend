@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in | 60MS HQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static-admin/admin.css">
+</head>
+<body>
+<div class="login-wrap">
+  <form class="login-card form" method="post">
+    <div class="logo"><span>60</span>MinuteSites HQ</div>
+    <p class="muted" style="margin-top:0">Leads, sites &amp; flipbooks.</p>
+    {% with messages = get_flashed_messages() %}
+      {% for m in messages %}<div class="flash" style="background:#F8E4E1;color:#B3362B">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    <div>
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" autofocus required>
+    </div>
+    <button class="btn" type="submit" style="width:100%">Enter</button>
+  </form>
+</div>
+</body>
+</html>
