@@ -3,14 +3,14 @@
 {% block title %}Dashboard | 60MS HQ{% endblock %}
 {% block content %}
 <div class="topbar">
-  <h1>Dashboard</h1>
-  <a class="btn" href="/admin/leads/new">+ Add lead</a>
+  <h1>{{ 'Dashboard' if role == 'admin' else 'Welcome, ' + me.name.split(' ')[0] }}</h1>
+  <a class="btn" href="/admin/sites/new">+ New site</a>
 </div>
 <div class="cards">
   <div class="card stat"><div class="num">{{ stats.leads }}</div><div class="label">Leads</div></div>
   <div class="card stat"><div class="num">{{ stats.booked }}</div><div class="label">Booked+</div></div>
-  <div class="card stat"><div class="num">{{ stats.sites }}</div><div class="label">Sites built</div></div>
-  <div class="card stat"><div class="num">{{ stats.flipbooks }}</div><div class="label">Flipbooks</div></div>
+  <div class="card stat"><div class="num">{{ stats.sites }}</div><div class="label">Sites</div></div>
+  <div class="card stat"><div class="num">{{ stats.forms }}</div><div class="label">Forms</div></div>
 </div>
 <h2>Latest leads</h2>
 {% if recent %}
@@ -28,6 +28,6 @@
   {% endfor %}
 </table>
 {% else %}
-<div class="card muted">No leads yet — add your first one (looking at you, Todd).</div>
+<div class="card muted">No leads yet — embed a form (Forms → copy the snippet, or “+ Form” in the site editor) and submissions appear here automatically.</div>
 {% endif %}
 {% endblock %}

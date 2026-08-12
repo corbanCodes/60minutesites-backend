@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% set active = 'sites' %}
+{% block title %}New site | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>New site</h1><a class="btn ghost sm" href="/admin/sites">← Back</a></div>
+<form class="card form" method="post" id="pickform" style="max-width:none">
+  <div class="row2" style="max-width:560px">
+    <div><label>Business name</label><input type="text" name="business_name" placeholder="Smith Plumbing" required autofocus></div>
+    <div><label>Starting point</label><input type="text" id="picked-label" value="Blank canvas" readonly style="background:#FBF8F5;font-weight:700"></div>
+  </div>
+  <input type="hidden" name="template" id="picked" value="blank">
+  <button class="btn" type="submit">Create &amp; open editor →</button>
+</form>
+
+<h2 style="margin-top:26px">Pick a template</h2>
+<p class="muted" style="margin-top:0">Click a card to select it — these are the real 60MS industry templates, fully editable after.</p>
+<div class="tpl-grid">
+  <div class="tpl-card selected" data-tpl="blank">
+    <div class="tpl-thumb blank-thumb">＋<br><span>Blank canvas</span></div>
+    <div class="tpl-name">Blank canvas</div>
+  </div>
+  {% for t in templates %}
+  <div class="tpl-card" data-tpl="{{ t }}">
+    <div class="tpl-thumb"><iframe src="/landing-pages/{{ t }}.html" loading="lazy" tabindex="-1" scrolling="no"></iframe></div>
+    <div class="tpl-name">{{ t.replace('-', ' ') | title }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<style>
+  .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin-top: 14px; }
+  .tpl-card { border: 2px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); cursor: pointer; transition: border-color .15s, transform .15s; }
+  .tpl-card:hover { transform: translateY(-2px); border-color: #CBB9A8; }
+  .tpl-card.selected { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,.18); }
+  .tpl-thumb { height: 150px; overflow: hidden; position: relative; background: #fff; }
+  .tpl-thumb iframe { width: 1200px; height: 900px; transform: scale(0.183); transform-origin: 0 0; border: 0; pointer-events: none; }
+  .blank-thumb { display: grid; place-items: center; font-size: 34px; color: var(--orange); font-weight: 800; text-align: center; line-height: 1.2; }
+  .blank-thumb span { font-size: 14px; color: var(--ink-2); font-weight: 700; }
+  .tpl-name { padding: 10px 12px; font-weight: 700; font-size: 13.5px; border-top: 1px solid var(--line); }
+</style>
+<script>
+  document.querySelectorAll('.tpl-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      document.querySelectorAll('.tpl-card').forEach(function (c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      document.getElementById('picked').value = card.dataset.tpl;
+      document.getElementById('picked-label').value = card.querySelector('.tpl-name').textContent;
+      document.getElementById('pickform').scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+{% endblock %}

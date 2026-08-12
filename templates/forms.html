@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set active = 'forms' %}
+{% block title %}Forms | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>Forms</h1></div>
+<form class="form card" method="post" style="margin-bottom:22px">
+  <h2 style="margin:0">New form</h2>
+  <div class="row2">
+    <div><label>Name</label><input type="text" name="name" placeholder="Homepage contact" required></div>
+    <div><label>Redirect after submit (optional)</label><input type="text" name="redirect_url" placeholder="https://… (blank = built-in thank-you page)"></div>
+  </div>
+  <button class="btn" type="submit">Create form</button>
+  <p class="muted" style="margin:0">Every submission lands in your <a href="/admin/leads">Leads</a> automatically — name, cell, email, business, plus anything extra saved as a note.</p>
+</form>
+
+{% for f in rows %}
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+    <h2 style="margin:0">{{ f.name }} <span class="muted" style="font-weight:400;font-size:13px">· {{ counts[f.id] }} submission{{ '' if counts[f.id] == 1 else 's' }}</span></h2>
+    <form method="post" action="/admin/forms/{{ f.id }}/delete" onsubmit="return confirm('Delete this form?')"><button class="btn danger sm">Delete</button></form>
+  </div>
+  <p class="muted" style="margin:8px 0 6px">Endpoint: <code>{{ host }}/form/{{ f.slug }}</code> · Paste this anywhere (any site, any builder):</p>
+  <textarea readonly onclick="this.select()" style="width:100%;box-sizing:border-box;height:120px;font-family:ui-monospace,monospace;font-size:12px;border:1.5px solid var(--line);border-radius:8px;padding:10px;background:#FBF8F5">&lt;form action="{{ host }}/form/{{ f.slug }}" method="POST"&gt;
+  &lt;input type="text" name="_gotcha" style="display:none" tabindex="-1"&gt;
+  &lt;input type="text" name="name" placeholder="Your name" required&gt;
+  &lt;input type="tel" name="phone" placeholder="Cell number" required&gt;
+  &lt;input type="email" name="email" placeholder="Email"&gt;
+  &lt;input type="text" name="business" placeholder="Business name"&gt;
+  &lt;button type="submit"&gt;Send&lt;/button&gt;
+&lt;/form&gt;</textarea>
+  <p class="muted" style="margin:6px 0 0">In the site editor, use <strong>+ Form</strong> in the toolbar to drop a styled version of this straight into a page. Extra fields you add are kept too (saved onto the lead as a note). Honeypot <code>_gotcha</code> blocks bots; optional <code>_next</code> field overrides the redirect.</p>
+</div>
+{% else %}
+<div class="card muted">No forms yet — create one above, then embed it anywhere. Submissions become Leads instantly.</div>
+{% endfor %}
+{% endblock %}

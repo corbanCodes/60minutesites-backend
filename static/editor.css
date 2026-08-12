@@ -1,0 +1,55 @@
+/* 60MS WYSIWYG editor chrome */
+#wys-toolbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 999999;
+  display: flex; align-items: center; gap: 6px; padding: 10px 14px;
+  background: rgba(22, 18, 15, 0.92); backdrop-filter: blur(10px);
+  font-family: 'Inter', -apple-system, sans-serif; box-shadow: 0 2px 18px rgba(0,0,0,.35);
+  flex-wrap: wrap;
+}
+#wys-toolbar * { font-family: inherit; }
+.wys-btn {
+  background: rgba(255,255,255,.08); color: #EDE6DF; border: none; cursor: pointer;
+  border-radius: 7px; padding: 7px 11px; font-size: 13px; font-weight: 700; line-height: 1;
+}
+.wys-btn:hover { background: rgba(255,255,255,.18); }
+.wys-btn.primary { background: #FF6B35; color: #fff; }
+.wys-btn.primary:hover { background: #E55A2B; }
+.wys-btn.ai { background: linear-gradient(135deg, #7B2FF7, #B443F5); color: #fff; }
+.wys-name { color: #B9AFA5; font-size: 13px; font-weight: 700; margin-right: 6px; }
+.wys-sep { width: 1px; height: 22px; background: rgba(255,255,255,.15); margin: 0 4px; }
+.wys-spacer { flex: 1; }
+#wys-status { color: #8FD3A8; font-size: 12.5px; font-weight: 700; min-width: 60px; text-align: right; }
+body.wys-editing { margin-top: 54px !important; }
+body.wys-editing [contenteditable="true"] :is(h1,h2,h3,h4,h5,h6,p,li,a,span,blockquote,figcaption,button):hover {
+  outline: 2px dashed rgba(255,107,53,.65); outline-offset: 2px; cursor: text;
+}
+body.wys-editing img:hover { outline: 3px solid rgba(123,47,247,.75); outline-offset: 2px; cursor: pointer; }
+.wys-el-active { outline: 2px solid #FF6B35 !important; outline-offset: 2px; }
+
+#wys-panel {
+  position: fixed; right: 16px; top: 66px; z-index: 999998; width: 300px;
+  background: #201B17; color: #EDE6DF; border-radius: 12px; padding: 16px;
+  font-family: 'Inter', sans-serif; box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  display: none; flex-direction: column; gap: 10px;
+}
+#wys-panel.open { display: flex; }
+#wys-panel h3 { margin: 0; font-size: 14px; }
+#wys-panel select, #wys-panel textarea {
+  width: 100%; box-sizing: border-box; background: #2C2620; color: #EDE6DF;
+  border: 1px solid #3E362E; border-radius: 8px; padding: 8px 10px;
+  font-family: inherit; font-size: 13px;
+}
+#wys-panel textarea { min-height: 70px; resize: vertical; }
+#wys-panel .hint { font-size: 11.5px; color: #9C9187; margin: 0; }
+#wys-menu {
+  position: fixed; z-index: 999998; background: #201B17; border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5); padding: 6px; display: none;
+  font-family: 'Inter', sans-serif; min-width: 200px;
+}
+#wys-menu.open { display: block; }
+#wys-menu button {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  color: #EDE6DF; padding: 9px 12px; border-radius: 7px; cursor: pointer;
+  font-size: 13px; font-weight: 600; font-family: inherit;
+}
+#wys-menu button:hover { background: rgba(255,255,255,.1); }

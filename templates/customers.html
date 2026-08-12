@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set active = 'customers' %}
+{% block title %}Customers | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>Customers</h1></div>
+<form class="form card" method="post" style="margin-bottom:22px">
+  <h2 style="margin:0">Add a customer</h2>
+  <div class="row2">
+    <div><label>Name</label><input type="text" name="name" required></div>
+    <div><label>Email</label><input type="email" name="email" required></div>
+  </div>
+  <div><label>Password (blank = auto-generate, shown once)</label><input type="text" name="password" placeholder="leave blank to auto-generate"></div>
+  <button class="btn" type="submit">Create customer</button>
+</form>
+{% if rows %}
+<table>
+  <tr><th>ID</th><th>Name</th><th>Email</th><th>Sites</th><th>Leads</th><th>Joined</th><th></th></tr>
+  {% for u in rows %}
+  <tr>
+    <td class="muted">#{{ u.id }}</td>
+    <td class="rowlink">{{ u.name }}</td>
+    <td>{{ u.email }}</td>
+    <td>{{ stats[u.id].sites }}</td>
+    <td>{{ stats[u.id].leads }}</td>
+    <td class="muted">{{ u.created_at.strftime("%b %-d, %Y") }}</td>
+    <td style="white-space:nowrap">
+      <form method="post" action="/admin/customers/{{ u.id }}/reset" style="display:inline"><button class="btn ghost sm" type="submit">Reset PW</button></form>
+      <form method="post" action="/admin/customers/{{ u.id }}/delete" style="display:inline" onsubmit="return confirm('Delete {{ u.name }}?')"><button class="btn danger sm" type="submit">Delete</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card muted">No customer accounts yet — they can self-serve via the “Create an account” link on the login page, or add one above.</div>
+{% endif %}
+{% endblock %}
