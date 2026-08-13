@@ -16,9 +16,9 @@
     <td class="muted">{{ site.template or 'v1 generated' }}</td>
     <td class="muted">{{ site.updated_at.strftime("%b %-d") }}</td>
     <td style="white-space:nowrap">
-      <a class="btn primary sm" href="/edit/{{ site.id }}" style="background:var(--orange);color:#fff">✎ Edit</a>
-      <a class="btn ghost sm" href="/admin/sites/{{ site.id }}/download">⬇ HTML</a>
-      <form method="post" action="/admin/sites/{{ site.id }}/delete" style="display:inline" onsubmit="return confirm('Delete this site?')"><button class="btn danger sm" type="submit">✕</button></form>
+      <a class="btn primary sm" href="/edit/{{ site.id }}" style="background:var(--orange);color:#fff">Edit</a>
+      <a class="btn ghost sm" href="/admin/sites/{{ site.id }}/download">HTML</a>
+      <form method="post" action="/admin/sites/{{ site.id }}/delete" style="display:inline" onsubmit="return confirm('Delete this site?')"><button class="btn danger sm" type="submit">Delete</button></form>
     </td>
   </tr>
   {% endfor %}

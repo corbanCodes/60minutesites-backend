@@ -12,19 +12,19 @@
 <div class="shell">
   <aside class="sidebar">
     <a class="logo" href="/admin"><span>60</span>MS&nbsp;HQ</a>
-    <a class="nav-item {{ 'active' if active == 'dashboard' }}" href="/admin">⌂ Dashboard</a>
-    <a class="nav-item {{ 'active' if active == 'leads' }}" href="/admin/leads">☎ Leads</a>
-    <a class="nav-item {{ 'active' if active == 'sites' }}" href="/admin/sites">▤ Sites</a>
-    <a class="nav-item {{ 'active' if active == 'forms' }}" href="/admin/forms">✉ Forms</a>
-    <a class="nav-item {{ 'active' if active == 'funnels' }}" href="/admin/funnels">⚡ Funnels</a>
+    <a class="nav-item {{ 'active' if active == 'dashboard' }}" href="/admin">Dashboard</a>
+    <a class="nav-item {{ 'active' if active == 'leads' }}" href="/admin/leads">Leads</a>
+    <a class="nav-item {{ 'active' if active == 'sites' }}" href="/admin/sites">Sites</a>
+    <a class="nav-item {{ 'active' if active == 'forms' }}" href="/admin/forms">Forms</a>
+    <a class="nav-item {{ 'active' if active == 'funnels' }}" href="/admin/funnels">Funnels</a>
     {% if role == 'admin' %}
-    <a class="nav-item {{ 'active' if active == 'customers' }}" href="/admin/customers">👤 Customers</a>
-    <a class="nav-item {{ 'active' if active == 'flipbooks' }}" href="/admin/flipbooks">❐ Flipbooks</a>
+    <a class="nav-item {{ 'active' if active == 'customers' }}" href="/admin/customers">Customers</a>
+    <a class="nav-item {{ 'active' if active == 'flipbooks' }}" href="/admin/flipbooks">Flipbooks</a>
     {% endif %}
     <div class="spacer"></div>
     {% if me %}<span class="nav-item" style="cursor:default;opacity:.7">{{ me.name }}</span>{% endif %}
-    <a class="nav-item" href="/" target="_blank">↗ Marketing site</a>
-    <a class="nav-item" href="/logout">⏻ Log out</a>
+    <a class="nav-item" href="/" target="_blank">Marketing site</a>
+    <a class="nav-item" href="/logout">Log out</a>
   </aside>
   <main class="main">
     {% with messages = get_flashed_messages() %}

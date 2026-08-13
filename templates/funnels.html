@@ -12,12 +12,12 @@
     <div>
       <a class="btn ghost sm" href="/edit/{{ site.id }}">Edit page</a>
       <a class="btn ghost sm" href="/s/{{ site.slug }}" target="_blank">View</a>
-      <a class="btn ghost sm" href="/admin/sites/{{ site.id }}/download">⬇ Download HTML</a>
+      <a class="btn ghost sm" href="/admin/sites/{{ site.id }}/download">Download HTML</a>
     </div>
   </div>
   <p class="muted" style="margin:6px 0 10px">Live at <code>{{ host }}/s/{{ site.slug }}</code> · the download is a portable copy you can host anywhere (Netlify drag-and-drop, any host) while domains get sorted.</p>
   <details>
-    <summary style="cursor:pointer;font-weight:700;color:var(--orange)">⚡ Facebook link kit (UTM builder)</summary>
+    <summary style="cursor:pointer;font-weight:700;color:var(--orange)">Facebook link kit (UTM builder)</summary>
     <div class="form" style="max-width:none;margin-top:12px">
       <div class="row2">
         <div><label>Campaign label</label><input type="text" class="fk-campaign" value="launch-1" data-site="{{ site.slug }}"></div>

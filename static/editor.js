@@ -23,7 +23,7 @@
     '<button class="wys-btn" data-act="link">Link</button>' +
     '<span class="wys-sep"></span>' +
     '<button class="wys-btn" data-act="form">+ Form</button>' +
-    (W.ai ? '<button class="wys-btn ai" data-act="ai">✦ AI</button>' : '') +
+    (W.ai ? '<button class="wys-btn ai" data-act="ai">AI</button>' : '') +
     '<span class="wys-spacer"></span>' +
     '<span id="wys-status"></span>' +
     '<a class="wys-btn" href="/s/' + W.slug + '" target="_blank">View</a>' +
@@ -37,7 +37,7 @@
   panel.id = "wys-panel";
   panel.setAttribute("contenteditable", "false");
   panel.innerHTML =
-    "<h3>✦ AI assistant</h3>" +
+    "<h3>AI assistant</h3>" +
     '<select id="wys-ai-mode">' +
     '<option value="text">Rewrite the selected text</option>' +
     '<option value="design">Restyle the whole page</option></select>' +
