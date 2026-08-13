@@ -8,6 +8,22 @@
     <div><label>Business name</label><input type="text" name="business_name" placeholder="Smith Plumbing" required autofocus></div>
     <div><label>Starting point</label><input type="text" id="picked-label" value="Blank canvas" readonly style="background:#FBF8F5;font-weight:700"></div>
   </div>
+  {% if role == 'admin' %}
+  <div class="row2" style="max-width:560px">
+    <div>
+      <label>Owner (who can edit it)</label>
+      <select name="owner_id">
+        <option value="">Me (admin)</option>
+        {% for u in users %}<option value="{{ u.id }}">{{ u.name }} — {{ u.email }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Or import from GitHub <span class="muted" style="font-weight:400">(overrides template)</span></label>
+      <input type="text" name="github_repo" placeholder="corbanCodes/living-younger">
+    </div>
+  </div>
+  <p class="muted" style="margin:0">GitHub import pulls the repo's <code>index.html</code> and links the site — every editor Save then commits back to the repo, and Netlify redeploys the client's real domain automatically.</p>
+  {% endif %}
   <input type="hidden" name="template" id="picked" value="blank">
   <button class="btn" type="submit">Create &amp; open editor →</button>
 </form>

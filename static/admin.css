@@ -85,3 +85,28 @@ a.rowlink:hover { color: var(--orange-dark); }
   .main { padding: 20px 16px; }
   .row2 { grid-template-columns: 1fr; }
 }
+
+/* ---------- v3 modernization ---------- */
+.sidebar { padding: 22px 14px; }
+.sidebar .logo { font-size: 17px; letter-spacing: -0.01em; padding: 0 10px 16px; }
+.sidebar a.nav-item, .sidebar span.nav-item { font-size: 13.5px; padding: 9px 12px; border-radius: 9px; }
+.sidebar a.nav-item i, .sidebar span.nav-item i { font-size: 15px; width: 18px; text-align: center; opacity: .85; }
+.sidebar a.nav-item.active { background: linear-gradient(120deg, var(--orange), var(--orange-dark)); box-shadow: 0 6px 16px rgba(255,107,53,.35); }
+.main { padding: 30px 34px; }
+h1 { font-size: 22px; letter-spacing: -0.02em; }
+.card { border-radius: 14px; box-shadow: 0 1px 2px rgba(28,24,20,.04), 0 8px 24px rgba(28,24,20,.05); border-color: #EAE3DA; }
+.cards .card.stat { position: relative; overflow: hidden; padding: 18px 20px; }
+.cards .card.stat::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(var(--orange), var(--orange-dark)); border-radius: 0 4px 4px 0; }
+.stat .num { font-size: 32px; letter-spacing: -0.02em; line-height: 1.1; }
+table { border-radius: 12px; box-shadow: 0 1px 2px rgba(28,24,20,.04); }
+th { background: #F6F1EB; padding: 11px 14px; }
+td { padding: 13px 14px; }
+tr:hover td { background: #FDFAF7; }
+.btn { border-radius: 9px; box-shadow: 0 1px 2px rgba(28,24,20,.08); transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(28,24,20,.12); }
+.btn.ghost:hover { background: #FBF7F2; }
+.form input:focus, .form select:focus, .form textarea:focus,
+.searchbar input:focus, .searchbar select:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,.15); outline: none; }
+.pill { letter-spacing: .02em; }
+.flash { border: 1px solid #CBE3D3; box-shadow: 0 4px 14px rgba(46,125,79,.08); }
+::selection { background: var(--orange); color: #fff; }

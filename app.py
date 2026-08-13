@@ -6,6 +6,7 @@ Persistence: set DATABASE_URL (Railway Postgres) and everything survives
 deploys. Falls back to local SQLite (data.db) for development.
 AI: set OPENAI_API_KEY (and optionally OPENAI_MODEL) to enable editor AI.
 """
+import base64
 import io
 import json
 import os
@@ -36,6 +37,11 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-only-secret-change-me")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme60")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+RESEND_KEY = (os.environ.get("RESEND_API_KEY") or os.environ.get("RESEND_API")
+              or os.environ.get("resend-api") or os.environ.get("resend_api", ""))
+RESEND_FROM = os.environ.get("RESEND_FROM", "60MS HQ <onboarding@resend.dev>")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
 db = SQLAlchemy(app)
 
@@ -52,6 +58,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(160), unique=True, nullable=False)
+    phone = db.Column(db.String(40), default="")
     password_hash = db.Column(db.String(300), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -94,6 +101,7 @@ class Site(db.Model):
     slug = db.Column(db.String(140), unique=True, nullable=False)
     business_name = db.Column(db.String(120), nullable=False)
     template = db.Column(db.String(80), default="")
+    github_repo = db.Column(db.String(200), default="")  # "owner/repo" -> Netlify auto-deploy
     html = db.Column(db.Text, default="")
     # legacy v1 fields (older generated sites still render through them)
     tagline = db.Column(db.String(200), default="")
@@ -106,6 +114,13 @@ class Site(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
                            onupdate=lambda: datetime.now(timezone.utc))
+
+
+class SiteRevision(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    site_id = db.Column(db.Integer, db.ForeignKey("site.id"), nullable=False)
+    html = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Media(db.Model):
@@ -143,7 +158,9 @@ def ensure_schema():
     insp = inspect(db.engine)
     wanted = {
         "lead": {"owner_id": "INTEGER", "form_id": "INTEGER"},
-        "site": {"owner_id": "INTEGER", "template": "VARCHAR(80)", "html": "TEXT"},
+        "site": {"owner_id": "INTEGER", "template": "VARCHAR(80)", "html": "TEXT",
+                 "github_repo": "VARCHAR(200)"},
+        "user": {"phone": "VARCHAR(40)"},
     }
     with db.engine.begin() as conn:
         for table, cols in wanted.items():
@@ -152,7 +169,7 @@ def ensure_schema():
             have = {c["name"] for c in insp.get_columns(table)}
             for col, ddl in cols.items():
                 if col not in have:
-                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}"))
+                    conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {col} {ddl}'))
 
 
 with app.app_context():
@@ -219,6 +236,63 @@ def inject_globals():
     role, user = current_user()
     return {"STATUSES": LEAD_STATUSES, "STATUS_COLORS": STATUS_COLORS,
             "role": role, "me": user}
+
+
+def github_fetch_index(repo):
+    """Pull index.html from a GitHub repo (site import)."""
+    hdr = {"Accept": "application/vnd.github.raw"}
+    if GITHUB_TOKEN:
+        hdr["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+    try:
+        r = http.get(f"https://api.github.com/repos/{repo}/contents/index.html",
+                     headers=hdr, timeout=20)
+        return r.text if r.status_code == 200 else None
+    except Exception:
+        return None
+
+
+def github_push_site(site):
+    """Commit site.html to the linked repo's index.html -> Netlify auto-deploys."""
+    if not (site.github_repo and GITHUB_TOKEN):
+        return None  # not configured; DB save alone
+    url = f"https://api.github.com/repos/{site.github_repo}/contents/index.html"
+    hdr = {"Authorization": f"Bearer {GITHUB_TOKEN}",
+           "Accept": "application/vnd.github+json"}
+    try:
+        r = http.get(url, headers=hdr, timeout=20)
+        sha = r.json().get("sha") if r.status_code == 200 else None
+        payload = {"message": "Update via 60MS HQ editor",
+                   "content": base64.b64encode(site.html.encode()).decode()}
+        if sha:
+            payload["sha"] = sha
+        r2 = http.put(url, headers=hdr, json=payload, timeout=30)
+        return r2.status_code in (200, 201)
+    except Exception:
+        return False
+
+
+def notify_lead(form, lead):
+    """Email the form's owner about a new lead via Resend (best-effort)."""
+    if not RESEND_KEY:
+        return
+    owner = db.session.get(User, form.owner_id) if form.owner_id else None
+    to = owner.email if owner else ADMIN_EMAIL
+    if not to:
+        return
+    rows = "".join(f"<tr><td style='padding:4px 12px 4px 0;color:#888'>{k}</td><td><b>{v}</b></td></tr>"
+                   for k, v in [("Name", lead.name), ("Cell", lead.phone), ("Email", lead.email),
+                                ("Business", lead.business), ("Source", lead.source)] if v)
+    try:
+        http.post("https://api.resend.com/emails",
+                  headers={"Authorization": f"Bearer {RESEND_KEY}"},
+                  json={"from": RESEND_FROM, "to": [to],
+                        "subject": f"New lead: {lead.name} — {form.name}",
+                        "html": f"<h2 style='font-family:sans-serif'>New lead from “{form.name}”</h2>"
+                                f"<table style='font-family:sans-serif;font-size:15px'>{rows}</table>"
+                                f"<p style='font-family:sans-serif;color:#888'>It's already in your Leads Center.</p>"},
+                  timeout=15)
+    except Exception:
+        pass
 
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -407,7 +481,10 @@ def lead_detail(lead_id):
 def forms():
     if request.method == "POST":
         name = request.form.get("name", "").strip() or "Contact form"
-        form = Form(owner_id=my_owner_id(), name=name, slug=slugify(name),
+        owner_id = my_owner_id()
+        if session.get("admin") and request.form.get("owner_id"):
+            owner_id = int(request.form["owner_id"])
+        form = Form(owner_id=owner_id, name=name, slug=slugify(name),
                     redirect_url=request.form.get("redirect_url", "").strip())
         db.session.add(form)
         db.session.commit()
@@ -415,8 +492,10 @@ def forms():
         return redirect(url_for("forms"))
     rows = owner_filter(Form.query, Form).order_by(Form.created_at.desc()).all()
     counts = {f.id: Lead.query.filter_by(form_id=f.id).count() for f in rows}
-    return render_template("forms.html", rows=rows, counts=counts,
-                           host=request.host_url.rstrip("/"))
+    users = User.query.order_by(User.name).all() if session.get("admin") else []
+    owners = {u.id: u.name for u in users}
+    return render_template("forms.html", rows=rows, counts=counts, users=users,
+                           owners=owners, host=request.host_url.rstrip("/"))
 
 
 @app.route("/admin/forms/<int:form_id>/delete", methods=["POST"])
@@ -451,6 +530,7 @@ def form_submit(slug):
         db.session.add(Note(lead_id=lead.id, body="Form extras: " +
                             json.dumps(extras, ensure_ascii=False)[:2000]))
     db.session.commit()
+    notify_lead(form, lead)
     if request.is_json:
         return _cors(jsonify(ok=True, lead_id=lead.id))
     return redirect(data.get("_next") or form.redirect_url
@@ -477,13 +557,14 @@ def customers():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
         password = request.form.get("password", "") or secrets.token_urlsafe(8)
         if not (name and email):
             flash("Name and email required.")
         elif User.query.filter_by(email=email).first():
             flash("That email already exists.")
         else:
-            db.session.add(User(name=name, email=email,
+            db.session.add(User(name=name, email=email, phone=phone,
                                 password_hash=generate_password_hash(password)))
             db.session.commit()
             flash(f"Customer “{name}” created — password: {password}")
@@ -515,7 +596,9 @@ def customer_action(user_id, action):
 @login_required
 def sites():
     rows = owner_filter(Site.query, Site).order_by(Site.updated_at.desc()).all()
-    return render_template("sites.html", rows=rows)
+    owners = {u.id: u.name for u in User.query.all()} if session.get("admin") else {}
+    revisions = {s.id: SiteRevision.query.filter_by(site_id=s.id).count() for s in rows}
+    return render_template("sites.html", rows=rows, owners=owners, revisions=revisions)
 
 
 @app.route("/admin/sites/new", methods=["GET", "POST"])
@@ -524,13 +607,27 @@ def site_new():
     if request.method == "POST":
         business = request.form.get("business_name", "").strip() or "My Business"
         template = request.form.get("template", "blank")
-        site = Site(owner_id=my_owner_id(), slug=slugify(business),
+        owner_id = my_owner_id()
+        if session.get("admin") and request.form.get("owner_id"):
+            owner_id = int(request.form["owner_id"])
+        repo = request.form.get("github_repo", "").strip().removeprefix("https://github.com/").strip("/")
+        html = None
+        if repo and session.get("admin"):
+            html = github_fetch_index(repo)
+            if html is None:
+                flash(f"Couldn't read index.html from {repo} — check the repo name"
+                      + ("" if GITHUB_TOKEN else " (no GITHUB_TOKEN set; private repos need one)"))
+                return redirect(url_for("site_new"))
+            template = "github-import"
+        site = Site(owner_id=owner_id, slug=slugify(business),
                     business_name=business, template=template,
-                    html=instantiate_template(template, business))
+                    github_repo=repo if html else "",
+                    html=html or instantiate_template(template, business))
         db.session.add(site)
         db.session.commit()
         return redirect(url_for("editor", site_id=site.id))
-    return render_template("site_picker.html", templates=list_templates())
+    users = User.query.order_by(User.name).all() if session.get("admin") else []
+    return render_template("site_picker.html", templates=list_templates(), users=users)
 
 
 @app.route("/edit/<int:site_id>")
@@ -567,9 +664,35 @@ def editor_save(site_id):
     html = payload.get("html", "")
     if not html:
         return jsonify(ok=False, error="empty"), 400
+    if site.html:  # keep a rollback trail, capped at 20
+        db.session.add(SiteRevision(site_id=site.id, html=site.html))
+        extra = (SiteRevision.query.filter_by(site_id=site.id)
+                 .order_by(SiteRevision.created_at.desc()).offset(20).all())
+        for r in extra:
+            db.session.delete(r)
     site.html = strip_editor_artifacts(html)
     db.session.commit()
-    return jsonify(ok=True)
+    pushed = github_push_site(site)
+    return jsonify(ok=True, github=("synced" if pushed else
+                                    "failed" if pushed is False else "not linked"))
+
+
+@app.route("/admin/sites/<int:site_id>/revert", methods=["POST"])
+@login_required
+def site_revert(site_id):
+    site = Site.query.get_or_404(site_id)
+    if not can_touch(site):
+        abort(403)
+    rev = (SiteRevision.query.filter_by(site_id=site.id)
+           .order_by(SiteRevision.created_at.desc()).first())
+    if not rev:
+        flash("No earlier version to restore.")
+        return redirect(url_for("sites"))
+    site.html, rev.html = rev.html, site.html  # swap so revert is itself revertible
+    db.session.commit()
+    github_push_site(site)
+    flash(f"Restored the previous version of “{site.business_name}”.")
+    return redirect(url_for("sites"))
 
 
 @app.route("/admin/sites/<int:site_id>/delete", methods=["POST"])
@@ -625,8 +748,8 @@ def site_download(site_id):
 @login_required
 def media_upload():
     file = request.files.get("file")
-    if not file or not file.mimetype.startswith("image/"):
-        return jsonify(ok=False, error="image files only"), 400
+    if not file or not (file.mimetype.startswith("image/") or file.mimetype.startswith("video/")):
+        return jsonify(ok=False, error="image or video files only"), 400
     m = Media(owner_id=my_owner_id(), filename=file.filename,
               mimetype=file.mimetype, data=file.read())
     db.session.add(m)
@@ -639,6 +762,17 @@ def media_get(media_id):
     m = Media.query.get_or_404(media_id)
     return Response(m.data, mimetype=m.mimetype,
                     headers={"Cache-Control": "public, max-age=604800"})
+
+
+@app.route("/admin/help")
+@admin_required
+def help_page():
+    status = {
+        "resend": bool(RESEND_KEY), "github": bool(GITHUB_TOKEN),
+        "openai": bool(OPENAI_API_KEY), "admin_email": ADMIN_EMAIL,
+        "host": request.host_url.rstrip("/"),
+    }
+    return render_template("help.html", s=status)
 
 
 # ------------------------------------------------------------------ editor AI

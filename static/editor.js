@@ -23,6 +23,8 @@
     '<button class="wys-btn" data-act="link">Link</button>' +
     '<span class="wys-sep"></span>' +
     '<button class="wys-btn" data-act="form">+ Form</button>' +
+    '<button class="wys-btn" data-act="add-image">+ Image</button>' +
+    '<button class="wys-btn" data-act="add-video">+ Video</button>' +
     (W.ai ? '<button class="wys-btn ai" data-act="ai">AI</button>' : '') +
     '<span class="wys-spacer"></span>' +
     '<span id="wys-status"></span>' +
@@ -108,6 +110,8 @@
       var url = prompt("Link URL (https://… or tel:…):", "https://");
       if (url) document.execCommand("createLink", false, url);
     }
+    else if (b.dataset.act === "add-image") { insertMedia("image/*"); }
+    else if (b.dataset.act === "add-video") { insertMedia("video/*"); }
     else if (b.dataset.act === "exit") { location.href = "/admin/sites"; }
     else if (b.dataset.act === "save") { save(); }
     else if (b.dataset.act === "ai") { panel.classList.toggle("open"); }
@@ -144,6 +148,32 @@
     if (anchor) anchor.insertAdjacentHTML("afterend", html);
     else document.body.insertAdjacentHTML("beforeend", html);
     status('Form "' + name + '" inserted ✓');
+  }
+
+  function insertMedia(accept) {
+    var input = document.createElement("input");
+    input.type = "file";
+    input.accept = accept;
+    input.onchange = function () {
+      if (!input.files[0]) return;
+      var fd = new FormData();
+      fd.append("file", input.files[0]);
+      status("Uploading…");
+      fetch("/media", { method: "POST", body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.ok) { status(j.error || "Upload failed", false); return; }
+          var el = accept.indexOf("video") === 0
+            ? '<video controls playsinline src="' + j.url + '" style="display:block;max-width:100%;width:720px;margin:24px auto;border-radius:14px"></video>'
+            : '<img src="' + j.url + '" alt="" style="display:block;max-width:100%;width:720px;margin:24px auto;border-radius:14px">';
+          var anchor = lastEl && lastEl.closest("section, main, div");
+          if (anchor) anchor.insertAdjacentHTML("afterend", el);
+          else document.body.insertAdjacentHTML("beforeend", el);
+          status("Added — drag scroll to see it ✓");
+        })
+        .catch(function () { status("Upload failed", false); });
+    };
+    input.click();
   }
 
   function fld(name, label, type, req) {

@@ -9,17 +9,22 @@
     <div><label>Name</label><input type="text" name="name" required></div>
     <div><label>Email</label><input type="email" name="email" required></div>
   </div>
-  <div><label>Password (blank = auto-generate, shown once)</label><input type="text" name="password" placeholder="leave blank to auto-generate"></div>
+  <div class="row2">
+    <div><label>Cell (for future text automations / 2FA)</label><input type="tel" name="phone" placeholder="(555) 123-4567"></div>
+    <div><label>Password (blank = auto-generate, shown once)</label><input type="text" name="password" placeholder="leave blank to auto-generate"></div>
+  </div>
   <button class="btn" type="submit">Create customer</button>
+  <p class="muted" style="margin:0">Next step after creating: go to Sites → “+ New site” and either pick a template or import their GitHub repo, with them selected as Owner. Full walkthrough in the <a href="/admin/help">Playbook</a>.</p>
 </form>
 {% if rows %}
 <table>
-  <tr><th>ID</th><th>Name</th><th>Email</th><th>Sites</th><th>Leads</th><th>Joined</th><th></th></tr>
+  <tr><th>ID</th><th>Name</th><th>Email</th><th>Cell</th><th>Sites</th><th>Leads</th><th>Joined</th><th></th></tr>
   {% for u in rows %}
   <tr>
     <td class="muted">#{{ u.id }}</td>
     <td class="rowlink">{{ u.name }}</td>
     <td>{{ u.email }}</td>
+    <td>{{ u.phone or "—" }}</td>
     <td>{{ stats[u.id].sites }}</td>
     <td>{{ stats[u.id].leads }}</td>
     <td class="muted">{{ u.created_at.strftime("%b %-d, %Y") }}</td>

@@ -9,6 +9,15 @@
     <div><label>Name</label><input type="text" name="name" placeholder="Homepage contact" required></div>
     <div><label>Redirect after submit (optional)</label><input type="text" name="redirect_url" placeholder="https://… (blank = built-in thank-you page)"></div>
   </div>
+  {% if role == 'admin' and users %}
+  <div>
+    <label>Owner (whose Leads it feeds + who gets the email)</label>
+    <select name="owner_id">
+      <option value="">Me (admin)</option>
+      {% for u in users %}<option value="{{ u.id }}">{{ u.name }} — {{ u.email }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
   <button class="btn" type="submit">Create form</button>
   <p class="muted" style="margin:0">Every submission lands in your <a href="/admin/leads">Leads</a> automatically — name, cell, email, business, plus anything extra saved as a note.</p>
 </form>
@@ -16,7 +25,7 @@
 {% for f in rows %}
 <div class="card" style="margin-bottom:16px">
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
-    <h2 style="margin:0">{{ f.name }} <span class="muted" style="font-weight:400;font-size:13px">· {{ counts[f.id] }} submission{{ '' if counts[f.id] == 1 else 's' }}</span></h2>
+    <h2 style="margin:0">{{ f.name }} <span class="muted" style="font-weight:400;font-size:13px">· {{ counts[f.id] }} submission{{ '' if counts[f.id] == 1 else 's' }}{% if role == 'admin' %} · owner: {{ owners.get(f.owner_id, 'me') }}{% endif %}</span></h2>
     <form method="post" action="/admin/forms/{{ f.id }}/delete" onsubmit="return confirm('Delete this form?')"><button class="btn danger sm">Delete</button></form>
   </div>
   <p class="muted" style="margin:8px 0 6px">Endpoint: <code>{{ host }}/form/{{ f.slug }}</code> · Paste this anywhere (any site, any builder):</p>
