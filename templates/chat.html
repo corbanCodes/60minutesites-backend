@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% set active = 'chat' %}
+{% block title %}Chat | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>Chat widgets</h1></div>
+
+{% if not has_ai %}
+<div class="flash flash-error" style="margin-bottom:18px"><i class="bi bi-exclamation-triangle-fill"></i>
+  <span><code>OPENAI_API_KEY</code> is not set on this server — widgets will render and capture leads, but AI replies are off until you add it.</span></div>
+{% endif %}
+
+<form class="form card" method="post" style="margin-bottom:22px">
+  <h2 style="margin:0">New chat widget</h2>
+  <div class="row2">
+    <div><label>Business name</label><input type="text" name="business_name" placeholder="Northline Property Service" required></div>
+    {% if role == 'admin' and users %}
+    <div>
+      <label>Owner (who gets the email updates + CRM leads)</label>
+      <select name="owner_id">
+        <option value="">Me (admin)</option>
+        {% for u in users %}<option value="{{ u.id }}">{{ u.name }} — {{ u.email }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div>
+  <button class="btn" type="submit">Create widget</button>
+  <p class="muted" style="margin:0">One line of HTML on the client's site gets them an AI chat bubble: it answers questions from the system prompt, pushes for name + cell, and every contact captured lands in the <a href="/admin/crm">CRM</a> with an email update. AI replies are capped per month — flip the toggle or raise the cap any time, no site changes needed.</p>
+</form>
+
+{% for w in rows %}
+{% set used = w.used_count if w.used_month == month else 0 %}
+<form class="card" method="post" action="/admin/chat/{{ w.id }}/update" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+    <h2 style="margin:0">{{ w.business_name }}
+      <span class="muted" style="font-weight:400;font-size:13px">· {{ counts[w.id] }} conversation{{ '' if counts[w.id] == 1 else 's' }}{% if role == 'admin' %} · owner: {{ owners.get(w.owner_id, 'me') }}{% endif %}</span></h2>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a class="btn ghost sm" href="/admin/chat/{{ w.id }}/convos"><i class="bi bi-chat-left-text"></i> Conversations</a>
+      <button class="btn danger sm" type="submit" formaction="/admin/chat/{{ w.id }}/delete"
+              onclick="return confirm('Delete this chat widget and its transcripts?')">Delete</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:12px 0 4px">
+    <label style="display:flex;gap:8px;align-items:center;font-weight:600;margin:0">
+      <input type="checkbox" name="enabled" {{ 'checked' if w.enabled }}> Widget on</label>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:600;margin:0">
+      <input type="checkbox" name="ai_enabled" {{ 'checked' if w.ai_enabled }}> AI replies on</label>
+    <span class="muted" style="font-size:13px">
+      AI usage this month: <strong>{{ used }} / {{ w.monthly_limit }}</strong>
+      {% if used >= w.monthly_limit %} — <span style="color:#C0392B;font-weight:700">cap reached, falling back to lead capture</span>{% endif %}
+    </span>
+  </div>
+
+  <div class="row2">
+    <div><label>Business name</label><input type="text" name="business_name" value="{{ w.business_name }}"></div>
+    <div><label>AI replies / month (upgrade = raise this)</label><input type="number" name="monthly_limit" value="{{ w.monthly_limit }}" min="0"></div>
+  </div>
+  <div class="row2">
+    <div><label>Greeting</label><input type="text" name="greeting" value="{{ w.greeting }}" placeholder="Hi! How can we help?"></div>
+    <div><label>Accent color</label><input type="text" name="accent" value="{{ w.accent }}" placeholder="#2E86DE"></div>
+  </div>
+  <div class="row2">
+    <div><label>Phone (powers Call + Text buttons)</label><input type="text" name="contact_phone" value="{{ w.contact_phone }}" placeholder="+1 555 123 4567"></div>
+    <div><label>Email (powers Email button)</label><input type="text" name="contact_email" value="{{ w.contact_email }}" placeholder="hello@business.com"></div>
+  </div>
+  <div class="row2">
+    <div><label>Booking link (powers Book button, optional)</label><input type="text" name="booking_url" value="{{ w.booking_url }}" placeholder="https://calendly.com/…"></div>
+    <div><label>Email updates go to (blank = account owner)</label><input type="text" name="notify_email" value="{{ w.notify_email }}" placeholder="owner@business.com"></div>
+  </div>
+  <div>
+    <label>System prompt (what the AI knows + how it behaves)</label>
+    <textarea name="system_prompt" rows="5" style="width:100%;box-sizing:border-box;font-size:13.5px">{{ w.system_prompt }}</textarea>
+  </div>
+  <button class="btn" type="submit">Save settings</button>
+
+  <p class="muted" style="margin:10px 0 6px">Embed — paste before <code>&lt;/body&gt;</code> on any site:</p>
+  <textarea readonly onclick="this.select()" style="width:100%;box-sizing:border-box;height:56px;font-family:ui-monospace,monospace;font-size:12px;border:1.5px solid var(--line);border-radius:8px;padding:10px;background:#FBF8F5">&lt;script src="{{ host }}/chat/widget.js" data-chat="{{ w.slug }}" defer&gt;&lt;/script&gt;</textarea>
+</form>
+{% else %}
+<div class="card muted">No chat widgets yet — create one above, drop one script tag on the client's site, and every chat lead lands in the CRM.</div>
+{% endfor %}
+{% endblock %}

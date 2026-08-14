@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% set active = 'chat' %}
+{% block title %}Chat — {{ w.business_name }} | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>{{ w.business_name }} — conversations</h1>
+  <a class="btn ghost sm" href="/admin/chat"><i class="bi bi-arrow-left"></i> All widgets</a>
+</div>
+
+{% for c in convos %}
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
+    <h2 style="margin:0;font-size:16px">
+      {% if c.visitor_name or c.visitor_phone %}
+        {{ c.visitor_name or 'Visitor' }}{% if c.visitor_phone %} · {{ c.visitor_phone }}{% endif %}
+        {% if c.lead_id %}<a href="/admin/crm/{{ c.lead_id }}" class="muted" style="font-size:13px;font-weight:400">→ lead #{{ c.lead_id }}</a>{% endif %}
+      {% else %}
+        Anonymous visitor
+      {% endif %}
+    </h2>
+    <span class="muted" style="font-size:13px">{{ c.updated_at|local }}{% if c.page_url %} · {{ c.page_url|truncate(60) }}{% endif %}</span>
+  </div>
+  <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+    {% for m in c.messages %}
+    <div style="max-width:78%;padding:8px 12px;border-radius:12px;font-size:14px;line-height:1.45;
+                {% if m.role == 'user' %}background:#EDF3FB;align-self:flex-start{% else %}background:#F4F4F2;align-self:flex-end{% endif %}">
+      <span class="muted" style="font-size:11px;display:block;margin-bottom:2px">{{ 'Visitor' if m.role == 'user' else 'Assistant' }}</span>{{ m.body }}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="card muted">No conversations yet — once the widget is live, transcripts show up here.</div>
+{% endfor %}
+{% endblock %}
