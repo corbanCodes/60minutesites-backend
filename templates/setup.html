@@ -37,10 +37,17 @@
   </table>
 </div>
 
-<h2>Guides</h2>
+{% macro gstat(key) -%}
+  {%- if key in done -%}
+    {%- if done[key] -%}<span class="guide-status ok"><i class="bi bi-check-circle-fill"></i> done</span>
+    {%- else -%}<span class="guide-status todo"><i class="bi bi-exclamation-circle"></i> to do</span>{%- endif -%}
+  {%- else -%}<span class="guide-status ref"><i class="bi bi-book"></i> reference</span>{%- endif -%}
+{%- endmacro %}
 
-<details class="guide" id="postgres" {{ 'open' if s.sqlite and s.railway }}>
-  <summary><i class="bi bi-database"></i> Permanent database (Postgres) — so deploys NEVER touch your data <span class="guide-tag">critical</span></summary>
+<h2>Guides <span class="count-chip">{{ done_count }} of {{ done_total }} auto-checked done</span></h2>
+
+<details class="guide {{ 'is-done' if done.get('postgres') }}" id="postgres" {{ 'open' if not done.get('postgres') and s.sqlite and s.railway }}>
+  <summary><i class="bi bi-database"></i> Permanent database (Postgres) — so deploys NEVER touch your data {{ gstat('postgres') }} <span class="guide-tag">critical</span></summary>
   <div class="guide-body">
     <p><b>Why:</b> without a database service, the CRM writes to a file inside the app container. Railway replaces the container on every deploy, so that file — leads, notes, customers, tasks — is erased each time. Postgres lives outside the container and survives everything.</p>
     <ol>
@@ -53,8 +60,8 @@
   </div>
 </details>
 
-<details class="guide" id="backups" {{ 'open' if s.sqlite and s.railway }}>
-  <summary><i class="bi bi-download"></i> Backups — export &amp; restore the whole CRM <span class="guide-tag">30 seconds, do it often</span></summary>
+<details class="guide {{ 'is-done' if done.get('backups') }}" id="backups" {{ 'open' if not done.get('backups') and s.sqlite and s.railway }}>
+  <summary><i class="bi bi-download"></i> Backups — export &amp; restore the whole CRM {{ gstat('backups') }} <span class="guide-tag">30 seconds, do it often</span></summary>
   <div class="guide-body">
     <p>Downloads everything — customers (with logins), leads, notes, tasks, forms, and sites (including their HTML) — as one JSON file. Restore inserts anything missing and <b>never overwrites</b> existing rows, so it's always safe to run. (Uploaded images/flipbook PDFs aren't included — those live in the DB media table and are re-uploadable.)</p>
     <p style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -67,8 +74,8 @@
   </div>
 </details>
 
-<details class="guide" id="github" {{ 'open' if not s.github }}>
-  <summary><i class="bi bi-github"></i> GitHub publishing — the ONE token that makes client edits go live <span class="guide-tag">do this once, never again</span></summary>
+<details class="guide {{ 'is-done' if done.get('github') }}" id="github" {{ 'open' if not done.get('github') and not s.github }}>
+  <summary><i class="bi bi-github"></i> GitHub publishing — the ONE token that makes client edits go live {{ gstat('github') }} <span class="guide-tag">do this once, never again</span></summary>
   <div class="guide-body">
     <p><b>How publishing works:</b> each client site links to a GitHub repo. When anyone hits Save in the editor, HQ commits the page to that repo, and Netlify (watching the repo) redeploys the client's real domain within a minute. The missing piece is a single server-side token — <b>set once for ALL sites and all future clients. You do NOT need a new token per site or per save.</b></p>
     <ol>
@@ -84,8 +91,8 @@
   </div>
 </details>
 
-<details class="guide" id="linksite">
-  <summary><i class="bi bi-link-45deg"></i> Link an EXISTING site to its repo <span class="guide-tag">the Todd situation</span></summary>
+<details class="guide {{ 'is-done' if done.get('linksite') }}" id="linksite" {{ 'open' if not done.get('linksite') and False }}>
+  <summary><i class="bi bi-link-45deg"></i> Link an EXISTING site to its repo {{ gstat('linksite') }} <span class="guide-tag">the Todd situation</span></summary>
   <div class="guide-body">
     <p>Already created the site in HQ (uploaded/built it) but it's not connected to GitHub? You don't need to recreate anything:</p>
     <ol>
@@ -100,7 +107,7 @@
 </details>
 
 <details class="guide" id="onboard">
-  <summary><i class="bi bi-person-plus"></i> Onboard a paying client, start to finish</summary>
+  <summary><i class="bi bi-person-plus"></i> Onboard a paying client, start to finish{{ gstat('onboard') }} </summary>
   <div class="guide-body">
     <ol>
       <li><b>Customers → Add</b> — name, email, cell, <b>monthly price + setup fee</b> (you can fill these in later too — there's a reminder if you skip it). Copy the generated password; text it to them.</li>
@@ -113,8 +120,8 @@
   </div>
 </details>
 
-<details class="guide" id="resend">
-  <summary><i class="bi bi-envelope"></i> Lead email alerts (Resend)</summary>
+<details class="guide {{ 'is-done' if done.get('resend') }}" id="resend" {{ 'open' if not done.get('resend') and False }}>
+  <summary><i class="bi bi-envelope"></i> Lead email alerts (Resend){{ gstat('resend') }} </summary>
   <div class="guide-body">
     <ol>
       <li>resend.com → API Keys → create key → Railway Variables → <code>RESEND_API_KEY</code>.</li>
@@ -124,22 +131,22 @@
   </div>
 </details>
 
-<details class="guide" id="billing">
-  <summary><i class="bi bi-currency-dollar"></i> Billing &amp; the Revenue dashboard</summary>
+<details class="guide {{ 'is-done' if done.get('billing') }}" id="billing" {{ 'open' if not done.get('billing') and False }}>
+  <summary><i class="bi bi-currency-dollar"></i> Billing &amp; the Revenue dashboard{{ gstat('billing') }} </summary>
   <div class="guide-body">
     <p>Set each customer's <b>monthly price</b> (and one-time setup fee) on the <a href="/admin/customers">Customers</a> page — inline, any time, before or after creating them. <a href="/admin/revenue">Revenue</a> then shows MRR, ARR run-rate, and a 12-month projection. Put a <b>$/mo deal value</b> on CRM leads and the weighted pipeline (New 10% → Built 75%) forecasts what's coming.</p>
   </div>
 </details>
 
-<details class="guide" id="openai">
-  <summary><i class="bi bi-stars"></i> Editor AI (optional)</summary>
+<details class="guide {{ 'is-done' if done.get('openai') }}" id="openai" {{ 'open' if not done.get('openai') and False }}>
+  <summary><i class="bi bi-stars"></i> Editor AI (optional){{ gstat('openai') }} </summary>
   <div class="guide-body">
     <p>Railway Variables → <code>OPENAI_API_KEY</code> (platform.openai.com → API keys). Enables “AI rewrite” on any text and “AI restyle” for whole-page design instructions in the site editor.</p>
   </div>
 </details>
 
-<details class="guide" id="demo">
-  <summary><i class="bi bi-easel"></i> Demo account — a full CRM to showcase on sales calls <span class="guide-tag">John Melody</span></summary>
+<details class="guide {{ 'is-done' if done.get('demo') }}" id="demo" {{ 'open' if not done.get('demo') and False }}>
+  <summary><i class="bi bi-easel"></i> Demo account — a full CRM to showcase on sales calls {{ gstat('demo') }} <span class="guide-tag">John Melody</span></summary>
   <div class="guide-body">
     <p>Builds (or wipes and rebuilds) a fake customer — <b>John Melody, Melody Home Services</b> (<code>johnmelody@gmail.com</code>) — loaded with ~750 leads across every pipeline stage with deal values, notes, open and completed tasks, two forms, and a polished site in the editor. Log in as him in front of a prospect and let the product sell itself.</p>
     <ol>
@@ -153,7 +160,7 @@
 </details>
 
 <details class="guide" id="broke">
-  <summary><i class="bi bi-wrench-adjustable"></i> If something breaks</summary>
+  <summary><i class="bi bi-wrench-adjustable"></i> If something breaks{{ gstat('broke') }} </summary>
   <div class="guide-body">
     <ul>
       <li><b>Client wrecked their page:</b> Sites → <b>Undo save</b> restores the previous version and re-pushes to GitHub. Every save keeps the last 20 versions.</li>

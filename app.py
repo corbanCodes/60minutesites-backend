@@ -1840,7 +1840,23 @@ def setup_page():
     }
     linked = Site.query.filter(Site.github_repo.isnot(None),
                                Site.github_repo != "").all()
-    return render_template("setup.html", s=status, linked_sites=linked)
+    unlinked_clients = Site.query.filter(
+        Site.owner_id.isnot(None),
+        db.or_(Site.github_repo.is_(None), Site.github_repo == "")).count()
+    # auto-detected completion per guide: green check = verified done
+    done = {
+        "postgres": not USING_SQLITE,
+        "backups": not USING_SQLITE,
+        "github": bool(GITHUB_TOKEN),
+        "linksite": bool(GITHUB_TOKEN) and bool(linked) and unlinked_clients == 0,
+        "resend": bool(RESEND_KEY) and bool(ADMIN_EMAIL),
+        "billing": User.query.filter(User.monthly_price.is_(None)).count() == 0,
+        "openai": bool(OPENAI_API_KEY),
+        "demo": User.query.filter_by(email=DEMO_EMAIL).first() is not None,
+    }
+    return render_template("setup.html", s=status, linked_sites=linked,
+                           done=done,
+                           done_count=sum(done.values()), done_total=len(done))
 
 
 @app.route("/admin/help")
