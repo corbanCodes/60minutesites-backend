@@ -12,6 +12,8 @@ body { margin: 0; font-family: var(--font); background: var(--bg); color: var(--
 .sidebar {
   width: 220px; background: var(--dark); color: #EDE6DF; padding: 24px 16px;
   display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
+  /* pin to the viewport so Log out & co. are visible on long pages too */
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 .sidebar .logo { font-weight: 800; font-size: 18px; margin-bottom: 20px; color: #fff; text-decoration: none; }
 .sidebar .logo span { color: var(--orange); }
@@ -87,7 +89,7 @@ a.rowlink:hover { color: var(--orange-dark); }
 
 @media (max-width: 760px) {
   .shell { flex-direction: column; }
-  .sidebar { width: 100%; padding: 10px 14px; position: sticky; top: 0; z-index: 60; box-shadow: 0 2px 12px rgba(28,24,20,.35); }
+  .sidebar { width: 100%; padding: 10px 14px; position: sticky; top: 0; z-index: 60; box-shadow: 0 2px 12px rgba(28,24,20,.35); height: auto; overflow-y: visible; }
   .side-top { display: flex; justify-content: space-between; align-items: center; }
   .sidebar .logo { margin: 0; padding: 4px 0; }
   .nav-toggle { display: inline-flex; }
