@@ -14,7 +14,23 @@
     <td><a class="rowlink" href="/edit/{{ site.id }}">{{ site.business_name }}</a>
         <div class="subtext">{{ site.template or 'v1 generated' }}</div></td>
     {% if role == 'admin' %}<td class="muted">{{ owners.get(site.owner_id, 'me') }}</td>{% endif %}
-    <td><a href="/s/{{ site.slug }}" target="_blank">/s/{{ site.slug }}</a></td>
+    <td>
+      {% if site.live_url %}
+        <a href="{{ site.live_url }}" target="_blank">{{ site.live_url | replace('https://', '') | replace('http://', '') }}</a>
+        <div class="subtext"><a href="/s/{{ site.slug }}" target="_blank" style="color:inherit">HQ copy: /s/{{ site.slug }}</a></div>
+      {% else %}
+        <a href="/s/{{ site.slug }}" target="_blank">/s/{{ site.slug }}</a>
+      {% endif %}
+      {% if role == 'admin' %}
+      <details class="linkrepo">
+        <summary>{{ 'Change' if site.live_url else 'Set' }} live domain</summary>
+        <form method="post" action="/admin/sites/{{ site.id }}/liveurl" class="linkrepo-form">
+          <input type="text" name="live_url" placeholder="https://toddtrope.com" value="{{ site.live_url or '' }}">
+          <button class="btn sm" type="submit">Save</button>
+        </form>
+      </details>
+      {% endif %}
+    </td>
     <td>
       {% if site.github_repo %}
         <div class="sync"><i class="bi bi-github"></i> {{ site.github_repo }}</div>

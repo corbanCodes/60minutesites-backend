@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo
 
 import pymupdf as fitz  # PyMuPDF
 import requests as http
-from flask import (Flask, abort, flash, jsonify, redirect, render_template,
+from flask import (Flask, abort, flash, g, jsonify, redirect, render_template,
                    request, send_from_directory, session, url_for, Response)
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
@@ -152,6 +152,7 @@ class Site(db.Model):
     business_name = db.Column(db.String(120), nullable=False)
     template = db.Column(db.String(80), default="")
     github_repo = db.Column(db.String(200), default="")  # "owner/repo" -> Netlify auto-deploy
+    live_url = db.Column(db.String(300), default="")  # client's real domain (ads point here)
     last_push_at = db.Column(db.DateTime, nullable=True)
     last_push_ok = db.Column(db.Boolean, nullable=True)
     last_push_msg = db.Column(db.String(300), default="")
@@ -212,7 +213,8 @@ def ensure_schema():
     wanted = {
         "lead": {"owner_id": "INTEGER", "form_id": "INTEGER", "deal_value": "FLOAT"},
         "site": {"owner_id": "INTEGER", "template": "VARCHAR(80)", "html": "TEXT",
-                 "github_repo": "VARCHAR(200)", "last_push_at": "TIMESTAMP",
+                 "github_repo": "VARCHAR(200)", "live_url": "VARCHAR(300)",
+                 "last_push_at": "TIMESTAMP",
                  "last_push_ok": "BOOLEAN", "last_push_msg": "VARCHAR(300)"},
         "user": {"phone": "VARCHAR(40)", "monthly_price": "FLOAT",
                  "setup_fee": "FLOAT"},
@@ -263,10 +265,23 @@ def admin_required(f):
     return wrapped
 
 
+def demo_uid():
+    """The demo account's user id (cached per request), or None."""
+    if not hasattr(g, "_demo_uid"):
+        u = User.query.filter_by(email=DEMO_EMAIL).first()
+        g._demo_uid = u.id if u else None
+    return g._demo_uid
+
+
 def owner_filter(query, model):
-    """Admin sees everything; customers see their own rows."""
+    """Admin sees everything EXCEPT the demo account's rows (those only exist
+    when you log in as the demo user); customers see their own rows."""
     role, user = current_user()
     if role == "admin":
+        duid = demo_uid()
+        if duid is not None:
+            return query.filter(db.or_(model.owner_id.is_(None),
+                                       model.owner_id != duid))
         return query
     return query.filter(model.owner_id == user.id)
 
@@ -1446,6 +1461,23 @@ def site_github(site_id):
     return redirect(url_for("sites"))
 
 
+@app.route("/admin/sites/<int:site_id>/liveurl", methods=["POST"])
+@admin_required
+def site_liveurl(site_id):
+    """Record where a site actually lives (the client's Netlify domain) so ad
+    links and View buttons use the real URL instead of the HQ-hosted /s/ copy."""
+    site = Site.query.get_or_404(site_id)
+    url = request.form.get("live_url", "").strip().rstrip("/")
+    if url and not re.fullmatch(r"https?://[\w.-]+(:\d+)?(/[\w./-]*)?", url):
+        flash("That doesn't look like a URL — e.g. https://toddtrope.com", "error")
+        return redirect(url_for("sites"))
+    site.live_url = url
+    db.session.commit()
+    flash(f"“{site.business_name}” live domain " +
+          (f"set to {url} — ad links and View now use it." if url else "cleared."))
+    return redirect(url_for("sites"))
+
+
 @app.route("/admin/sites/<int:site_id>/push", methods=["POST"])
 @login_required
 def site_push(site_id):
@@ -1726,6 +1758,37 @@ def _demo_site_html(quote_slug):
 </body></html>"""
 
 
+def _wipe_demo_data(user):
+    """Delete everything the demo account owns (leads+notes+tasks, forms,
+    sites+revisions). Touches ONLY rows with the demo user's owner_id."""
+    lead_ids = [l.id for l in Lead.query.filter_by(owner_id=user.id)]
+    if lead_ids:
+        Note.query.filter(Note.lead_id.in_(lead_ids)).delete(synchronize_session=False)
+        Task.query.filter(Task.lead_id.in_(lead_ids)).delete(synchronize_session=False)
+        Lead.query.filter(Lead.id.in_(lead_ids)).delete(synchronize_session=False)
+    Task.query.filter_by(owner_id=user.id).delete(synchronize_session=False)
+    site_ids = [s.id for s in Site.query.filter_by(owner_id=user.id)]
+    if site_ids:
+        SiteRevision.query.filter(SiteRevision.site_id.in_(site_ids)).delete(synchronize_session=False)
+        Site.query.filter(Site.id.in_(site_ids)).delete(synchronize_session=False)
+    Form.query.filter_by(owner_id=user.id).delete(synchronize_session=False)
+
+
+@app.route("/admin/setup/demo-delete", methods=["POST"])
+@admin_required
+def demo_delete():
+    """Remove the demo account and every row it owns."""
+    user = User.query.filter_by(email=DEMO_EMAIL).first()
+    if not user:
+        flash("No demo account exists — nothing to remove.")
+        return redirect(url_for("setup_page"))
+    _wipe_demo_data(user)
+    db.session.delete(user)
+    db.session.commit()
+    flash("Demo account and all its data removed. Rebuild it any time.", "sticky")
+    return redirect(url_for("setup_page"))
+
+
 @app.route("/admin/setup/demo", methods=["POST"])
 @admin_required
 def demo_seed():
@@ -1738,17 +1801,7 @@ def demo_seed():
         return redirect(url_for("setup_page"))
     user = User.query.filter_by(email=DEMO_EMAIL).first()
     if user:  # clean rebuild: wipe the demo account's data, keep the login
-        lead_ids = [l.id for l in Lead.query.filter_by(owner_id=user.id)]
-        if lead_ids:
-            Note.query.filter(Note.lead_id.in_(lead_ids)).delete(synchronize_session=False)
-            Task.query.filter(Task.lead_id.in_(lead_ids)).delete(synchronize_session=False)
-            Lead.query.filter(Lead.id.in_(lead_ids)).delete(synchronize_session=False)
-        Task.query.filter_by(owner_id=user.id).delete(synchronize_session=False)
-        site_ids = [s.id for s in Site.query.filter_by(owner_id=user.id)]
-        if site_ids:
-            SiteRevision.query.filter(SiteRevision.site_id.in_(site_ids)).delete(synchronize_session=False)
-            Site.query.filter(Site.id.in_(site_ids)).delete(synchronize_session=False)
-        Form.query.filter_by(owner_id=user.id).delete(synchronize_session=False)
+        _wipe_demo_data(user)
         user.password_hash = generate_password_hash(pw)
     else:
         user = User(name="John Melody", email=DEMO_EMAIL, phone="(555) 014-2266",

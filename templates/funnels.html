@@ -15,7 +15,11 @@
       <a class="btn ghost sm" href="/admin/sites/{{ site.id }}/download">Download HTML</a>
     </div>
   </div>
-  <p class="muted" style="margin:6px 0 10px">Live at <code>{{ host }}/s/{{ site.slug }}</code> · the download is a portable copy you can host anywhere (Netlify drag-and-drop, any host) while domains get sorted.</p>
+  {% set base_url = site.live_url or (host ~ '/s/' ~ site.slug) %}
+  <p class="muted" style="margin:6px 0 10px">
+    Ads point at <code>{{ base_url }}</code>
+    {% if site.live_url %} (the real domain — edits publish there via GitHub → Netlify){% elif site.github_repo %} · linked to GitHub — <b>set the live domain on <a href="/admin/sites">Sites</a></b> so ads use the client's real URL instead of the HQ copy{% else %} · HQ-hosted page — fine for ad tests; link a repo + live domain on <a href="/admin/sites">Sites</a> when it moves to a real domain{% endif %}.
+  </p>
   <details>
     <summary style="cursor:pointer;font-weight:700;color:var(--orange)">Facebook link kit (UTM builder)</summary>
     <div class="form" style="max-width:none;margin-top:12px">
@@ -23,7 +27,7 @@
         <div><label>Campaign label</label><input type="text" class="fk-campaign" value="launch-1" data-site="{{ site.slug }}"></div>
         <div><label>Ad variants (comma-separated)</label><input type="text" class="fk-variants" value="casual-video, billboard, text-exchange" data-site="{{ site.slug }}"></div>
       </div>
-      <button class="btn sm" type="button" onclick="fkGen('{{ site.slug }}', this)">Generate links</button>
+      <button class="btn sm" type="button" data-base="{{ base_url }}" onclick="fkGen(this)">Generate links</button>
       <textarea class="fk-out" readonly onclick="this.select()" style="width:100%;box-sizing:border-box;height:110px;font-family:ui-monospace,monospace;font-size:12px;border:1.5px solid var(--line);border-radius:8px;padding:10px;background:#FBF8F5" placeholder="Your per-ad Website URLs appear here — one per ad, paste into Meta's Website URL box."></textarea>
     </div>
   </details>
@@ -33,12 +37,12 @@
 {% endfor %}
 
 <script>
-function fkGen(slug, btn) {
+function fkGen(btn) {
   var card = btn.closest('details');
   var campaign = card.querySelector('.fk-campaign').value.trim().replace(/\s+/g, '-').toLowerCase() || 'launch-1';
   var variants = card.querySelector('.fk-variants').value.split(',').map(function(v){ return v.trim().replace(/\s+/g, '-').toLowerCase(); }).filter(Boolean);
   if (!variants.length) variants = ['ad-a'];
-  var base = '{{ host }}/s/' + slug;
+  var base = btn.dataset.base;
   var out = variants.map(function(v) {
     return base + '?utm_source=facebook&utm_medium=paid&utm_campaign=' + campaign + '&utm_content=' + v;
   }).join('\n');

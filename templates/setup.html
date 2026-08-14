@@ -149,13 +149,19 @@
   <summary><i class="bi bi-easel"></i> Demo account — a full CRM to showcase on sales calls {{ gstat('demo') }} <span class="guide-tag">John Melody</span></summary>
   <div class="guide-body">
     <p>Builds (or wipes and rebuilds) a fake customer — <b>John Melody, Melody Home Services</b> (<code>johnmelody@gmail.com</code>) — loaded with ~750 leads across every pipeline stage with deal values, notes, open and completed tasks, two forms, and a polished site in the editor. Log in as him in front of a prospect and let the product sell itself.</p>
+    <p><b>His junk stays out of your way:</b> demo data is hidden from YOUR admin CRM, dashboard, sites, and forms — it only exists when you're logged in as John.</p>
     <ol>
       <li>Set a <code>DEMO_PASSWORD</code> variable on Railway (web service → Variables) — the password never appears here.</li>
       <li>Hit the button. Rebuild any time to reset the demo to a clean, full state before a pitch.</li>
     </ol>
-    <form method="post" action="/admin/setup/demo" onsubmit="return confirm('Build/reset the John Melody demo account? Its existing demo data is wiped and regenerated.')">
-      <button class="btn" type="submit"><i class="bi bi-stars"></i> Build / reset demo account</button>
-    </form>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <form method="post" action="/admin/setup/demo" onsubmit="return confirm('Build/reset the John Melody demo account? Its existing demo data is wiped and regenerated.')">
+        <button class="btn" type="submit"><i class="bi bi-stars"></i> Build / reset demo account</button>
+      </form>
+      <form method="post" action="/admin/setup/demo-delete" onsubmit="return confirm('Delete the demo account and ALL its data?')">
+        <button class="btn ghost" type="submit"><i class="bi bi-trash"></i> Remove demo account</button>
+      </form>
+    </div>
   </div>
 </details>
 
