@@ -752,6 +752,19 @@ def home():
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.errorhandler(404)
+def extensionless_pages(e):
+    """Netlify served pretty URLs (/pricing -> pricing.html); the indexed web
+    knows those URLs, so resolve them here too instead of 404ing."""
+    p = request.path.strip("/")
+    if (p and request.method in ("GET", "HEAD")
+            and "." not in os.path.basename(p) and ".." not in p):
+        for cand in (p + ".html", p + "/index.html"):
+            if os.path.isfile(os.path.join(app.static_folder, cand)):
+                return send_from_directory(app.static_folder, cand)
+    return e
+
+
 @app.route("/static-admin/<path:filename>")
 def static_admin(filename):
     return send_from_directory(os.path.join(app.root_path, "static"), filename)
