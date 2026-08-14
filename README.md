@@ -39,3 +39,5 @@ falls back to local SQLite, which is fine on your laptop and ephemeral on Railwa
 | `DATABASE_URL` | Postgres connection (Railway plugin) | sqlite:///data.db |
 | `ADMIN_PASSWORD` | /login password | changeme60 |
 | `SECRET_KEY` | session signing | dev value — set your own |
+
+> Data lives in Railway Postgres (`DATABASE_URL`); deploys never touch it. Backups: Railway PITR + volume snapshots + HQ Setup → Export.
