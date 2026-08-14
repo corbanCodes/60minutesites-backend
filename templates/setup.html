@@ -25,6 +25,8 @@
 <div class="card" style="margin:18px 0">
   <h2 style="margin-top:0">System status</h2>
   <table>
+    <tr><td>Database</td>
+        <td colspan="2">{% if not s.sqlite %}<span class="pill" style="background:#2E7D4F">Postgres</span> — permanent, survives deploys{% elif s.railway %}<span class="pill" style="background:#B3362B">TEMPORARY</span> — <b>SQLite inside the container: every deploy erases all data.</b> Fix it now (guide below){% else %}<span class="pill" style="background:#888">SQLite</span> — local dev file{% endif %}</td></tr>
     <tr><td>GitHub publishing</td>
         <td>{% if s.github %}<span class="pill" style="background:#2E7D4F">Connected</span> — Saves push to linked repos{% else %}<span class="pill" style="background:#B3362B">Off</span> — no <code>GITHUB_TOKEN</code> on the server (guide below){% endif %}</td>
         <td style="text-align:right"><form method="post" action="/admin/setup/test-github"><button class="btn ghost sm" type="submit">Test connection</button></form></td></tr>
@@ -36,6 +38,34 @@
 </div>
 
 <h2>Guides</h2>
+
+<details class="guide" id="postgres" {{ 'open' if s.sqlite and s.railway }}>
+  <summary><i class="bi bi-database"></i> Permanent database (Postgres) — so deploys NEVER touch your data <span class="guide-tag">critical</span></summary>
+  <div class="guide-body">
+    <p><b>Why:</b> without a database service, the CRM writes to a file inside the app container. Railway replaces the container on every deploy, so that file — leads, notes, customers, tasks — is erased each time. Postgres lives outside the container and survives everything.</p>
+    <ol>
+      <li>Railway → your project canvas → <b>+ Create → Database → Add PostgreSQL</b>. A "Postgres" card appears next to "web".</li>
+      <li>Click the <b>web</b> service → <b>Variables</b> → <b>New Variable</b>: name <code>DATABASE_URL</code>, value <code>${{'{{'}}Postgres.DATABASE_URL{{'}}'}}</code> (type it exactly — it references the Postgres card). Railway redeploys automatically.</li>
+      <li>Open HQ — the app builds its tables in Postgres on first boot, and the Database row above turns green. From then on, deploy as often as you like.</li>
+      <li>If you have a backup file, restore it below (Backups) to load your data in.</li>
+    </ol>
+    <p class="muted">Bonus: Railway Postgres supports its own backups (Postgres card → Backups tab) — turn on daily backups there for belt-and-suspenders.</p>
+  </div>
+</details>
+
+<details class="guide" id="backups" {{ 'open' if s.sqlite and s.railway }}>
+  <summary><i class="bi bi-download"></i> Backups — export &amp; restore the whole CRM <span class="guide-tag">30 seconds, do it often</span></summary>
+  <div class="guide-body">
+    <p>Downloads everything — customers (with logins), leads, notes, tasks, forms, and sites (including their HTML) — as one JSON file. Restore inserts anything missing and <b>never overwrites</b> existing rows, so it's always safe to run. (Uploaded images/flipbook PDFs aren't included — those live in the DB media table and are re-uploadable.)</p>
+    <p style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <a class="btn" href="/admin/export.json"><i class="bi bi-download"></i> Export backup now</a>
+    </p>
+    <form method="post" action="/admin/import" enctype="multipart/form-data" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <input type="file" name="backup" accept="application/json,.json" required>
+      <button class="btn ghost" type="submit">Restore from backup</button>
+    </form>
+  </div>
+</details>
 
 <details class="guide" id="github" {{ 'open' if not s.github }}>
   <summary><i class="bi bi-github"></i> GitHub publishing — the ONE token that makes client edits go live <span class="guide-tag">do this once, never again</span></summary>

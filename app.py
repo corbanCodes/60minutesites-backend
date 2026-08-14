@@ -43,6 +43,11 @@ app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 40 * 1024 * 1024
 
+# SQLite on a hosted container = data erased on every deploy. Detect and scream.
+USING_SQLITE = db_url.startswith("sqlite")
+IS_RAILWAY = bool(os.environ.get("RAILWAY_ENVIRONMENT")
+                  or os.environ.get("RAILWAY_PROJECT_ID"))
+
 app.secret_key = os.environ.get("SECRET_KEY", "dev-only-secret-change-me")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme60")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
@@ -370,6 +375,14 @@ def setup_alerts():
     """Admin to-do list for things that aren't fully configured.
     Each: {level: critical|warn|info, icon, title, body, guide (anchor on /admin/setup)}."""
     alerts = []
+    if USING_SQLITE and IS_RAILWAY:
+        alerts.append(dict(
+            level="critical", icon="bi-database-x", guide="postgres",
+            title="DATABASE IS TEMPORARY — every deploy erases ALL CRM data",
+            body="No DATABASE_URL is set, so the app is writing to a throwaway file inside "
+                 "the container. Leads, notes, customers, tasks — all of it vanishes on the "
+                 "next deploy. Add the Postgres service NOW (guide below), and export a "
+                 "backup (Setup → Backups) after every work session until this alert is gone."))
     linked_q = Site.query.filter(Site.github_repo.isnot(None), Site.github_repo != "")
     linked_count = linked_q.count()
     if not GITHUB_TOKEN:
@@ -1290,6 +1303,94 @@ def media_get(media_id):
                     headers={"Cache-Control": "public, max-age=604800"})
 
 
+# ------------------------------------------------------- backup & restore
+BACKUP_TABLES = [  # (key, model, columns) — FK-safe insert order
+    ("users", User, ["id", "name", "email", "phone", "password_hash",
+                     "monthly_price", "setup_fee", "created_at"]),
+    ("forms", Form, ["id", "owner_id", "name", "slug", "redirect_url", "created_at"]),
+    ("sites", Site, ["id", "owner_id", "slug", "business_name", "template",
+                     "github_repo", "html", "tagline", "phone", "email",
+                     "services", "about", "color", "style", "created_at"]),
+    ("leads", Lead, ["id", "owner_id", "form_id", "name", "phone", "email",
+                     "business", "business_type", "source", "status",
+                     "deal_value", "created_at"]),
+    ("notes", Note, ["id", "lead_id", "body", "created_at"]),
+    ("tasks", Task, ["id", "owner_id", "lead_id", "title", "kind", "due_at",
+                     "done", "done_at", "created_at"]),
+]
+
+
+@app.route("/admin/export.json")
+@admin_required
+def export_json():
+    """One-click full CRM backup (everything except uploaded media/flipbooks)."""
+    def dump(model, cols):
+        out = []
+        for r in model.query.all():
+            d = {}
+            for c in cols:
+                v = getattr(r, c)
+                d[c] = v.isoformat() if isinstance(v, datetime) else v
+            out.append(d)
+        return out
+    data = {"format": "60ms-backup-v1",
+            "exported_at": datetime.now(timezone.utc).isoformat()}
+    for key, model, cols in BACKUP_TABLES:
+        data[key] = dump(model, cols)
+    stamp = datetime.now(LOCAL_TZ).strftime("%Y-%m-%d-%H%M")
+    return Response(json.dumps(data, ensure_ascii=False),
+                    mimetype="application/json",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="60ms-backup-{stamp}.json"'})
+
+
+@app.route("/admin/import", methods=["POST"])
+@admin_required
+def import_json():
+    """Restore a backup: inserts rows whose id doesn't exist yet (never overwrites)."""
+    file = request.files.get("backup")
+    try:
+        data = json.loads(file.read().decode("utf-8")) if file else None
+    except Exception:
+        data = None
+    if not data or data.get("format") != "60ms-backup-v1":
+        flash("That doesn't look like a 60MS backup file (.json from Export).", "error")
+        return redirect(url_for("setup_page"))
+    dt_fields = {"created_at", "due_at", "done_at"}
+    restored = []
+    for key, model, cols in BACKUP_TABLES:
+        n = 0
+        for row in data.get(key, []):
+            rid = row.get("id")
+            if rid is None or db.session.get(model, rid) is not None:
+                continue
+            kwargs = {}
+            for c in cols:
+                v = row.get(c)
+                if c in dt_fields and v:
+                    try:
+                        v = datetime.fromisoformat(v)
+                    except ValueError:
+                        v = None
+                kwargs[c] = v
+            db.session.add(model(**kwargs))
+            n += 1
+        if n:
+            restored.append(f"{n} {key}")
+    db.session.commit()
+    if db.engine.dialect.name == "postgresql":
+        # explicit-id inserts don't advance sequences; fix so new rows don't collide
+        with db.engine.begin() as conn:
+            for key, model, _ in BACKUP_TABLES:
+                t = model.__tablename__
+                conn.execute(text(
+                    f"SELECT setval(pg_get_serial_sequence('\"{t}\"', 'id'), "
+                    f"COALESCE((SELECT MAX(id) FROM \"{t}\"), 1))"))
+    flash("Restored: " + (", ".join(restored) if restored else
+                          "nothing new (every row in the file already exists)"), "sticky")
+    return redirect(url_for("setup_page"))
+
+
 @app.route("/admin/setup")
 @admin_required
 def setup_page():
@@ -1297,6 +1398,7 @@ def setup_page():
         "resend": bool(RESEND_KEY), "github": bool(GITHUB_TOKEN),
         "openai": bool(OPENAI_API_KEY), "admin_email": ADMIN_EMAIL,
         "host": request.host_url.rstrip("/"),
+        "sqlite": USING_SQLITE, "railway": IS_RAILWAY,
     }
     linked = Site.query.filter(Site.github_repo.isnot(None),
                                Site.github_repo != "").all()
