@@ -12,8 +12,11 @@
 </head>
 <body>
 <div class="shell">
-  <aside class="sidebar">
-    <a class="logo" href="/admin"><span>60</span>MS&nbsp;HQ</a>
+  <aside class="sidebar" id="sidebar">
+    <div class="side-top">
+      <a class="logo" href="/admin"><span>60</span>MS&nbsp;HQ</a>
+      <button class="nav-toggle" id="navtoggle" aria-label="Menu" aria-expanded="false" aria-controls="sidebar"><i class="bi bi-list"></i></button>
+    </div>
     <div class="nav-sec">Work</div>
     <a class="nav-item {{ 'active' if active == 'dashboard' }}" href="/admin"><i class="bi bi-grid-1x2"></i>Dashboard</a>
     <a class="nav-item {{ 'active' if active == 'crm' }}" href="/admin/crm"><i class="bi bi-kanban"></i>CRM</a>
@@ -56,6 +59,16 @@
     setTimeout(function () { f.classList.add('fade-out'); }, 7000);
     setTimeout(function () { f.remove(); }, 7600);
   });
+  // mobile hamburger
+  (function () {
+    var sb = document.getElementById('sidebar'), btn = document.getElementById('navtoggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var open = sb.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open);
+      btn.querySelector('i').className = open ? 'bi bi-x-lg' : 'bi bi-list';
+    });
+  })();
 </script>
 </body>
 </html>

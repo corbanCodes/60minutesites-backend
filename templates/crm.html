@@ -9,6 +9,8 @@
       <a class="viewtab active" href="/admin/crm"><i class="bi bi-list-ul"></i> List</a>
       <a class="viewtab" href="/admin/crm/board"><i class="bi bi-kanban"></i> Board</a>
     </div>
+    <a class="btn ghost" href="/admin/crm/import" title="Bulk-add leads from a spreadsheet"><i class="bi bi-upload"></i> Import</a>
+    <a class="btn ghost" href="/admin/crm/export.csv{% if q or status %}?q={{ q | urlencode }}&status={{ status | urlencode }}{% endif %}" title="Download this view as CSV"><i class="bi bi-download"></i> Export</a>
     <a class="btn" href="/admin/crm/new">+ Add lead</a>
   </div>
 </div>

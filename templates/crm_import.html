@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% set active = 'crm' %}
+{% block title %}Import CSV | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>Import leads from CSV</h1><a class="btn ghost" href="/admin/crm">← Back to CRM</a></div>
+
+<form method="post" enctype="multipart/form-data" id="impform">
+  <label class="dropzone" id="dz">
+    <input type="file" name="csv" id="csvfile" accept=".csv,text/csv" class="sr-file">
+    <i class="bi bi-filetype-csv"></i>
+    <div class="dz-title">Drop a CSV here <span class="muted">or click to browse</span></div>
+    <div class="dz-sub muted">Formspree exports, spreadsheets, old CRM dumps — anything with a name, phone, or email column.</div>
+    <div class="dz-file" id="dzfile" hidden></div>
+  </label>
+
+  <div id="mapwrap" hidden>
+    <div class="card" style="margin-bottom:16px">
+      <h2 style="margin-top:0">Match your columns <span class="muted" style="font-weight:400;font-size:13px">— we guessed, fix anything that's wrong</span></h2>
+      <label class="chk" style="margin-bottom:10px;display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:600">
+        <input type="checkbox" name="has_header" id="hasheader" value="1" checked> first row is column titles (don't import it)
+      </label>
+      <div style="overflow-x:auto">
+        <table class="preview-table" id="ptable"></table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <h2 style="margin-top:0">Options</h2>
+      <div class="import-opts">
+        <div>
+          <label>If a lead already exists (same email or phone)</label>
+          <select name="dedupe">
+            <option value="skip">Skip it — don't create a duplicate</option>
+            <option value="update">Update it — fill in any blank fields</option>
+            <option value="none">Import anyway (allows duplicates)</option>
+          </select>
+        </div>
+        <div>
+          <label>Status for rows without one</label>
+          <select name="default_status">{% for s in STATUSES %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
+        </div>
+        <div>
+          <label>Source for rows without one</label>
+          <input type="text" name="default_source" value="csv-import">
+        </div>
+        {% if role == 'admin' and users %}
+        <div>
+          <label>Import into</label>
+          <select name="owner_id">
+            <option value="">My CRM (admin)</option>
+            {% for u in users %}<option value="{{ u.id }}">{{ u.name }} — {{ u.email }}</option>{% endfor %}
+          </select>
+        </div>
+        {% endif %}
+      </div>
+      <p class="muted" style="margin:10px 0 0">Old leads welcome: map a “Date added” column and they keep their original dates, so your CRM history stays honest.</p>
+    </div>
+
+    <input type="hidden" name="mapping" id="mapping">
+    <button class="btn" type="submit" id="gobtn"><i class="bi bi-box-arrow-in-down"></i> Import <span id="rowcount"></span></button>
+  </div>
+</form>
+
+<script>
+(function () {
+  var FIELDS = {{ CSV_FIELDS | tojson }};
+  var dz = document.getElementById('dz'), input = document.getElementById('csvfile');
+  var rows = [], selects = [];
+
+  function parseCSV(text) {
+    var out = [], row = [], cur = '', inQ = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (inQ) {
+        if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+        else cur += c;
+      } else if (c === '"' && cur === '') inQ = true; // quote only opens at field start — matches Python csv
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i + 1] === '\n') i++;
+        row.push(cur); if (row.join('') !== '') out.push(row);
+        row = []; cur = '';
+      } else cur += c;
+    }
+    row.push(cur); if (row.join('') !== '') out.push(row);
+    return out;
+  }
+
+  function guess(header) {
+    var h = (header || '').toLowerCase();
+    if (/business.?type|industry|category|type of/.test(h)) return 'business_type';
+    if (/business|company|organi[sz]ation/.test(h)) return 'business';
+    if (/e-?mail/.test(h)) return 'email';
+    if (/phone|cell|mobile|number|tel/.test(h)) return 'phone';
+    if (/source|channel|utm|campaign|how.*hear/.test(h)) return 'source';
+    if (/status|stage/.test(h)) return 'status';
+    if (/value|price|deal|mrr|\$|amount|monthly/.test(h)) return 'deal_value';
+    if (/note|message|comment|detail/.test(h)) return 'note';
+    if (/date|created|added|submitted|signed|joined|time/.test(h)) return 'created_at';
+    if (/name/.test(h)) return 'name';
+    return 'skip';
+  }
+
+  function build() {
+    if (!rows.length) return;
+    var prev = selects.map(function (s) { return s.value; }); // keep manual fixes across re-renders
+    var hasHeader = document.getElementById('hasheader').checked;
+    var headers = hasHeader ? rows[0] : rows[0].map(function (_, i) { return 'Column ' + (i + 1); });
+    var data = hasHeader ? rows.slice(1) : rows;
+    var t = document.getElementById('ptable');
+    t.innerHTML = '';
+    selects = [];
+    var trSel = document.createElement('tr');
+    headers.forEach(function (h, i) {
+      var td = document.createElement('td');
+      var sel = document.createElement('select');
+      FIELDS.forEach(function (f) {
+        var o = document.createElement('option');
+        o.value = f[0]; o.textContent = f[1];
+        sel.appendChild(o);
+      });
+      sel.value = prev[i] !== undefined ? prev[i] : (hasHeader ? guess(h) : 'skip');
+      sel.addEventListener('change', sync);
+      selects.push(sel);
+      td.appendChild(sel);
+      trSel.appendChild(td);
+    });
+    t.appendChild(trSel);
+    var trH = document.createElement('tr');
+    headers.forEach(function (h) {
+      var th = document.createElement('th');
+      th.textContent = h;
+      trH.appendChild(th);
+    });
+    t.appendChild(trH);
+    data.slice(0, 5).forEach(function (r) {
+      var tr = document.createElement('tr');
+      headers.forEach(function (_, i) {
+        var td = document.createElement('td');
+        td.textContent = (r[i] || '').slice(0, 40);
+        tr.appendChild(td);
+      });
+      t.appendChild(tr);
+    });
+    document.getElementById('rowcount').textContent = data.length + ' rows';
+    document.getElementById('mapwrap').hidden = false;
+    sync();
+  }
+
+  function sync() {
+    var m = selects.map(function (s) { return s.value; });
+    document.getElementById('mapping').value = JSON.stringify(m);
+    var ok = m.some(function (v) { return v === 'name' || v === 'phone' || v === 'email'; });
+    var btn = document.getElementById('gobtn');
+    btn.disabled = !ok;
+    btn.title = ok ? '' : 'Map at least one of Name, Phone, or Email';
+  }
+
+  function load(file) {
+    if (!file) return;
+    var r = new FileReader();
+    r.onload = function () {
+      selects = []; // a fresh file gets fresh guesses (no stale mappings)
+      rows = parseCSV(r.result.replace(/^﻿/, ''));
+      var f = document.getElementById('dzfile');
+      f.hidden = false;
+      f.textContent = file.name + ' — ' + rows.length + ' rows detected';
+      dz.classList.add('has-file');
+      build();
+    };
+    r.readAsText(file);
+  }
+
+  input.addEventListener('change', function () { load(input.files[0]); });
+  document.getElementById('hasheader').addEventListener('change', build);
+  ['dragover', 'dragenter'].forEach(function (ev) {
+    dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove('over'); });
+  });
+  dz.addEventListener('drop', function (e) {
+    if (e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      load(e.dataTransfer.files[0]);
+    }
+  });
+})();
+</script>
+{% endblock %}

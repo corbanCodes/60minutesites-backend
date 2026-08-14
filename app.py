@@ -10,10 +10,12 @@ Publishing: set GITHUB_TOKEN (fine-grained PAT, Contents read/write) once and
 every editor Save commits to the linked repo. APP_TZ controls display times.
 """
 import base64
+import csv
 import io
 import json
 import math
 import os
+import random
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -72,6 +74,12 @@ STATUS_COLORS = {
 # how much of a deal's monthly value counts toward the weighted pipeline
 STATUS_WEIGHTS = {"New": 0.10, "Contacted": 0.25, "Booked": 0.50, "Built": 0.75}
 LEAD_FIELDS = ["name", "phone", "email", "business", "business_type"]
+# CSV import: mappable targets (key, label shown in the mapping dropdowns)
+CSV_FIELDS = [("name", "Name"), ("phone", "Phone"), ("email", "Email"),
+              ("business", "Business"), ("business_type", "Business type"),
+              ("source", "Source"), ("status", "Status"),
+              ("deal_value", "Deal value ($/mo)"), ("note", "Note"),
+              ("created_at", "Date added"), ("skip", "— ignore column —")]
 TASK_KINDS = ["Call", "Text", "Email", "Meeting", "Follow-up", "To-do"]
 TASK_ICONS = {"Call": "bi-telephone", "Text": "bi-chat-left-dots",
               "Email": "bi-envelope", "Meeting": "bi-people",
@@ -314,6 +322,51 @@ def parse_local_dt(s):
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
+def digits_only(s):
+    return re.sub(r"\D", "", s or "")
+
+
+def phone_key(s):
+    """Canonical phone for duplicate matching: digits, minus a US country code
+    ('+1 415 555 0100' and '(415) 555-0100' must collide)."""
+    d = digits_only(s)
+    if len(d) == 11 and d.startswith("1"):
+        d = d[1:]
+    return d
+
+
+def csv_safe(v):
+    """Excel/Sheets execute cells starting with = + - @ as formulas — a lead
+    named '=HYPERLINK(...)' from a public form must not run on YOUR machine."""
+    s = "" if v is None else str(v)
+    return "'" + s if s[:1] in ("=", "+", "-", "@", "\t", "\r") else s
+
+
+def parse_flex_date(s):
+    """Best-effort date parsing for CSV imports ('old' leads keep their real
+    date). Naive inputs are read in APP_TZ; stored naive UTC. None if hopeless."""
+    s = (s or "").strip()
+    if not s:
+        return None
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except ValueError:
+        dt = None
+    if dt is None:
+        for f in ("%m/%d/%Y %H:%M", "%m/%d/%Y %I:%M %p", "%m/%d/%Y", "%m/%d/%y",
+                  "%b %d, %Y", "%B %d, %Y", "%d %b %Y", "%Y/%m/%d"):
+            try:
+                dt = datetime.strptime(s, f)
+                break
+            except ValueError:
+                continue
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=LOCAL_TZ)
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def parse_money(s):
     s = (s or "").replace("$", "").replace(",", "").strip()
     if not s:
@@ -446,8 +499,8 @@ def inject_globals():
     role, user = current_user()
     ctx = {"STATUSES": LEAD_STATUSES, "STATUS_COLORS": STATUS_COLORS,
            "STATUS_WEIGHTS": STATUS_WEIGHTS, "TASK_KINDS": TASK_KINDS,
-           "TASK_ICONS": TASK_ICONS, "role": role, "me": user,
-           "alerts": [], "alert_count": 0}
+           "TASK_ICONS": TASK_ICONS, "CSV_FIELDS": CSV_FIELDS,
+           "role": role, "me": user, "alerts": [], "alert_count": 0}
     # alert badge only for admin pages (skip public pages -> no extra queries)
     if role == "admin" and request.path.startswith("/admin"):
         alerts = setup_alerts()
@@ -632,7 +685,7 @@ def login():
             session.clear()
             session["uid"] = user.id
             return redirect(request.args.get("next") or url_for("dashboard"))
-        flash("No match — check email + password (owner: leave email blank).", "error")
+        flash("No match — check your email and password.", "error")
     return render_template("login.html")
 
 
@@ -802,6 +855,180 @@ def lead_status(lead_id):
         lead.status = status
         db.session.commit()
     return jsonify(ok=True, status=lead.status)
+
+
+# ------------------------------------------------------- csv import/export
+@app.route("/admin/crm/export.csv")
+@login_required
+def crm_export():
+    """Export the CRM as CSV — honors the same q/status filters as the list."""
+    q = request.args.get("q", "").strip()
+    status = request.args.get("status", "")
+    query = owner_filter(Lead.query, Lead)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(db.or_(Lead.name.ilike(like), Lead.phone.ilike(like),
+                                    Lead.email.ilike(like), Lead.business.ilike(like)))
+    if status:
+        query = query.filter_by(status=status)
+    rows = query.order_by(Lead.created_at.desc()).all()
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Name", "Business", "Business type", "Phone", "Email",
+                "Source", "Status", "Deal value ($/mo)", "Date added",
+                "Open tasks", "Notes"])
+    nxt = _next_steps(rows)
+    for l in rows:
+        notes = " | ".join(n.body for n in l.notes
+                           if not n.body.startswith("Status changed:"))
+        w.writerow([csv_safe(l.name), csv_safe(l.business),
+                    csv_safe(l.business_type), csv_safe(l.phone),
+                    csv_safe(l.email), csv_safe(l.source), l.status,
+                    "" if l.deal_value is None else l.deal_value,
+                    to_local(l.created_at).strftime("%Y-%m-%d %H:%M"),
+                    csv_safe(nxt[l.id].title if l.id in nxt else ""),
+                    csv_safe(notes[:1000])])
+    stamp = datetime.now(LOCAL_TZ).strftime("%Y-%m-%d")
+    return Response(buf.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition":
+                             f'attachment; filename="60ms-crm-{stamp}.csv"'})
+
+
+@app.route("/admin/crm/import", methods=["GET", "POST"])
+@login_required
+def crm_import():
+    if request.method == "GET":
+        users = User.query.order_by(User.name).all() if session.get("admin") else []
+        return render_template("crm_import.html", users=users)
+
+    file = request.files.get("csv")
+    try:
+        text_data = file.read().decode("utf-8-sig", errors="replace") if file else ""
+    except Exception:
+        text_data = ""
+    try:
+        mapping = json.loads(request.form.get("mapping", "[]"))
+    except ValueError:
+        mapping = []
+    valid = {k for k, _ in CSV_FIELDS}
+    mapping = [m if m in valid else "skip" for m in mapping] if isinstance(mapping, list) else []
+    if not text_data.strip() or not mapping:
+        flash("Upload a CSV and map its columns first.", "error")
+        return redirect(url_for("crm_import"))
+    if not any(m in ("name", "phone", "email") for m in mapping):
+        flash("Map at least one of Name, Phone, or Email so each lead is identifiable.", "error")
+        return redirect(url_for("crm_import"))
+
+    owner_id = my_owner_id()
+    if session.get("admin") and request.form.get("owner_id"):
+        owner_id = int(request.form["owner_id"])
+    dedupe = request.form.get("dedupe", "skip")  # skip | update | none
+    default_status = request.form.get("default_status")
+    if default_status not in LEAD_STATUSES:
+        default_status = "New"
+    default_source = (request.form.get("default_source") or "csv-import").strip()[:120]
+
+    if len(text_data) > 10 * 1024 * 1024:
+        flash("That file is over 10 MB — export a smaller CSV and try again.", "error")
+        return redirect(url_for("crm_import"))
+    # normalize \r\n and bare \r (Excel "CSV Macintosh") so csv can't choke
+    text_data = text_data.replace("\r\n", "\n").replace("\r", "\n")
+    rows = []
+    try:
+        for r in csv.reader(io.StringIO(text_data)):
+            if not any(c.strip() for c in r):
+                continue  # blank/comma-only rows — the preview drops these too
+            rows.append(r)
+            if len(rows) > 5001:  # 5000 data rows + a possible header
+                flash("That CSV has over 5,000 rows — split it into smaller files.", "error")
+                return redirect(url_for("crm_import"))
+    except csv.Error:
+        flash("Couldn't parse that file as CSV — re-export it as standard "
+              "CSV (UTF-8) and try again.", "error")
+        return redirect(url_for("crm_import"))
+    if request.form.get("has_header") == "1" and rows:
+        rows = rows[1:]
+    if len(rows) > 5000:
+        flash("That CSV has over 5,000 rows — split it into smaller files.", "error")
+        return redirect(url_for("crm_import"))
+
+    # duplicate index (email / phone) within the SAME owner's leads only
+    by_email, by_phone = {}, {}
+    if dedupe != "none":
+        scope = (Lead.query.filter(Lead.owner_id == owner_id) if owner_id
+                 else Lead.query.filter(Lead.owner_id.is_(None)))
+        for l in scope.all():
+            if l.email:
+                by_email.setdefault(l.email.strip().lower(), l)
+            p = phone_key(l.phone)
+            if p:
+                by_phone.setdefault(p, l)
+
+    added = updated = skipped = unusable = 0
+    for row in rows:
+        vals, note_parts = {}, []
+        for i, target in enumerate(mapping):
+            v = row[i].strip() if i < len(row) else ""
+            if not v or target == "skip":
+                continue
+            if target == "note":
+                note_parts.append(v)
+            else:
+                vals[target] = v
+        email = vals.get("email", "").strip().lower()
+        phone = phone_key(vals.get("phone", ""))
+        if not (vals.get("name") or email or phone):
+            unusable += 1
+            continue
+        existing = ((by_email.get(email) if email else None)
+                    or (by_phone.get(phone) if phone else None))
+        if existing is not None and dedupe == "skip":
+            skipped += 1
+            continue
+        if existing is not None and dedupe == "update":
+            for f in LEAD_FIELDS + ["source"]:  # fill blanks, never overwrite
+                if vals.get(f) and not getattr(existing, f):
+                    # phone column is VARCHAR(40); the rest are 120
+                    setattr(existing, f, vals[f][:40 if f == "phone" else 120])
+            if existing.deal_value is None and vals.get("deal_value"):
+                existing.deal_value = parse_money(vals["deal_value"])
+            for np in note_parts:
+                db.session.add(Note(lead_id=existing.id, body=np[:2000]))
+            updated += 1
+            continue
+        status = next((s for s in LEAD_STATUSES
+                       if s.lower() == vals.get("status", "").strip().lower()),
+                      default_status)
+        lead = Lead(owner_id=owner_id,
+                    name=(vals.get("name") or vals.get("business")
+                          or email or vals.get("phone", "Unknown"))[:120],
+                    phone=vals.get("phone", "")[:40],
+                    email=vals.get("email", "")[:120],
+                    business=vals.get("business", "")[:120],
+                    business_type=vals.get("business_type", "")[:120],
+                    source=(vals.get("source") or default_source)[:120],
+                    status=status,
+                    deal_value=parse_money(vals.get("deal_value")),
+                    created_at=parse_flex_date(vals.get("created_at")) or utcnow_naive())
+        db.session.add(lead)
+        db.session.flush()
+        for np in note_parts:
+            db.session.add(Note(lead_id=lead.id, body=np[:2000]))
+        if email:
+            by_email.setdefault(email, lead)  # dupes inside the same file collapse too
+        if phone:
+            by_phone.setdefault(phone, lead)  # phone is already the canonical key
+        added += 1
+    db.session.commit()
+    bits = [f"{added} added"]
+    if updated:
+        bits.append(f"{updated} updated (blanks filled)")
+    if skipped:
+        bits.append(f"{skipped} skipped as duplicates")
+    if unusable:
+        bits.append(f"{unusable} rows had no name/phone/email — ignored")
+    flash("CSV import done: " + " · ".join(bits), "sticky")
+    return redirect(url_for("crm"))
 
 
 # legacy URLs (old bookmarks / muscle memory) -> CRM
@@ -987,11 +1214,13 @@ def form_delete(form_id):
     return redirect(url_for("forms"))
 
 
-@app.route("/form/<slug>", methods=["POST", "OPTIONS"])
+@app.route("/form/<slug>", methods=["GET", "POST", "OPTIONS"])
 def form_submit(slug):
     if request.method == "OPTIONS":
         return _cors(Response(status=204))
     form = Form.query.filter_by(slug=slug).first_or_404()
+    if request.method == "GET":  # hosted, shareable page — embeds keep working as-is
+        return render_template("public_form.html", form=form)
     data = request.get_json(silent=True) or request.form.to_dict()
     if data.get("_gotcha"):  # honeypot
         return _cors(jsonify(ok=True))
@@ -1388,6 +1617,215 @@ def import_json():
                     f"COALESCE((SELECT MAX(id) FROM \"{t}\"), 1))"))
     flash("Restored: " + (", ".join(restored) if restored else
                           "nothing new (every row in the file already exists)"), "sticky")
+    return redirect(url_for("setup_page"))
+
+
+# --------------------------------------------------- demo account (sales prop)
+DEMO_EMAIL = "johnmelody@gmail.com"
+_D_FIRST = ["Mike", "Sarah", "Carlos", "Dana", "Priya", "Tom", "Angela", "Ray",
+            "Nicole", "Marcus", "Beth", "Hector", "Wendy", "Sam", "Olivia",
+            "Derek", "Tina", "Paul", "Grace", "Victor", "Lena", "Chris",
+            "Maria", "Doug", "Renee", "Omar", "Kate", "Bill", "Jasmine", "Ted"]
+_D_LAST = ["Rivera", "Chen", "Okafor", "Miller", "Patel", "Novak", "Brooks",
+           "Silva", "Hansen", "Wright", "Kim", "Delgado", "Foster", "Nguyen",
+           "Barone", "Ellis", "Romero", "Fitzgerald", "Yoder", "Grant",
+           "Whitaker", "Sosa", "Lindstrom", "Beck", "Adeyemi", "Cole"]
+_D_TRADES = [("Plumbing", "Plumber"), ("Roofing", "Roofer"), ("Electric", "Electrician"),
+             ("Landscaping", "Landscaper"), ("HVAC", "HVAC"), ("Painting", "Painter"),
+             ("Flooring", "Flooring"), ("Cleaning", "Cleaning service"),
+             ("Concrete", "Concrete"), ("Fencing", "Fencing"), ("Salon", "Salon"),
+             ("Bakery", "Bakery"), ("Auto Repair", "Mechanic"), ("Photography", "Photographer")]
+_D_SUFFIX = ["LLC", "Co.", "& Sons", "Services", "Pros", "Bros", "Solutions", ""]
+_D_SOURCES = ["website-form", "google", "facebook-ad", "referral", "yelp",
+              "walk-in", "quote-form", "nextdoor"]
+_D_NOTES = ["Called — {n} wants an estimate next week, sounded ready to move.",
+            "Left a voicemail, will try again Thursday.",
+            "Texted photos of the job. Bigger than expected — quote higher.",
+            "Met at the property. Nice folks, dog is loud. Quote sent same day.",
+            "Asked for references — sent the Hendersons and the bakery job.",
+            "Price-shopping against two other bids. Follow up Friday.",
+            "Wife handles scheduling — call after 5pm only.",
+            "Repeat customer — did their gutters last spring.",
+            "Wants it done before the holidays. Tight but doable.",
+            "Sent the contract. Waiting on signature.",
+            "Deposit received. Scheduling materials delivery.",
+            "Referred by {r} — give them the referral discount."]
+_D_TASKS_OPEN = [("Call", "Call {n} back about the estimate"),
+                 ("Text", "Text {n} the updated quote"),
+                 ("Email", "Email {n} the contract"),
+                 ("Meeting", "Walk-through at {n}'s place"),
+                 ("Follow-up", "Follow up with {n} — bid was pending"),
+                 ("To-do", "Order materials for {n}'s job")]
+_D_TASKS_DONE = [("Call", "Called {n} — quote accepted"),
+                 ("Email", "Sent invoice to {n}"),
+                 ("To-do", "Finished {n}'s job — ask for a review"),
+                 ("Follow-up", "Checked in with {n} after the install")]
+
+
+def _demo_site_html(quote_slug):
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Melody Home Services — Repairs done right, the first time</title>
+<style>
+  :root {{ --blue: #1D4ED8; --ink: #10203A; --bg: #F5F7FB; }}
+  * {{ box-sizing: border-box; margin: 0; }}
+  body {{ font-family: 'Segoe UI', -apple-system, sans-serif; color: var(--ink); background: #fff; line-height: 1.6; }}
+  header {{ background: linear-gradient(135deg, #1D4ED8, #1E3A8A); color: #fff; padding: 72px 24px 84px; text-align: center; }}
+  header h1 {{ font-size: 42px; letter-spacing: -0.02em; }}
+  header p {{ font-size: 19px; opacity: .92; max-width: 560px; margin: 14px auto 26px; }}
+  .cta {{ display: inline-block; background: #fff; color: var(--blue); font-weight: 800; padding: 15px 34px; border-radius: 10px; text-decoration: none; font-size: 17px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }}
+  section {{ padding: 64px 24px; max-width: 1000px; margin: 0 auto; }}
+  h2 {{ font-size: 30px; text-align: center; margin-bottom: 34px; letter-spacing: -0.01em; }}
+  .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }}
+  .svc {{ background: var(--bg); border-radius: 14px; padding: 26px; }}
+  .svc h3 {{ margin-bottom: 6px; font-size: 18px; }}
+  .quotes {{ background: var(--bg); }}
+  .q {{ background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 2px 10px rgba(16,32,58,.06); }}
+  .q b {{ display: block; margin-top: 12px; color: var(--blue); }}
+  form {{ max-width: 460px; margin: 0 auto; display: grid; gap: 12px; }}
+  input, textarea {{ padding: 13px; border: 1.5px solid #D7DEEA; border-radius: 9px; font: inherit; }}
+  button {{ background: var(--blue); color: #fff; border: 0; padding: 15px; border-radius: 9px; font-size: 16px; font-weight: 800; cursor: pointer; }}
+  footer {{ background: var(--ink); color: #B9C4D8; text-align: center; padding: 34px 20px; font-size: 14px; }}
+</style></head><body>
+<header>
+  <h1>Melody Home Services</h1>
+  <p>Repairs done right, the first time. Licensed, insured, and on time — serving the whole metro since 2011.</p>
+  <a class="cta" href="#quote">Get a free quote</a>
+</header>
+<section>
+  <h2>What we do</h2>
+  <div class="grid">
+    <div class="svc"><h3>Repairs &amp; odd jobs</h3><p>Doors, drywall, fixtures, the list on your fridge — knocked out in one visit.</p></div>
+    <div class="svc"><h3>Kitchens &amp; baths</h3><p>Tile, vanities, backsplashes, and full refreshes that don't drag on for months.</p></div>
+    <div class="svc"><h3>Decks &amp; fences</h3><p>Build, repair, stain. Storm damage handled fast with photos for your insurer.</p></div>
+    <div class="svc"><h3>Painting</h3><p>Interior and exterior, clean lines, furniture covered, zero mystery smudges.</p></div>
+    <div class="svc"><h3>Gutters &amp; exterior</h3><p>Cleaning, guards, small roof fixes before they become big roof problems.</p></div>
+    <div class="svc"><h3>Emergency calls</h3><p>Burst pipe? Broken lock? Same-day slots held open every weekday.</p></div>
+  </div>
+</section>
+<section class="quotes">
+  <h2>Neighbors talk</h2>
+  <div class="grid">
+    <div class="q">“John rebuilt our back steps in a day and the price matched the quote to the dollar.”<b>— Denise H., Maple Grove</b></div>
+    <div class="q">“Three other guys no-showed. Melody Home Services showed up early. Twice.”<b>— Curtis W., Riverside</b></div>
+    <div class="q">“Booked online at 9pm, fixed by Friday. The photo updates were a nice touch.”<b>— Alma R., Fairview</b></div>
+  </div>
+</section>
+<section id="quote">
+  <h2>Get your free quote</h2>
+  <form action="/form/{quote_slug}" method="POST">
+    <input type="text" name="_gotcha" style="display:none" tabindex="-1">
+    <input type="text" name="name" placeholder="Your name" required>
+    <input type="tel" name="phone" placeholder="Cell number" required>
+    <input type="text" name="business" placeholder="Address or neighborhood">
+    <textarea name="message" placeholder="What needs fixing?"></textarea>
+    <button type="submit">Send — we reply within the hour</button>
+  </form>
+</section>
+<footer>Melody Home Services · (555) 014-2266 · Licensed &amp; insured · Mon–Sat 7am–6pm</footer>
+</body></html>"""
+
+
+@app.route("/admin/setup/demo", methods=["POST"])
+@admin_required
+def demo_seed():
+    """(Re)build the John Melody showcase account — a thriving business to
+    demo to prospects. Password comes from DEMO_PASSWORD, never hardcoded."""
+    pw = os.environ.get("DEMO_PASSWORD", "")
+    if not pw:
+        flash("Set a DEMO_PASSWORD variable on the server first (Railway → web "
+              "→ Variables), then hit this button again.", "error")
+        return redirect(url_for("setup_page"))
+    user = User.query.filter_by(email=DEMO_EMAIL).first()
+    if user:  # clean rebuild: wipe the demo account's data, keep the login
+        lead_ids = [l.id for l in Lead.query.filter_by(owner_id=user.id)]
+        if lead_ids:
+            Note.query.filter(Note.lead_id.in_(lead_ids)).delete(synchronize_session=False)
+            Task.query.filter(Task.lead_id.in_(lead_ids)).delete(synchronize_session=False)
+            Lead.query.filter(Lead.id.in_(lead_ids)).delete(synchronize_session=False)
+        Task.query.filter_by(owner_id=user.id).delete(synchronize_session=False)
+        site_ids = [s.id for s in Site.query.filter_by(owner_id=user.id)]
+        if site_ids:
+            SiteRevision.query.filter(SiteRevision.site_id.in_(site_ids)).delete(synchronize_session=False)
+            Site.query.filter(Site.id.in_(site_ids)).delete(synchronize_session=False)
+        Form.query.filter_by(owner_id=user.id).delete(synchronize_session=False)
+        user.password_hash = generate_password_hash(pw)
+    else:
+        user = User(name="John Melody", email=DEMO_EMAIL, phone="(555) 014-2266",
+                    monthly_price=0, setup_fee=0,  # never pollutes YOUR revenue
+                    password_hash=generate_password_hash(pw))
+        db.session.add(user)
+        db.session.flush()
+
+    contact = Form(owner_id=user.id, name="Website contact", slug=slugify("melody contact"))
+    quote = Form(owner_id=user.id, name="Free quote request", slug=slugify("melody quote"))
+    db.session.add_all([contact, quote])
+    db.session.flush()
+    site = Site(owner_id=user.id, slug=slugify("melody home services"),
+                business_name="Melody Home Services", template="demo",
+                html=_demo_site_html(quote.slug))
+    db.session.add(site)
+
+    now = utcnow_naive()
+    leads, notes, tasks = [], [], []
+    for _ in range(750):
+        first, last = random.choice(_D_FIRST), random.choice(_D_LAST)
+        trade, ttype = random.choice(_D_TRADES)
+        biz = f"{last} {trade} {random.choice(_D_SUFFIX)}".strip()
+        days = int(random.triangular(0, 540, 25))
+        created = now - timedelta(days=days, hours=random.randint(0, 23),
+                                  minutes=random.randint(0, 59))
+        if days < 7:
+            status = random.choices(["New", "Contacted", "Booked", "Dead"],
+                                    [45, 35, 15, 5])[0]
+        elif days < 45:
+            status = random.choices(LEAD_STATUSES, [5, 25, 20, 15, 20, 15])[0]
+        else:
+            status = random.choices(LEAD_STATUSES, [0, 4, 5, 6, 45, 40])[0]
+        form = random.choice([contact, quote, None, None])
+        lead = Lead(owner_id=user.id, form_id=form.id if form else None,
+                    name=f"{first} {last}", business=biz, business_type=ttype,
+                    phone=f"(555) {random.randint(100, 999)}-{random.randint(1000, 9999)}",
+                    email=(f"{first}.{last}@{random.choice(['gmail.com', 'yahoo.com', 'outlook.com', 'aol.com'])}".lower()
+                           if random.random() < 0.8 else ""),
+                    source=form.name.lower().replace(' ', '-') if form else random.choice(_D_SOURCES),
+                    status=status,
+                    deal_value=random.choice([79, 99, 99, 129, 149, 179, 199, 249])
+                    if random.random() < 0.7 else None,
+                    created_at=created)
+        leads.append(lead)
+    db.session.add_all(leads)
+    db.session.flush()
+    for lead in leads:
+        if random.random() < 0.4:
+            for _ in range(random.randint(1, 2)):
+                body = random.choice(_D_NOTES).format(
+                    n=lead.name.split()[0],
+                    r=f"{random.choice(_D_FIRST)} {random.choice(_D_LAST)}")
+                notes.append(Note(lead_id=lead.id, body=body,
+                                  created_at=lead.created_at + timedelta(
+                                      hours=random.randint(1, 96))))
+    recent = [l for l in leads if l.status in ("New", "Contacted", "Booked", "Built")][:22]
+    for i, lead in enumerate(recent):
+        kind, tpl = random.choice(_D_TASKS_OPEN)
+        due = now + timedelta(hours=random.choice([-30, -4, 2, 5, 26, 30, 70, 120, 200]))
+        tasks.append(Task(owner_id=user.id, lead_id=lead.id, kind=kind,
+                          title=tpl.format(n=lead.name.split()[0]), due_at=due))
+    for lead in random.sample(leads, 55):
+        kind, tpl = random.choice(_D_TASKS_DONE)
+        done_at = lead.created_at + timedelta(days=random.randint(1, 20))
+        tasks.append(Task(owner_id=user.id, lead_id=lead.id, kind=kind,
+                          title=tpl.format(n=lead.name.split()[0]), done=True,
+                          done_at=done_at, due_at=done_at))
+    tasks.append(Task(owner_id=user.id, kind="To-do", title="Pick up van from the shop",
+                      due_at=now + timedelta(hours=8)))
+    tasks.append(Task(owner_id=user.id, kind="To-do",
+                      title="Post before/after photos to the website"))
+    db.session.add_all(notes + tasks)
+    db.session.commit()
+    flash(f"Demo account rebuilt: {DEMO_EMAIL} — {len(leads)} leads, {len(notes)} "
+          f"notes, {len(tasks)} tasks, 2 forms, 1 site. Log in with your "
+          "DEMO_PASSWORD to showcase it.", "sticky")
     return redirect(url_for("setup_page"))
 
 

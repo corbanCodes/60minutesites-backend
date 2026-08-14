@@ -28,7 +28,12 @@
     <h2 style="margin:0">{{ f.name }} <span class="muted" style="font-weight:400;font-size:13px">· {{ counts[f.id] }} submission{{ '' if counts[f.id] == 1 else 's' }}{% if role == 'admin' %} · owner: {{ owners.get(f.owner_id, 'me') }}{% endif %}</span></h2>
     <form method="post" action="/admin/forms/{{ f.id }}/delete" onsubmit="return confirm('Delete this form?')"><button class="btn danger sm">Delete</button></form>
   </div>
-  <p class="muted" style="margin:8px 0 6px">Endpoint: <code>{{ host }}/form/{{ f.slug }}</code> · Paste this anywhere (any site, any builder):</p>
+  <p style="margin:10px 0 8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <a class="btn sm" href="/form/{{ f.slug }}" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Hosted page</a>
+    <button class="btn ghost sm" type="button" onclick="navigator.clipboard.writeText('{{ host }}/form/{{ f.slug }}');this.textContent='Copied ✓';setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i> Copy link',1500)"><i class="bi bi-clipboard"></i> Copy link</button>
+    <span class="muted" style="font-size:13px">Text or email this link to anyone — no website needed. Submissions land in the owner's CRM.</span>
+  </p>
+  <p class="muted" style="margin:8px 0 6px">Or embed it — endpoint: <code>{{ host }}/form/{{ f.slug }}</code> · Paste this anywhere (any site, any builder):</p>
   <textarea readonly onclick="this.select()" style="width:100%;box-sizing:border-box;height:120px;font-family:ui-monospace,monospace;font-size:12px;border:1.5px solid var(--line);border-radius:8px;padding:10px;background:#FBF8F5">&lt;form action="{{ host }}/form/{{ f.slug }}" method="POST"&gt;
   &lt;input type="text" name="_gotcha" style="display:none" tabindex="-1"&gt;
   &lt;input type="text" name="name" placeholder="Your name" required&gt;
