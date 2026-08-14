@@ -654,6 +654,13 @@ def github_check_repo(repo):
         return False, f"Couldn't reach GitHub ({type(e).__name__})"
 
 
+def form_tag(form):
+    """Stable subject token for inbox rules: C<client id>-F<form id>.
+    'subject contains [60MS C3' = one forwarding rule per client;
+    'subject contains C3-F12]' = one rule per form."""
+    return f"[60MS C{form.owner_id or 0}-F{form.id}]"
+
+
 def notify_lead(form, lead):
     """Email the form's owner about a new lead via Resend (best-effort)."""
     if not RESEND_KEY:
@@ -665,15 +672,17 @@ def notify_lead(form, lead):
     rows = "".join(f"<tr><td style='padding:4px 12px 4px 0;color:#888'>{k}</td><td><b>{v}</b></td></tr>"
                    for k, v in [("Name", lead.name), ("Cell", lead.phone), ("Email", lead.email),
                                 ("Business", lead.business), ("Source", lead.source)] if v)
+    payload = {"from": RESEND_FROM, "to": [to],
+               "subject": f"New lead: {lead.name} — {form.name} {form_tag(form)}",
+               "html": f"<h2 style='font-family:sans-serif'>New lead from “{form.name}”</h2>"
+                       f"<table style='font-family:sans-serif;font-size:15px'>{rows}</table>"
+                       f"<p style='font-family:sans-serif;color:#888'>It's already in your CRM.</p>"}
+    if lead.email:
+        payload["reply_to"] = lead.email  # hitting Reply answers the LEAD
     try:
         http.post("https://api.resend.com/emails",
                   headers={"Authorization": f"Bearer {RESEND_KEY}"},
-                  json={"from": RESEND_FROM, "to": [to],
-                        "subject": f"New lead: {lead.name} — {form.name}",
-                        "html": f"<h2 style='font-family:sans-serif'>New lead from “{form.name}”</h2>"
-                                f"<table style='font-family:sans-serif;font-size:15px'>{rows}</table>"
-                                f"<p style='font-family:sans-serif;color:#888'>It's already in your CRM.</p>"},
-                  timeout=15)
+                  json=payload, timeout=15)
     except Exception:
         pass
 

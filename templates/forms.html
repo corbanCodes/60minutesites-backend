@@ -28,6 +28,10 @@
     <h2 style="margin:0">{{ f.name }} <span class="muted" style="font-weight:400;font-size:13px">· {{ counts[f.id] }} submission{{ '' if counts[f.id] == 1 else 's' }}{% if role == 'admin' %} · owner: {{ owners.get(f.owner_id, 'me') }}{% endif %}</span></h2>
     <form method="post" action="/admin/forms/{{ f.id }}/delete" onsubmit="return confirm('Delete this form?')"><button class="btn danger sm">Delete</button></form>
   </div>
+  <p class="muted" style="margin:8px 0 0;font-size:13px">
+    <i class="bi bi-funnel"></i> Email rule tag: <code onclick="navigator.clipboard.writeText(this.textContent)" style="cursor:pointer" title="Click to copy">[60MS C{{ f.owner_id or 0 }}-F{{ f.id }}]</code>
+    — every lead email's subject ends with this. Inbox rule “subject contains <code>[60MS C{{ f.owner_id or 0 }}</code>” catches ALL of this {{ 'client' if f.owner_id else 'account' }}'s forms; add <code>-F{{ f.id }}]</code> for just this one.
+  </p>
   <p style="margin:10px 0 8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
     <a class="btn sm" href="/form/{{ f.slug }}" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Hosted page</a>
     <button class="btn ghost sm" type="button" onclick="navigator.clipboard.writeText('{{ host }}/form/{{ f.slug }}');this.textContent='Copied ✓';setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i> Copy link',1500)"><i class="bi bi-clipboard"></i> Copy link</button>
