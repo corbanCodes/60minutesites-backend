@@ -4,55 +4,218 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ book.title }}</title>
+  <meta property="og:title" content="{{ book.title }}">
+  <meta property="og:type" content="book">
+  {% if first %}<meta property="og:image" content="{{ host }}/f/{{ book.slug }}/page/0.png">{% endif %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="icon" href="/favicon.ico">
   <style>
     * { box-sizing: border-box; margin: 0; }
-    body { font-family: 'Inter', sans-serif; background: #17130F; color: #EDE6DF; min-height: 100vh;
-           display: flex; flex-direction: column; align-items: center; padding: 28px 12px 60px; }
-    h1 { font-size: 22px; margin-bottom: 4px; }
-    .hint { opacity: .6; font-size: 13px; margin-bottom: 22px; }
+    :root { --orange: #FF6B35; --bg: #17130F; --panel: #221C16; --line: #3A322A; }
+    html, body { height: 100%; }
+    body { font-family: 'Inter', sans-serif; background: radial-gradient(1000px 500px at 50% -20%, #2A221B 0%, var(--bg) 60%);
+           color: #EDE6DF; display: flex; flex-direction: column; overflow: hidden; }
+    .bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; flex-shrink: 0; }
+    .bar h1 { font-size: 15px; font-weight: 800; margin-right: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bar.embed-hide { display: none; }
+    .ibtn { background: rgba(255,255,255,.07); border: none; color: #EDE6DF; border-radius: 8px; width: 36px; height: 36px;
+            font-size: 16px; cursor: pointer; display: inline-grid; place-items: center; flex-shrink: 0; }
+    .ibtn:hover { background: rgba(255,255,255,.14); }
+    .ibtn.on { background: var(--orange); }
+    .stage { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; min-height: 0; padding: 8px 46px; }
     #book { touch-action: pan-y; }
-    #book .page { background: #fff; box-shadow: 0 6px 30px rgba(0,0,0,.5); }
+    #book .page { background: #fff; box-shadow: 0 8px 34px rgba(0,0,0,.55); }
     #book img { width: 100%; height: 100%; object-fit: contain; display: block; background: #fff; }
-    .nav { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
-    button {
-      font-family: 'Inter', sans-serif; font-weight: 800; font-size: 14px; cursor: pointer;
-      background: #FF6B35; border: none; color: #fff; border-radius: 8px; padding: 10px 20px;
-    }
-    button:hover { background: #E55A2B; }
-    .counter { font-size: 14px; opacity: .7; min-width: 70px; text-align: center; font-variant-numeric: tabular-nums; }
+    .arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5; background: rgba(255,255,255,.08);
+             border: none; color: #EDE6DF; font-size: 20px; width: 38px; height: 64px; border-radius: 10px; cursor: pointer; }
+    .arrow:hover { background: var(--orange); }
+    .arrow.l { left: 6px; } .arrow.r { right: 6px; }
+    .foot { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 10px; flex-shrink: 0; }
+    .counter { font-size: 13px; opacity: .75; font-variant-numeric: tabular-nums; }
+    .hint { font-size: 12px; opacity: .45; }
+    @media (max-width: 640px) { .hint { display: none; } .stage { padding: 6px 42px; } }
+
+    /* drawer (TOC + search) */
+    .drawer { position: fixed; top: 0; left: 0; bottom: 0; width: min(330px, 88vw); background: var(--panel);
+              border-right: 1px solid var(--line); transform: translateX(-102%); transition: transform .25s ease;
+              z-index: 40; display: flex; flex-direction: column; box-shadow: 20px 0 60px rgba(0,0,0,.4); }
+    .drawer.open { transform: none; }
+    .drawer header { display: flex; gap: 8px; align-items: center; padding: 14px; border-bottom: 1px solid var(--line); }
+    .drawer header b { font-size: 14px; margin-right: auto; }
+    .search-row { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    .search-row input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line);
+                        background: #171310; color: #EDE6DF; font: inherit; font-size: 14px; }
+    .search-row input:focus { outline: none; border-color: var(--orange); }
+    .list { overflow-y: auto; flex: 1; padding: 8px; }
+    .item { display: block; width: 100%; text-align: left; background: none; border: none; color: #EDE6DF; font: inherit;
+            padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 13.5px; line-height: 1.45; }
+    .item:hover { background: rgba(255,255,255,.06); }
+    .item .pg { color: var(--orange); font-weight: 800; font-size: 11.5px; }
+    .item mark { background: var(--orange); color: #fff; border-radius: 3px; padding: 0 2px; }
+    .empty-note { opacity: .5; font-size: 13px; padding: 14px; }
+
+    /* share modal */
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; place-items: center; z-index: 50; padding: 16px; }
+    .modal.open { display: grid; }
+    .modal .box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; width: 520px; max-width: 100%; }
+    .modal h2 { font-size: 16px; margin-bottom: 12px; }
+    .modal label { font-size: 12px; font-weight: 700; opacity: .7; display: block; margin: 12px 0 4px; }
+    .modal textarea, .modal input { width: 100%; background: #171310; color: #EDE6DF; border: 1.5px solid var(--line);
+                                    border-radius: 8px; padding: 10px; font-family: ui-monospace, monospace; font-size: 12px; }
+    .modal textarea { height: 84px; resize: none; }
+    .copy { margin-top: 14px; display: flex; gap: 10px; justify-content: flex-end; }
+    .btn { background: var(--orange); color: #fff; border: none; border-radius: 8px; padding: 9px 16px; font: inherit;
+           font-weight: 800; font-size: 13.5px; cursor: pointer; }
+    .btn.ghost { background: rgba(255,255,255,.09); }
   </style>
 </head>
 <body>
-  <h1>{{ book.title }}</h1>
-  <p class="hint">Drag a corner or use the arrows — it flips like paper.</p>
-  <div id="book">
-    {% for page in book.pages %}
+  <div class="bar {{ 'embed-hide' if embed }}">
+    <h1>{{ book.title }}</h1>
+    {% if toc or has_text %}<button class="ibtn" id="btn-drawer" title="{{ 'Contents & search' if toc else 'Search' }}"><i class="bi bi-list-ul"></i></button>{% endif %}
+    <button class="ibtn" id="btn-share" title="Share / embed"><i class="bi bi-share"></i></button>
+    <button class="ibtn" id="btn-fs" title="Fullscreen"><i class="bi bi-arrows-fullscreen"></i></button>
+  </div>
+
+  <div class="stage">
+    <button class="arrow l" id="prev" aria-label="Previous page"><i class="bi bi-chevron-left"></i></button>
+    <div id="book">
+      {% for page in book.pages %}
       <div class="page" data-density="{{ 'hard' if loop.first or loop.last else 'soft' }}">
-        <img src="/f/{{ book.slug }}/page/{{ page.page_num }}.png" alt="Page {{ page.page_num + 1 }}">
+        <img src="/f/{{ book.slug }}/page/{{ page.page_num }}.png" alt="Page {{ page.page_num + 1 }}" loading="lazy">
       </div>
-    {% endfor %}
+      {% endfor %}
+    </div>
+    <button class="arrow r" id="next" aria-label="Next page"><i class="bi bi-chevron-right"></i></button>
   </div>
-  <div class="nav">
-    <button id="prev">← Prev</button>
+
+  <div class="foot">
     <span class="counter"><span id="cur">1</span> / {{ book.page_count }}</span>
-    <button id="next">Next →</button>
+    <span class="hint">drag a page corner — it flips like paper · arrow keys work too</span>
   </div>
+
+  <aside class="drawer" id="drawer">
+    <header>
+      <b>{{ book.title }}</b>
+      <button class="ibtn" id="btn-close" title="Close"><i class="bi bi-x-lg"></i></button>
+    </header>
+    {% if has_text %}
+    <div class="search-row"><input type="search" id="q" placeholder="Search inside this book…" autocomplete="off"></div>
+    {% endif %}
+    <div class="list" id="list"></div>
+  </aside>
+
+  <div class="modal" id="share">
+    <div class="box">
+      <h2><i class="bi bi-share"></i> Share this flipbook</h2>
+      <label>Direct link</label>
+      <input readonly id="share-url" value="{{ host }}/f/{{ book.slug }}" onclick="this.select()">
+      <label>Embed on any website (iframe)</label>
+      <textarea readonly id="share-embed" onclick="this.select()">&lt;iframe src="{{ host }}/f/{{ book.slug }}?embed=1" width="100%" height="700" style="border:0;border-radius:12px" allowfullscreen loading="lazy" title="{{ book.title }}"&gt;&lt;/iframe&gt;</textarea>
+      <div class="copy">
+        <button class="btn ghost" id="copy-url">Copy link</button>
+        <button class="btn" id="copy-embed">Copy embed code</button>
+        <button class="btn ghost" id="share-close">Done</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
   <script>
+    var TOC = {{ toc | tojson }};
+    var HAS_TEXT = {{ 'true' if has_text else 'false' }};
+    var SLUG = {{ book.slug | tojson }};
     var W = {{ first.width if first else 800 }}, H = {{ first.height if first else 1035 }};
-    var maxW = Math.min(window.innerWidth - 24, 520);
-    var pageW = Math.floor(maxW / ((window.innerWidth > 900) ? 1 : 1));
-    var pageH = Math.floor(pageW * H / W);
+
+    var stage = document.querySelector('.stage');
+    function pageSize() {
+      var availW = stage.clientWidth - 8, availH = stage.clientHeight - 8;
+      var spread = window.innerWidth > 860;                 // two pages side-by-side?
+      var pw = Math.floor(spread ? availW / 2 : availW);
+      var ph = Math.floor(pw * H / W);
+      if (ph > availH) { ph = availH; pw = Math.floor(ph * W / H); }
+      return { w: Math.max(200, pw), h: Math.max(260, ph) };
+    }
+    var sz = pageSize();
     var flip = new St.PageFlip(document.getElementById('book'), {
-      width: pageW, height: pageH, size: 'fixed',
-      showCover: true, maxShadowOpacity: 0.35, mobileScrollSupport: true, flippingTime: 700
+      width: sz.w, height: sz.h, size: 'fixed', showCover: true,
+      maxShadowOpacity: 0.4, mobileScrollSupport: true, flippingTime: 650,
+      usePortrait: window.innerWidth <= 860
     });
     flip.loadFromHTML(document.querySelectorAll('#book .page'));
-    document.getElementById('prev').onclick = function(){ flip.flipPrev(); };
-    document.getElementById('next').onclick = function(){ flip.flipNext(); };
-    flip.on('flip', function(e){ document.getElementById('cur').textContent = e.data + 1; });
+
+    function goTo(page1) {                                   // 1-based
+      flip.flip(Math.max(0, Math.min({{ book.page_count }} - 1, page1 - 1)));
+    }
+    document.getElementById('prev').onclick = function () { flip.flipPrev(); };
+    document.getElementById('next').onclick = function () { flip.flipNext(); };
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') flip.flipPrev();
+      if (e.key === 'ArrowRight') flip.flipNext();
+    });
+    flip.on('flip', function (e) {
+      document.getElementById('cur').textContent = e.data + 1;
+      if (!{{ 'true' if embed else 'false' }}) history.replaceState(null, '', '#p=' + (e.data + 1));
+    });
+    var m = location.hash.match(/p=(\d+)/);
+    if (m) setTimeout(function () { goTo(parseInt(m[1], 10)); }, 350);
+
+    /* drawer: TOC + search */
+    var drawer = document.getElementById('drawer'), list = document.getElementById('list');
+    function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+    function showTOC() {
+      if (!TOC.length) { list.innerHTML = HAS_TEXT ? '<p class="empty-note">Type above to search inside the book.</p>' : ''; return; }
+      list.innerHTML = TOC.map(function (e) {
+        return '<button class="item" data-p="' + e.page + '"><span class="pg">p.' + e.page + '</span> &nbsp;' + esc(e.title) + '</button>';
+      }).join('');
+    }
+    list.addEventListener('click', function (e) {
+      var b = e.target.closest('.item');
+      if (b) { goTo(parseInt(b.dataset.p, 10)); if (window.innerWidth < 700) drawer.classList.remove('open'); }
+    });
+    var btnDrawer = document.getElementById('btn-drawer');
+    if (btnDrawer) btnDrawer.onclick = function () { drawer.classList.toggle('open'); showTOC(); var q = document.getElementById('q'); if (q && drawer.classList.contains('open')) q.focus(); };
+    document.getElementById('btn-close').onclick = function () { drawer.classList.remove('open'); };
+
+    var qEl = document.getElementById('q'), qTimer;
+    if (qEl) qEl.addEventListener('input', function () {
+      clearTimeout(qTimer);
+      var q = qEl.value.trim();
+      if (q.length < 2) { showTOC(); return; }
+      qTimer = setTimeout(function () {
+        fetch('/f/' + SLUG + '/search?q=' + encodeURIComponent(q))
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (!j.hits.length) { list.innerHTML = '<p class="empty-note">No matches for “' + esc(q) + '”.</p>'; return; }
+            var rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig');
+            list.innerHTML = j.hits.map(function (h) {
+              return '<button class="item" data-p="' + h.page + '"><span class="pg">p.' + h.page + '</span> &nbsp;' +
+                esc(h.snippet).replace(rx, function (s) { return '<mark>' + s + '</mark>'; }) + '</button>';
+            }).join('');
+          }).catch(function () {});
+      }, 220);
+    });
+
+    /* share + fullscreen */
+    var modal = document.getElementById('share');
+    document.getElementById('btn-share').onclick = function () { modal.classList.add('open'); };
+    document.getElementById('share-close').onclick = function () { modal.classList.remove('open'); };
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.classList.remove('open'); });
+    function copy(id, btn) {
+      var el = document.getElementById(id);
+      navigator.clipboard.writeText(el.value).then(function () {
+        var t = btn.textContent; btn.textContent = 'Copied ✓';
+        setTimeout(function () { btn.textContent = t; }, 1400);
+      });
+    }
+    document.getElementById('copy-url').onclick = function () { copy('share-url', this); };
+    document.getElementById('copy-embed').onclick = function () { copy('share-embed', this); };
+    document.getElementById('btn-fs').onclick = function () {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    };
   </script>
 </body>
 </html>

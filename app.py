@@ -5,7 +5,8 @@ Admin + customer accounts · CRM (pipeline, board, tasks, revenue) · Forms
 
 Persistence: set DATABASE_URL (Railway Postgres) and everything survives
 deploys. Falls back to local SQLite (data.db) for development.
-AI: set OPENAI_API_KEY (and optionally OPENAI_MODEL) to enable editor AI.
+AI: set OPENAI_API_KEY (and optionally OPENAI_MODEL) to enable editor AI and
+AI replies in client chat widgets (/admin/chat — capped per month per widget).
 Publishing: set GITHUB_TOKEN (fine-grained PAT, Contents read/write) once and
 every editor Save commits to the linked repo. APP_TZ controls display times.
 """
@@ -195,6 +196,7 @@ class Flipbook(db.Model):
     slug = db.Column(db.String(140), unique=True, nullable=False)
     title = db.Column(db.String(160), nullable=False)
     page_count = db.Column(db.Integer, default=0)
+    toc = db.Column(db.Text, default="")  # JSON [{"title": ..., "page": 1-based}]
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     pages = db.relationship("FlipbookPage", backref="flipbook",
                             cascade="all, delete-orphan",
@@ -206,6 +208,7 @@ class FlipbookPage(db.Model):
     flipbook_id = db.Column(db.Integer, db.ForeignKey("flipbook.id"), nullable=False)
     page_num = db.Column(db.Integer, nullable=False)
     image = db.Column(db.LargeBinary, nullable=False)
+    text = db.Column(db.Text, default="")  # extracted at upload -> powers search
     width = db.Column(db.Integer, default=0)
     height = db.Column(db.Integer, default=0)
 
@@ -271,6 +274,8 @@ def ensure_schema():
                  "last_push_ok": "BOOLEAN", "last_push_msg": "VARCHAR(300)"},
         "user": {"phone": "VARCHAR(40)", "monthly_price": "FLOAT",
                  "setup_fee": "FLOAT"},
+        "flipbook": {"toc": "TEXT"},
+        "flipbook_page": {"text": "TEXT"},
     }
     with db.engine.begin() as conn:
         for table, cols in wanted.items():
@@ -2099,6 +2104,52 @@ def ai_design():
 
 
 # ---------------------------------------------------------- flipbook animator
+def _toc_from_outline(doc):
+    """PDF's own bookmarks -> [{'title', 'page'}] (top 2 levels, capped)."""
+    out = []
+    try:
+        for level, title, page in doc.get_toc(simple=True):
+            if level <= 2 and title.strip() and 1 <= page <= doc.page_count:
+                out.append({"title": title.strip()[:120], "page": page})
+    except Exception:
+        pass
+    return out[:60]
+
+
+def _toc_from_ai(title, page_texts):
+    """One-time AI pass over extracted page text -> TOC JSON. Best-effort."""
+    if not OPENAI_API_KEY:
+        return []
+    condensed = "\n".join(f"[page {i + 1}] {t[:220]}"
+                          for i, t in enumerate(page_texts[:80]) if t.strip())
+    if not condensed.strip():
+        return []
+    try:
+        out = _openai([
+            {"role": "system", "content":
+             "You build tables of contents. Given per-page text snippets from a "
+             "publication, return ONLY a JSON array (no markdown fences) of its "
+             "main sections: [{\"title\": \"...\", \"page\": N}] with 1-based "
+             "pages, 5-25 entries, short human titles in reading order. If the "
+             "content has no clear sections, return []."},
+            {"role": "user", "content": f"Publication: {title}\n\n{condensed[:12000]}"},
+        ], max_tokens=900)
+        out = re.sub(r"^```(?:json)?|```$", "", out.strip(), flags=re.M).strip()
+        toc = json.loads(out)
+        clean = []
+        for e in toc if isinstance(toc, list) else []:
+            try:
+                p = int(e.get("page"))
+                t = str(e.get("title", "")).strip()
+            except (AttributeError, TypeError, ValueError):
+                continue
+            if t and 1 <= p <= len(page_texts):
+                clean.append({"title": t[:120], "page": p})
+        return clean[:40]
+    except Exception:
+        return []
+
+
 @app.route("/admin/flipbooks", methods=["GET", "POST"])
 @admin_required
 def flipbooks():
@@ -2119,16 +2170,85 @@ def flipbooks():
         book = Flipbook(slug=slugify(title), title=title, page_count=doc.page_count)
         db.session.add(book)
         db.session.flush()
+        page_texts = []
         for i, page in enumerate(doc):
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            try:
+                txt = page.get_text().strip()[:6000]
+            except Exception:
+                txt = ""
+            page_texts.append(txt)
             db.session.add(FlipbookPage(flipbook_id=book.id, page_num=i,
-                                        image=pix.tobytes("png"),
+                                        image=pix.tobytes("png"), text=txt,
                                         width=pix.width, height=pix.height))
+        toc = _toc_from_outline(doc)
+        toc_how = "from the PDF's own bookmarks" if toc else ""
+        if not toc and request.form.get("ai_toc") == "1":
+            toc = _toc_from_ai(title, page_texts)
+            toc_how = "AI-built (one-time)" if toc else ""
+        book.toc = json.dumps(toc) if toc else ""
         db.session.commit()
-        flash(f"Flipbook “{title}” ready at /f/{book.slug}")
+        extra = f" · TOC {toc_how}, {len(toc)} sections" if toc else ""
+        searchable = sum(1 for t in page_texts if t)
+        extra += f" · {searchable} searchable pages" if searchable else " · no text layer (search off)"
+        flash(f"Flipbook “{title}” ready at /f/{book.slug}{extra}")
         return redirect(url_for("flipbooks"))
     rows = Flipbook.query.order_by(Flipbook.created_at.desc()).all()
-    return render_template("flipbooks.html", rows=rows)
+    meta = {}
+    for b in rows:
+        try:
+            toc_n = len(json.loads(b.toc)) if b.toc else 0
+        except ValueError:
+            toc_n = 0
+        has_text = db.session.query(FlipbookPage.id).filter(
+            FlipbookPage.flipbook_id == b.id, FlipbookPage.text.isnot(None),
+            FlipbookPage.text != "").first() is not None
+        meta[b.id] = {"toc": toc_n, "search": has_text}
+    return render_template("flipbooks.html", rows=rows, meta=meta,
+                           host=request.host_url.rstrip("/"),
+                           has_ai=bool(OPENAI_API_KEY))
+
+
+@app.route("/admin/flipbooks/<int:book_id>/toc", methods=["POST"])
+@admin_required
+def flipbook_toc(book_id):
+    """(Re)build a book's TOC with AI from the stored page text."""
+    book = Flipbook.query.get_or_404(book_id)
+    texts = [p.text or "" for p in book.pages]
+    if not any(texts):
+        flash("This book has no extracted text (uploaded before search existed, "
+              "or it's a scanned/image PDF) — re-upload the PDF to enable "
+              "search + TOC.", "error")
+        return redirect(url_for("flipbooks"))
+    toc = _toc_from_ai(book.title, texts)
+    if not toc:
+        flash("AI couldn't find clear sections in this one — TOC unchanged.", "error")
+        return redirect(url_for("flipbooks"))
+    book.toc = json.dumps(toc)
+    db.session.commit()
+    flash(f"TOC rebuilt for “{book.title}” — {len(toc)} sections.")
+    return redirect(url_for("flipbooks"))
+
+
+@app.route("/f/<slug>/search")
+def flipbook_search(slug):
+    book = Flipbook.query.filter_by(slug=slug).first_or_404()
+    q = request.args.get("q", "").strip()
+    if len(q) < 2:
+        return _cors(jsonify(ok=True, hits=[]))
+    hits = []
+    ql = q.lower()
+    for p in book.pages:
+        t = p.text or ""
+        i = t.lower().find(ql)
+        if i == -1:
+            continue
+        start = max(0, i - 55)
+        snippet = ("…" if start else "") + t[start:i + len(q) + 65].replace("\n", " ") + "…"
+        hits.append({"page": p.page_num + 1, "snippet": snippet.strip()})
+        if len(hits) >= 30:
+            break
+    return _cors(jsonify(ok=True, hits=hits, q=q))
 
 
 @app.route("/admin/flipbooks/<int:book_id>/delete", methods=["POST"])
@@ -2145,7 +2265,15 @@ def flipbook_delete(book_id):
 def flipbook_view(slug):
     book = Flipbook.query.filter_by(slug=slug).first_or_404()
     first = book.pages[0] if book.pages else None
-    return render_template("flipbook_view.html", book=book, first=first)
+    try:
+        toc = json.loads(book.toc) if book.toc else []
+    except ValueError:
+        toc = []
+    has_text = any((p.text or "").strip() for p in book.pages)
+    return render_template("flipbook_view.html", book=book, first=first,
+                           toc=toc, has_text=has_text,
+                           embed=request.args.get("embed") == "1",
+                           host=request.host_url.rstrip("/"))
 
 
 @app.route("/f/<slug>/page/<int:num>.png")

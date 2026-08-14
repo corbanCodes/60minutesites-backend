@@ -6,30 +6,43 @@
 <form class="form card" method="post" enctype="multipart/form-data" style="margin-bottom:22px">
   <h2 style="margin:0">New flipbook</h2>
   <div class="row2">
-    <div><label>Title</label><input type="text" name="title" placeholder="Spring Menu 2026" required></div>
+    <div><label>Title</label><input type="text" name="title" placeholder="Tampa Local Deals — September" required></div>
     <div><label>PDF file</label><input type="file" name="pdf" accept="application/pdf" required></div>
   </div>
+  <label class="chk" style="display:inline-flex;gap:6px;align-items:center;font-size:13px;font-weight:600">
+    <input type="checkbox" name="ai_toc" value="1" checked {{ '' if has_ai else 'disabled' }}>
+    Build a table of contents with AI if the PDF has no bookmarks (one-time, at upload){% if not has_ai %} — needs OPENAI_API_KEY{% endif %}
+  </label>
   <button class="btn" type="submit">Upload &amp; animate</button>
-  <p class="muted" style="margin:0">Pages render once and live in the database — they survive redeploys.</p>
+  <p class="muted" style="margin:0">Pages render once and live in the database — they survive redeploys. Text is extracted for in-book search; readers get 3D page flips, contents, search, and a share/embed button.</p>
 </form>
-{% if rows %}
-<table>
-  <tr><th>Title</th><th>Share link</th><th>Pages</th><th>Created</th><th></th></tr>
-  {% for book in rows %}
-  <tr>
-    <td class="rowlink">{{ book.title }}</td>
-    <td><a href="/f/{{ book.slug }}" target="_blank">/f/{{ book.slug }}</a></td>
-    <td>{{ book.page_count }}</td>
-    <td class="muted">{{ book.created_at.strftime("%b %-d") }}</td>
-    <td>
-      <form method="post" action="/admin/flipbooks/{{ book.id }}/delete" onsubmit="return confirm('Delete this flipbook?')" style="display:inline">
-        <button class="btn danger sm" type="submit">Delete</button>
-      </form>
-    </td>
-  </tr>
-  {% endfor %}
-</table>
+
+{% for book in rows %}
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+    <h2 style="margin:0">{{ book.title }}
+      <span class="muted" style="font-weight:400;font-size:13px">· {{ book.page_count }} pages
+        {% if meta[book.id].toc %} · <span style="color:var(--good);font-weight:700">TOC ({{ meta[book.id].toc }})</span>{% endif %}
+        {% if meta[book.id].search %} · <span style="color:var(--good);font-weight:700">searchable</span>{% else %} · <span style="color:#B98A2B;font-weight:700">no search</span> (re-upload to enable){% endif %}
+      </span>
+    </h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn sm" href="/f/{{ book.slug }}" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Open</a>
+      <button class="btn ghost sm" type="button" onclick="navigator.clipboard.writeText('{{ host }}/f/{{ book.slug }}');this.textContent='Copied ✓';setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i> Copy link',1400)"><i class="bi bi-clipboard"></i> Copy link</button>
+      {% if meta[book.id].search %}
+      <form method="post" action="/admin/flipbooks/{{ book.id }}/toc" style="display:inline"><button class="btn ghost sm" type="submit" title="One AI pass over the book's text">{{ 'Rebuild' if meta[book.id].toc else 'Build' }} TOC (AI)</button></form>
+      {% endif %}
+      <form method="post" action="/admin/flipbooks/{{ book.id }}/delete" onsubmit="return confirm('Delete this flipbook?')" style="display:inline"><button class="btn danger sm" type="submit">Delete</button></form>
+    </div>
+  </div>
+  <p class="muted" style="margin:10px 0 6px">Embed on any site (advertisers' sites, the client's site, anywhere):</p>
+  <textarea readonly onclick="this.select()" style="width:100%;box-sizing:border-box;height:56px;font-family:ui-monospace,monospace;font-size:12px;border:1.5px solid var(--line);border-radius:8px;padding:10px;background:#FBF8F5">&lt;iframe src="{{ host }}/f/{{ book.slug }}?embed=1" width="100%" height="700" style="border:0;border-radius:12px" allowfullscreen loading="lazy" title="{{ book.title }}"&gt;&lt;/iframe&gt;</textarea>
+</div>
 {% else %}
-<div class="card muted">No flipbooks yet. Upload any PDF and it becomes a page-turning book at a shareable link.</div>
-{% endif %}
+<div class="empty card">
+  <i class="bi bi-journal-richtext"></i>
+  <p><b>No flipbooks yet.</b></p>
+  <p class="muted">Upload any PDF and it becomes a 3D page-turning book at a shareable link, with search and a table of contents.</p>
+</div>
+{% endfor %}
 {% endblock %}
