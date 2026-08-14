@@ -735,10 +735,12 @@ def logout():
 @app.route("/admin")
 @login_required
 def dashboard():
+    # admin's dashboard tracks HIS pipeline; customer accounts see their own
+    lead_q = (Lead.query.filter(Lead.owner_id.is_(None)) if session.get("admin")
+              else owner_filter(Lead.query, Lead))
     stats = {
-        "leads": owner_filter(Lead.query, Lead).count(),
-        "booked": owner_filter(Lead.query, Lead)
-                  .filter(Lead.status.in_(["Booked", "Built", "Client"])).count(),
+        "leads": lead_q.count(),
+        "booked": lead_q.filter(Lead.status.in_(["Booked", "Built", "Client"])).count(),
         "sites": owner_filter(Site.query, Site).count(),
         "forms": owner_filter(Form.query, Form).count(),
     }
@@ -754,12 +756,42 @@ def dashboard():
     today = (open_q.filter(Task.due_at >= now, Task.due_at <= eod)
              .order_by(Task.due_at).limit(8).all())
     task_leads = {t.lead_id: t.lead.name for t in overdue + today if t.lead_id}
-    recent = owner_filter(Lead.query, Lead).order_by(Lead.created_at.desc()).limit(6).all()
+    recent = lead_q.order_by(Lead.created_at.desc()).limit(6).all()
     return render_template("dashboard.html", stats=stats, recent=recent,
                            overdue=overdue, today=today, task_leads=task_leads)
 
 
 # ------------------------------------------------------------------------ crm
+def scoped_leads(query):
+    """Lead scoping for CRM views. Customers: always their own. Admin: ?scope=
+    'mine' (default — owner_id NULL), 'all' (everyone except demo), or a
+    customer id to peek at one account without logging in as them."""
+    role, user = current_user()
+    if role != "admin":
+        return query.filter(Lead.owner_id == user.id)
+    s = request.args.get("scope", "mine")
+    if s == "all":
+        duid = demo_uid()
+        if duid is not None:
+            return query.filter(db.or_(Lead.owner_id.is_(None),
+                                       Lead.owner_id != duid))
+        return query
+    try:
+        return query.filter(Lead.owner_id == int(s))
+    except (TypeError, ValueError):
+        return query.filter(Lead.owner_id.is_(None))  # 'mine' and anything odd
+
+
+def crm_scope_ctx():
+    """Template context for the scope dropdown (admin only)."""
+    if not session.get("admin"):
+        return {"scope": "", "scope_users": []}
+    duid = demo_uid()
+    users = User.query.order_by(User.name).all()
+    return {"scope": request.args.get("scope", "mine"),
+            "scope_users": [u for u in users if u.id != duid]}
+
+
 def _next_steps(rows):
     """{lead_id: earliest open task} for the given leads."""
     ids = [l.id for l in rows]
@@ -778,7 +810,7 @@ def _next_steps(rows):
 def crm():
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "")
-    query = owner_filter(Lead.query, Lead)
+    query = scoped_leads(Lead.query)
     if q:
         like = f"%{q}%"
         query = query.filter(db.or_(Lead.name.ilike(like), Lead.phone.ilike(like),
@@ -787,19 +819,21 @@ def crm():
         query = query.filter_by(status=status)
     rows = query.order_by(Lead.created_at.desc()).all()
     return render_template("crm.html", rows=rows, q=q, status=status,
-                           next_steps=_next_steps(rows), now=utcnow_naive())
+                           next_steps=_next_steps(rows), now=utcnow_naive(),
+                           **crm_scope_ctx())
 
 
 @app.route("/admin/crm/board")
 @login_required
 def crm_board():
-    rows = owner_filter(Lead.query, Lead).order_by(Lead.created_at.desc()).all()
+    rows = scoped_leads(Lead.query).order_by(Lead.created_at.desc()).all()
     cols = {s: [] for s in LEAD_STATUSES}
     for lead in rows:
         cols.setdefault(lead.status, []).append(lead)
     totals = {s: sum(l.deal_value or 0 for l in leads_) for s, leads_ in cols.items()}
     return render_template("crm_board.html", cols=cols, totals=totals,
-                           next_steps=_next_steps(rows), now=utcnow_naive())
+                           next_steps=_next_steps(rows), now=utcnow_naive(),
+                           **crm_scope_ctx())
 
 
 @app.route("/admin/crm/new", methods=["GET", "POST"])
@@ -876,10 +910,10 @@ def lead_status(lead_id):
 @app.route("/admin/crm/export.csv")
 @login_required
 def crm_export():
-    """Export the CRM as CSV — honors the same q/status filters as the list."""
+    """Export the CRM as CSV — honors the same q/status/scope as the list."""
     q = request.args.get("q", "").strip()
     status = request.args.get("status", "")
-    query = owner_filter(Lead.query, Lead)
+    query = scoped_leads(Lead.query)
     if q:
         like = f"%{q}%"
         query = query.filter(db.or_(Lead.name.ilike(like), Lead.phone.ilike(like),

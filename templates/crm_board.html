@@ -6,9 +6,18 @@
   <h1>CRM</h1>
   <div class="topbar-actions">
     <div class="viewtabs">
-      <a class="viewtab" href="/admin/crm"><i class="bi bi-list-ul"></i> List</a>
-      <a class="viewtab active" href="/admin/crm/board"><i class="bi bi-kanban"></i> Board</a>
+      <a class="viewtab" href="/admin/crm{% if scope and scope != 'mine' %}?scope={{ scope }}{% endif %}"><i class="bi bi-list-ul"></i> List</a>
+      <a class="viewtab active" href="/admin/crm/board{% if scope and scope != 'mine' %}?scope={{ scope }}{% endif %}"><i class="bi bi-kanban"></i> Board</a>
     </div>
+    {% if role == 'admin' %}
+    <form method="get" style="display:inline">
+      <select name="scope" onchange="this.form.submit()" class="scope-select" title="Whose leads">
+        <option value="mine" {{ 'selected' if scope == 'mine' }}>My leads</option>
+        <option value="all" {{ 'selected' if scope == 'all' }}>Everyone's</option>
+        {% for u in scope_users %}<option value="{{ u.id }}" {{ 'selected' if scope == u.id | string }}>{{ u.name }}</option>{% endfor %}
+      </select>
+    </form>
+    {% endif %}
     <a class="btn" href="/admin/crm/new">+ Add lead</a>
   </div>
 </div>

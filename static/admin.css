@@ -306,6 +306,8 @@ body { background: radial-gradient(1200px 500px at 85% -10%, #FDEEE4 0%, var(--b
 .import-opts select, .import-opts input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px; font-family: var(--font); font-size: 14px; background: #fff; }
 #gobtn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
+.scope-select { padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 700; background: #fff; }
+
 /* stat card link */
 .stat.linkable { cursor: pointer; }
 .stat.linkable:hover .num { color: var(--orange-dark); }

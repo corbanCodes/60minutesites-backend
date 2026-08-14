@@ -6,15 +6,22 @@
   <h1>CRM</h1>
   <div class="topbar-actions">
     <div class="viewtabs">
-      <a class="viewtab active" href="/admin/crm"><i class="bi bi-list-ul"></i> List</a>
-      <a class="viewtab" href="/admin/crm/board"><i class="bi bi-kanban"></i> Board</a>
+      <a class="viewtab active" href="/admin/crm{% if scope and scope != 'mine' %}?scope={{ scope }}{% endif %}"><i class="bi bi-list-ul"></i> List</a>
+      <a class="viewtab" href="/admin/crm/board{% if scope and scope != 'mine' %}?scope={{ scope }}{% endif %}"><i class="bi bi-kanban"></i> Board</a>
     </div>
     <a class="btn ghost" href="/admin/crm/import" title="Bulk-add leads from a spreadsheet"><i class="bi bi-upload"></i> Import</a>
-    <a class="btn ghost" href="/admin/crm/export.csv{% if q or status %}?q={{ q | urlencode }}&status={{ status | urlencode }}{% endif %}" title="Download this view as CSV"><i class="bi bi-download"></i> Export</a>
+    <a class="btn ghost" href="/admin/crm/export.csv?q={{ q | urlencode }}&status={{ status | urlencode }}{% if scope %}&scope={{ scope }}{% endif %}" title="Download this view as CSV"><i class="bi bi-download"></i> Export</a>
     <a class="btn" href="/admin/crm/new">+ Add lead</a>
   </div>
 </div>
 <form class="searchbar" method="get">
+  {% if role == 'admin' %}
+  <select name="scope" onchange="this.form.submit()" title="Whose leads">
+    <option value="mine" {{ 'selected' if scope == 'mine' }}>My leads</option>
+    <option value="all" {{ 'selected' if scope == 'all' }}>Everyone's</option>
+    {% for u in scope_users %}<option value="{{ u.id }}" {{ 'selected' if scope == u.id | string }}>{{ u.name }}</option>{% endfor %}
+  </select>
+  {% endif %}
   <input type="text" name="q" placeholder="Search name, phone, email, business…" value="{{ q }}">
   <select name="status" onchange="this.form.submit()">
     <option value="">All statuses</option>
@@ -22,6 +29,9 @@
   </select>
   <button class="btn ghost" type="submit">Search</button>
 </form>
+{% if role == 'admin' and scope != 'mine' %}
+<p class="muted" style="margin:-8px 0 14px"><i class="bi bi-eye"></i> Viewing {{ 'everyone&#39;s leads' | safe if scope == 'all' else 'a customer&#39;s leads' | safe }} — <a href="/admin/crm">back to my leads</a></p>
+{% endif %}
 {% if rows %}
 <table>
   <tr><th>Name</th><th>Business</th><th>Phone</th><th>$/mo</th><th>Status</th><th>Next step</th><th>Added</th></tr>
