@@ -59,6 +59,10 @@ RESEND_KEY = (os.environ.get("RESEND_API_KEY") or os.environ.get("RESEND_API")
 RESEND_FROM = os.environ.get("RESEND_FROM", "60MS HQ <onboarding@resend.dev>")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+# domain aliases: hosts in REDIRECT_HOSTS 301 to CANONICAL_HOST (SEO: one URL)
+CANONICAL_HOST = os.environ.get("CANONICAL_HOST", "").strip().lower()
+REDIRECT_HOSTS = {h.strip().lower() for h in
+                  os.environ.get("REDIRECT_HOSTS", "").split(",") if h.strip()}
 try:
     LOCAL_TZ = ZoneInfo(os.environ.get("APP_TZ", "America/Los_Angeles"))
 except Exception:
@@ -204,6 +208,55 @@ class FlipbookPage(db.Model):
     image = db.Column(db.LargeBinary, nullable=False)
     width = db.Column(db.Integer, default=0)
     height = db.Column(db.Integer, default=0)
+
+
+class ChatWidget(db.Model):
+    """Embeddable AI chat bubble for a client site. One per business; the
+    embed script works on any host and the whole thing can be switched off
+    here without touching the client's site."""
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, nullable=True)
+    slug = db.Column(db.String(140), unique=True, nullable=False)
+    business_name = db.Column(db.String(120), nullable=False)
+    enabled = db.Column(db.Boolean, default=True)          # master on/off
+    ai_enabled = db.Column(db.Boolean, default=True)       # AI replies on/off
+    monthly_limit = db.Column(db.Integer, default=50)      # AI replies / month
+    used_month = db.Column(db.String(7), default="")       # "2026-08"
+    used_count = db.Column(db.Integer, default=0)
+    system_prompt = db.Column(db.Text, default="")
+    greeting = db.Column(db.String(300), default="")
+    accent = db.Column(db.String(9), default="#2E86DE")
+    contact_phone = db.Column(db.String(40), default="")   # powers Call + Text chips
+    contact_email = db.Column(db.String(120), default="")
+    booking_url = db.Column(db.String(300), default="")
+    notify_email = db.Column(db.String(120), default="")   # blank = owner/admin email
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class ChatConversation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    widget_id = db.Column(db.Integer, db.ForeignKey("chat_widget.id"), nullable=False)
+    visitor_name = db.Column(db.String(120), default="")
+    visitor_phone = db.Column(db.String(40), default="")
+    visitor_email = db.Column(db.String(120), default="")
+    page_url = db.Column(db.String(400), default="")
+    notified = db.Column(db.Boolean, default=False)        # first-message email sent
+    lead_id = db.Column(db.Integer, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc),
+                           onupdate=lambda: datetime.now(timezone.utc))
+    messages = db.relationship("ChatMessage", backref="conversation",
+                               cascade="all, delete-orphan",
+                               order_by="ChatMessage.id")
+
+
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey("chat_conversation.id"),
+                                nullable=False)
+    role = db.Column(db.String(12), nullable=False)        # user | assistant
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 def ensure_schema():
@@ -670,6 +723,16 @@ def strip_editor_artifacts(html):
 
 
 # ---------------------------------------------------------------- auth + home
+@app.before_request
+def canonical_redirect():
+    """60minute-sites.com (and any listed alias) -> the canonical domain.
+    GET/HEAD only: form POSTs from embeds must never bounce through a 301."""
+    if (CANONICAL_HOST and request.method in ("GET", "HEAD")
+            and request.host.split(":")[0].lower() in REDIRECT_HOSTS):
+        return redirect(f"https://{CANONICAL_HOST}{request.full_path.rstrip('?')}",
+                        code=301)
+
+
 @app.route("/")
 def home():
     return send_from_directory(app.static_folder, "index.html")
@@ -2093,6 +2156,252 @@ def flipbook_page(slug, num):
         abort(404)
     return Response(page.image, mimetype="image/png",
                     headers={"Cache-Control": "public, max-age=86400"})
+
+
+# ------------------------------------------------------------- chat widget
+CHAT_FALLBACK = ("Thanks for reaching out! Leave your name and number below "
+                 "and {biz} will get back to you shortly.")
+
+
+def _chat_month():
+    return datetime.now(timezone.utc).strftime("%Y-%m")
+
+
+def _chat_default_prompt(biz):
+    return (f"You are the friendly virtual assistant for {biz}. Answer visitor "
+            "questions about the business briefly (2-3 sentences max) and in a "
+            "warm, professional tone. Your #1 goal is to get the visitor's name "
+            "and phone number so the team can follow up — work it in naturally. "
+            "Never invent prices, availability, or guarantees; if you don't know "
+            "something, say the team will confirm and ask for their number. "
+            "Never mention that you are an AI language model.")
+
+
+def _chat_ai_available(w):
+    """Roll the monthly counter and answer whether an AI reply may be used."""
+    if not (w.ai_enabled and OPENAI_API_KEY):
+        return False
+    m = _chat_month()
+    if w.used_month != m:
+        w.used_month, w.used_count = m, 0
+    return w.used_count < (w.monthly_limit or 0)
+
+
+def _chat_notify_to(w):
+    if w.notify_email:
+        return w.notify_email
+    owner = db.session.get(User, w.owner_id) if w.owner_id else None
+    return owner.email if owner else ADMIN_EMAIL
+
+
+def notify_chat(w, convo, subject, html):
+    """Email update for chat activity via Resend (best-effort, like notify_lead)."""
+    to = _chat_notify_to(w)
+    if not (RESEND_KEY and to):
+        return
+    try:
+        http.post("https://api.resend.com/emails",
+                  headers={"Authorization": f"Bearer {RESEND_KEY}"},
+                  json={"from": RESEND_FROM, "to": [to], "subject": subject,
+                        "html": html + "<p style='font-family:sans-serif;color:#888'>"
+                                       "Full transcript in HQ → Chat → Conversations.</p>"},
+                  timeout=15)
+    except Exception:
+        pass
+
+
+@app.route("/admin/chat", methods=["GET", "POST"])
+@login_required
+def chat_widgets():
+    if request.method == "POST":
+        name = request.form.get("business_name", "").strip() or "My business"
+        owner_id = my_owner_id()
+        if session.get("admin") and request.form.get("owner_id"):
+            owner_id = int(request.form["owner_id"])
+        slug = base = slugify(name)
+        n = 2
+        while ChatWidget.query.filter_by(slug=slug).first():
+            slug, n = f"{base}-{n}", n + 1
+        w = ChatWidget(owner_id=owner_id, slug=slug, business_name=name,
+                       system_prompt=_chat_default_prompt(name),
+                       greeting=f"Hi! Welcome to {name} — how can we help?")
+        db.session.add(w)
+        db.session.commit()
+        flash(f"Chat widget for “{name}” created — grab the embed code below.")
+        return redirect(url_for("chat_widgets"))
+    rows = owner_filter(ChatWidget.query, ChatWidget).order_by(
+        ChatWidget.created_at.desc()).all()
+    month = _chat_month()
+    counts = {w.id: ChatConversation.query.filter_by(widget_id=w.id).count()
+              for w in rows}
+    users = User.query.order_by(User.name).all() if session.get("admin") else []
+    owners = {u.id: u.name for u in users}
+    return render_template("chat.html", rows=rows, counts=counts, month=month,
+                           users=users, owners=owners,
+                           host=request.host_url.rstrip("/"),
+                           has_ai=bool(OPENAI_API_KEY))
+
+
+@app.route("/admin/chat/<int:wid>/update", methods=["POST"])
+@login_required
+def chat_update(wid):
+    w = ChatWidget.query.get_or_404(wid)
+    if not can_touch(w):
+        abort(403)
+    f = request.form
+    w.enabled = bool(f.get("enabled"))
+    w.ai_enabled = bool(f.get("ai_enabled"))
+    w.business_name = f.get("business_name", w.business_name).strip() or w.business_name
+    w.greeting = f.get("greeting", "").strip()
+    w.system_prompt = f.get("system_prompt", "").strip() or _chat_default_prompt(w.business_name)
+    w.accent = f.get("accent", w.accent).strip() or w.accent
+    w.contact_phone = f.get("contact_phone", "").strip()
+    w.contact_email = f.get("contact_email", "").strip()
+    w.booking_url = f.get("booking_url", "").strip()
+    w.notify_email = f.get("notify_email", "").strip()
+    try:
+        w.monthly_limit = max(0, int(f.get("monthly_limit", w.monthly_limit)))
+    except ValueError:
+        pass
+    db.session.commit()
+    flash(f"“{w.business_name}” chat settings saved.")
+    return redirect(url_for("chat_widgets"))
+
+
+@app.route("/admin/chat/<int:wid>/delete", methods=["POST"])
+@login_required
+def chat_delete(wid):
+    w = ChatWidget.query.get_or_404(wid)
+    if not can_touch(w):
+        abort(403)
+    for c in ChatConversation.query.filter_by(widget_id=w.id).all():
+        db.session.delete(c)
+    db.session.delete(w)
+    db.session.commit()
+    flash("Chat widget deleted (transcripts removed too).")
+    return redirect(url_for("chat_widgets"))
+
+
+@app.route("/admin/chat/<int:wid>/convos")
+@login_required
+def chat_convos(wid):
+    w = ChatWidget.query.get_or_404(wid)
+    if not can_touch(w):
+        abort(403)
+    convos = (ChatConversation.query.filter_by(widget_id=w.id)
+              .order_by(ChatConversation.updated_at.desc()).limit(200).all())
+    return render_template("chat_convos.html", w=w, convos=convos)
+
+
+@app.route("/chat/widget.js")
+def chat_widget_js():
+    resp = send_from_directory(os.path.join(_here, "static"), "chatwidget.js",
+                               mimetype="application/javascript")
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return _cors(resp)
+
+
+@app.route("/chat/<slug>/boot")
+def chat_boot(slug):
+    w = ChatWidget.query.filter_by(slug=slug).first()
+    if not w or not w.enabled:
+        return _cors(jsonify(ok=True, enabled=False))
+    return _cors(jsonify(
+        ok=True, enabled=True, business=w.business_name,
+        greeting=w.greeting or f"Hi! Welcome to {w.business_name} — how can we help?",
+        accent=w.accent, phone=w.contact_phone, email=w.contact_email,
+        booking=w.booking_url, ai=_chat_ai_available(w)))
+
+
+@app.route("/chat/<slug>/message", methods=["POST", "OPTIONS"])
+def chat_message(slug):
+    if request.method == "OPTIONS":
+        return _cors(Response(status=204))
+    w = ChatWidget.query.filter_by(slug=slug).first_or_404()
+    if not w.enabled:
+        return _cors(jsonify(ok=False, error="disabled")), 403
+    p = request.get_json(silent=True) or {}
+    body = str(p.get("message", "")).strip()[:1000]
+    if not body:
+        return _cors(jsonify(ok=False, error="empty")), 400
+    convo = None
+    if p.get("conversation_id"):
+        convo = db.session.get(ChatConversation, int(p["conversation_id"]))
+        if convo and convo.widget_id != w.id:
+            convo = None
+    first_message = convo is None
+    if convo is None:
+        convo = ChatConversation(widget_id=w.id,
+                                 page_url=str(p.get("page", ""))[:400])
+        db.session.add(convo)
+        db.session.flush()
+    if ChatMessage.query.filter_by(conversation_id=convo.id).count() >= 80:
+        return _cors(jsonify(ok=False, error="conversation full")), 429
+    prior = [{"role": m.role, "content": m.body}
+             for m in convo.messages[-12:] if m.role in ("user", "assistant")]
+    db.session.add(ChatMessage(conversation_id=convo.id, role="user", body=body))
+    ai_ok = _chat_ai_available(w)
+    if ai_ok:
+        history = prior + [{"role": "user", "content": body}]
+        try:
+            reply = _openai(
+                [{"role": "system",
+                  "content": (w.system_prompt or _chat_default_prompt(w.business_name))}]
+                + history, max_tokens=300)
+            w.used_count = (w.used_count or 0) + 1
+        except Exception:
+            ai_ok, reply = False, CHAT_FALLBACK.format(biz=w.business_name)
+    else:
+        reply = CHAT_FALLBACK.format(biz=w.business_name)
+    db.session.add(ChatMessage(conversation_id=convo.id, role="assistant", body=reply))
+    db.session.commit()
+    if first_message and not convo.notified:
+        convo.notified = True
+        db.session.commit()
+        notify_chat(w, convo, f"New chat on {w.business_name}",
+                    f"<h2 style='font-family:sans-serif'>New chat conversation</h2>"
+                    f"<p style='font-family:sans-serif'>Page: {convo.page_url or '—'}<br>"
+                    f"First message: <b>{body[:500]}</b></p>")
+    return _cors(jsonify(ok=True, conversation_id=convo.id, reply=reply, ai=ai_ok))
+
+
+@app.route("/chat/<slug>/contact", methods=["POST", "OPTIONS"])
+def chat_contact(slug):
+    if request.method == "OPTIONS":
+        return _cors(Response(status=204))
+    w = ChatWidget.query.filter_by(slug=slug).first_or_404()
+    p = request.get_json(silent=True) or {}
+    name = str(p.get("name", "")).strip()[:120]
+    phone = str(p.get("phone", "")).strip()[:40]
+    email = str(p.get("email", "")).strip()[:120]
+    if not (name or phone or email):
+        return _cors(jsonify(ok=False, error="empty")), 400
+    convo = None
+    if p.get("conversation_id"):
+        convo = db.session.get(ChatConversation, int(p["conversation_id"]))
+        if convo and convo.widget_id != w.id:
+            convo = None
+    lead = Lead(owner_id=w.owner_id, name=name or "Chat visitor", phone=phone,
+                email=email, business="", source=f"Chat — {w.business_name}")
+    db.session.add(lead)
+    db.session.flush()
+    if convo:
+        convo.visitor_name, convo.visitor_phone = name, phone
+        convo.visitor_email, convo.lead_id = email, lead.id
+        transcript = "".join(f"<p style='font-family:sans-serif;margin:2px 0'>"
+                             f"<b>{'Visitor' if m.role == 'user' else 'Assistant'}:</b> "
+                             f"{m.body[:400]}</p>" for m in convo.messages[-20:])
+    else:
+        transcript = ""
+    db.session.commit()
+    notify_chat(w, convo, f"Chat lead: {name or phone} — {w.business_name}",
+                f"<h2 style='font-family:sans-serif'>Chat visitor left their info</h2>"
+                f"<table style='font-family:sans-serif;font-size:15px'>"
+                f"<tr><td style='padding:4px 12px 4px 0;color:#888'>Name</td><td><b>{name}</b></td></tr>"
+                f"<tr><td style='padding:4px 12px 4px 0;color:#888'>Cell</td><td><b>{phone}</b></td></tr>"
+                f"<tr><td style='padding:4px 12px 4px 0;color:#888'>Email</td><td><b>{email}</b></td></tr>"
+                f"</table><p style='font-family:sans-serif'>It's already in the CRM.</p>{transcript}")
+    return _cors(jsonify(ok=True))
 
 
 if __name__ == "__main__":
