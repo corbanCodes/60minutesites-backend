@@ -1288,8 +1288,10 @@ def form_submit(slug):
     notify_lead(form, lead)
     if request.is_json:
         return _cors(jsonify(ok=True, lead_id=lead.id))
-    return redirect(data.get("_next") or form.redirect_url
-                    or url_for("form_thanks", slug=slug))
+    dest = (data.get("_next") or form.redirect_url or "").strip()
+    if dest and not dest.startswith(("http://", "https://", "/")):
+        dest = "https://" + dest  # "60minutesites.com/thanks.html" style values
+    return redirect(dest or url_for("form_thanks", slug=slug))
 
 
 @app.route("/form/<slug>/thanks")
