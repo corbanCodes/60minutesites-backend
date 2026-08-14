@@ -59,11 +59,14 @@
     : "<button disabled>No forms yet — create one in HQ → Forms</button>";
   document.body.appendChild(menu);
 
+  var statusTimer;
   function status(msg, ok) {
     var el = document.getElementById("wys-status");
+    clearTimeout(statusTimer); // a stale timer must never wipe a newer message
     el.textContent = msg;
     el.style.color = ok === false ? "#E07A6E" : "#8FD3A8";
-    if (msg) setTimeout(function () { el.textContent = ""; }, 3500);
+    // failures stay up long enough to actually read
+    if (msg) statusTimer = setTimeout(function () { el.textContent = ""; }, ok === false ? 12000 : 3500);
   }
 
   /* ---------------- editing behaviors ---------------- */
@@ -253,7 +256,10 @@
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ html: html }),
     }).then(function (r) { return r.json(); }).then(function (j) {
-      status(j.ok ? "Saved ✓" : "Save failed", j.ok);
+      if (!j.ok) { status("Save failed", false); return; }
+      if (j.github === "synced") status("Saved ✓ · pushed to GitHub, going live", true);
+      else if (j.github === "failed") status("Saved here, but NOT live — " + (j.msg || "GitHub push failed"), false);
+      else status("Saved ✓", true);
     }).catch(function () { status("Save failed", false); });
   }
 

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-{% set active = 'leads' %}
+{% set active = 'crm' %}
 {% block title %}{{ lead.name }} | 60MS HQ{% endblock %}
 {% block content %}
 <div class="topbar">
-  <h1>{{ lead.name }} <span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}; vertical-align: middle;">{{ lead.status }}</span></h1>
-  <a class="btn ghost" href="/admin/leads">← Back</a>
+  <h1>{{ lead.name }} <span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}; vertical-align: middle;">{{ lead.status }}</span>
+    {% if lead.deal_value %}<span class="count-chip">{{ lead.deal_value | money }}/mo</span>{% endif %}</h1>
+  <a class="btn ghost" href="/admin/crm">← Back to CRM</a>
 </div>
 
 <div class="card" style="margin-bottom:16px">
@@ -20,39 +21,102 @@
 </div>
 
 <div class="row2" style="align-items:start">
-  <form class="form card" method="post">
-    <input type="hidden" name="action" value="update">
-    <h2 style="margin:0">Details</h2>
-    <div><label>Name</label><input type="text" name="name" value="{{ lead.name }}"></div>
-    <div><label>Business</label><input type="text" name="business" value="{{ lead.business }}"></div>
-    <div class="row2">
-      <div><label>Cell</label><input type="tel" name="phone" value="{{ lead.phone }}"></div>
-      <div><label>Email</label><input type="email" name="email" value="{{ lead.email }}"></div>
+  <div style="display:grid;gap:16px">
+    <form class="form card" method="post" style="max-width:none">
+      <input type="hidden" name="action" value="update">
+      <h2 style="margin:0">Details</h2>
+      <div class="row2">
+        <div><label>Name</label><input type="text" name="name" value="{{ lead.name }}"></div>
+        <div><label>Business</label><input type="text" name="business" value="{{ lead.business }}"></div>
+      </div>
+      <div class="row2">
+        <div><label>Cell</label><input type="tel" name="phone" value="{{ lead.phone }}"></div>
+        <div><label>Email</label><input type="email" name="email" value="{{ lead.email }}"></div>
+      </div>
+      <div class="row2">
+        <div><label>Business type</label><input type="text" name="business_type" value="{{ lead.business_type }}"></div>
+        <div><label>Source</label><input type="text" name="source" value="{{ lead.source }}"></div>
+      </div>
+      <div class="row2">
+        <div><label>Deal value ($/month if closed)</label><input type="text" name="deal_value" value="{{ lead.deal_value if lead.deal_value is not none else '' }}" placeholder="99"></div>
+        <div></div>
+      </div>
+      <button class="btn" type="submit">Save changes</button>
+      <p class="muted" style="margin:4px 0 0">Added {{ lead.created_at | local }}</p>
+    </form>
+
+    <div class="card" id="tasks">
+      <h2 style="margin-top:0">Tasks <span class="count-chip">{{ open_tasks | length }} open</span></h2>
+      <form class="task-add-row compact" method="post" action="/admin/tasks">
+        <input type="hidden" name="lead_id" value="{{ lead.id }}">
+        <input type="hidden" name="next" value="/admin/crm/{{ lead.id }}#tasks">
+        <input type="text" name="title" placeholder="Follow up about the quote…" required>
+        <select name="kind">{% for k in TASK_KINDS %}<option value="{{ k }}">{{ k }}</option>{% endfor %}</select>
+        <input type="datetime-local" name="due_at">
+        <button class="btn sm" type="submit">Add</button>
+      </form>
+      {% for t in open_tasks %}
+      {% set mine = role == 'admin' or (me and t.owner_id == me.id) %}
+      <div class="task-row">
+        {% if mine %}
+        <form method="post" action="/admin/tasks/{{ t.id }}/toggle">
+          <input type="hidden" name="next" value="/admin/crm/{{ lead.id }}#tasks">
+          <button class="task-check" type="submit" title="Mark done"><i class="bi bi-circle"></i></button>
+        </form>
+        {% else %}
+        <span class="task-check" title="Scheduled by your site team"><i class="bi bi-circle"></i></span>
+        {% endif %}
+        <span class="task-kind"><i class="bi {{ TASK_ICONS[t.kind] }}"></i>{{ t.kind }}</span>
+        <span class="task-title">{{ t.title }}</span>
+        <span class="task-due {{ 'overdue' if t.due_at and t.due_at < now }}">{{ t.due_at | duefmt }}</span>
+        {% if mine %}
+        <span class="task-actions">
+          <form method="post" action="/admin/tasks/{{ t.id }}/delete" class="inline-form" onsubmit="return confirm('Delete this task?')">
+            <input type="hidden" name="next" value="/admin/crm/{{ lead.id }}#tasks">
+            <button class="chip-btn danger"><i class="bi bi-trash"></i></button>
+          </form>
+        </span>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="muted" style="margin-bottom:0">No open tasks — every active lead deserves a next step.</p>
+      {% endfor %}
+      {% if done_tasks %}
+      <details class="done-wrap" style="margin-top:10px">
+        <summary>Done <span class="count-chip">{{ done_tasks | length }}</span></summary>
+        {% for t in done_tasks %}
+        <div class="task-row done">
+          <span class="task-check done"><i class="bi bi-check-circle-fill"></i></span>
+          <span class="task-kind"><i class="bi {{ TASK_ICONS[t.kind] }}"></i>{{ t.kind }}</span>
+          <span class="task-title">{{ t.title }}</span>
+          <span class="task-due">{{ t.done_at | localdate if t.done_at else '' }}</span>
+        </div>
+        {% endfor %}
+      </details>
+      {% endif %}
     </div>
-    <div class="row2">
-      <div><label>Business type</label><input type="text" name="business_type" value="{{ lead.business_type }}"></div>
-      <div><label>Source</label><input type="text" name="source" value="{{ lead.source }}"></div>
-    </div>
-    <button class="btn" type="submit">Save changes</button>
-    <p class="muted" style="margin:4px 0 0">Added {{ lead.created_at.strftime("%b %-d, %Y %-I:%M %p") }} UTC</p>
-  </form>
+  </div>
 
   <div class="card">
-    <h2 style="margin-top:0">Notes</h2>
+    <h2 style="margin-top:0">Notes &amp; activity</h2>
     <form class="form" method="post">
       <input type="hidden" name="action" value="note">
       <textarea name="body" placeholder="Called at 2pm — wants a plumbing site, has logo…"></textarea>
       <button class="btn sm" type="submit">Add note</button>
     </form>
     {% for note in lead.notes %}
-      <div class="note">{{ note.body }}<div class="when">{{ note.created_at.strftime("%b %-d, %-I:%M %p") }} UTC</div></div>
+      {% if note.body.startswith('Status changed:') %}
+        <div class="note sys"><i class="bi bi-arrow-left-right"></i> {{ note.body }}<div class="when">{{ note.created_at | local }}</div></div>
+      {% else %}
+        <div class="note">{{ note.body }}<div class="when">{{ note.created_at | local }}</div></div>
+      {% endif %}
     {% else %}
       <p class="muted">No notes yet.</p>
     {% endfor %}
   </div>
 </div>
 
-<form method="post" style="margin-top:18px" onsubmit="return confirm('Delete this lead and all notes?')">
+<form method="post" style="margin-top:18px" onsubmit="return confirm('Delete this lead, its notes, and its tasks?')">
   <input type="hidden" name="action" value="delete">
   <button class="btn danger sm" type="submit">Delete lead</button>
 </form>

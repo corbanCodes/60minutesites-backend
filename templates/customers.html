@@ -2,8 +2,11 @@
 {% set active = 'customers' %}
 {% block title %}Customers | 60MS HQ{% endblock %}
 {% block content %}
-<div class="topbar"><h1>Customers</h1></div>
-<form class="form card" method="post" style="margin-bottom:22px">
+<div class="topbar">
+  <h1>Customers {% if mrr %}<span class="count-chip">{{ mrr | money }}/mo total</span>{% endif %}</h1>
+  <a class="btn ghost" href="/admin/revenue">Revenue dashboard →</a>
+</div>
+<form class="form card" method="post" style="margin-bottom:22px;max-width:none">
   <h2 style="margin:0">Add a customer</h2>
   <div class="row2">
     <div><label>Name</label><input type="text" name="name" required></div>
@@ -13,29 +16,43 @@
     <div><label>Cell (for future text automations / 2FA)</label><input type="tel" name="phone" placeholder="(555) 123-4567"></div>
     <div><label>Password (blank = auto-generate, shown once)</label><input type="text" name="password" placeholder="leave blank to auto-generate"></div>
   </div>
+  <div class="row2">
+    <div><label>Monthly price ($/mo — you can set or change this any time)</label><input type="text" name="monthly_price" placeholder="99"></div>
+    <div><label>Setup fee (one-time, optional)</label><input type="text" name="setup_fee" placeholder="250"></div>
+  </div>
   <button class="btn" type="submit">Create customer</button>
-  <p class="muted" style="margin:0">Next step after creating: go to Sites → “+ New site” and either pick a template or import their GitHub repo, with them selected as Owner. Full walkthrough in the <a href="/admin/help">Playbook</a>.</p>
+  <p class="muted" style="margin:0">Next step after creating: go to Sites → “+ New site” with them as Owner (or Link repo on an existing site). Full walkthrough in <a href="/admin/setup">Setup</a>.</p>
 </form>
 {% if rows %}
 <table>
-  <tr><th>ID</th><th>Name</th><th>Email</th><th>Cell</th><th>Sites</th><th>Leads</th><th>Joined</th><th></th></tr>
+  <tr><th>Name</th><th>Contact</th><th>Billing</th><th>Sites</th><th>Leads</th><th>Joined</th><th></th></tr>
   {% for u in rows %}
   <tr>
-    <td class="muted">#{{ u.id }}</td>
-    <td class="rowlink">{{ u.name }}</td>
-    <td>{{ u.email }}</td>
-    <td>{{ u.phone or "—" }}</td>
+    <td><span class="rowlink">{{ u.name }}</span><div class="subtext">#{{ u.id }}</div></td>
+    <td>{{ u.email }}{% if u.phone %}<div class="subtext">{{ u.phone }}</div>{% endif %}</td>
+    <td>
+      <form method="post" action="/admin/customers/{{ u.id }}/billing" class="billing-form">
+        <input type="text" name="monthly_price" value="{{ u.monthly_price if u.monthly_price is not none else '' }}" placeholder="$/mo" title="Monthly price">
+        <input type="text" name="setup_fee" value="{{ u.setup_fee if u.setup_fee is not none else '' }}" placeholder="setup" title="One-time setup fee">
+        <button class="chip-btn" type="submit" title="Save billing"><i class="bi bi-check-lg"></i></button>
+      </form>
+      {% if u.monthly_price is none %}<div class="subtext" style="color:#B3362B">no price set</div>{% endif %}
+    </td>
     <td>{{ stats[u.id].sites }}</td>
     <td>{{ stats[u.id].leads }}</td>
-    <td class="muted">{{ u.created_at.strftime("%b %-d, %Y") }}</td>
+    <td class="muted">{{ u.created_at | localdate('%b %-d, %Y') }}</td>
     <td style="white-space:nowrap">
       <form method="post" action="/admin/customers/{{ u.id }}/reset" style="display:inline"><button class="btn ghost sm" type="submit">Reset PW</button></form>
-      <form method="post" action="/admin/customers/{{ u.id }}/delete" style="display:inline" onsubmit="return confirm('Delete {{ u.name }}?')"><button class="btn danger sm" type="submit">Delete</button></form>
+      <form method="post" action="/admin/customers/{{ u.id }}/delete" style="display:inline" onsubmit="return confirm('Delete this customer? Their sites and leads are kept, unowned.')"><button class="btn danger sm" type="submit">Delete</button></form>
     </td>
   </tr>
   {% endfor %}
 </table>
 {% else %}
-<div class="card muted">No customer accounts yet — they can self-serve via the “Create an account” link on the login page, or add one above.</div>
+<div class="empty card">
+  <i class="bi bi-people"></i>
+  <p><b>No customer accounts yet.</b></p>
+  <p class="muted">They can self-serve via “Create an account” on the login page, or add one above.</p>
+</div>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% set active = 'tasks' %}
+{% block title %}Tasks | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Tasks <span class="count-chip">{{ open_count }} open</span></h1>
+</div>
+
+<form class="card task-add" method="post" action="/admin/tasks">
+  <input type="hidden" name="next" value="/admin/tasks">
+  <div class="task-add-row">
+    <input type="text" name="title" placeholder="Call Todd about the new photos…" required autofocus>
+    <select name="kind">{% for k in TASK_KINDS %}<option value="{{ k }}">{{ k }}</option>{% endfor %}</select>
+    <input type="datetime-local" name="due_at" title="When (optional)">
+    <select name="lead_id" title="Link to a lead (optional)">
+      <option value="">No lead</option>
+      {% for l in my_leads %}<option value="{{ l.id }}">{{ l.name }}{% if l.business %} — {{ l.business }}{% endif %}</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit">Add</button>
+  </div>
+  <p class="muted" style="margin:8px 0 0">Schedule calls, follow-ups, and general to-dos. Leave the date blank for “someday”, link a lead and it shows up on their card too.</p>
+</form>
+
+{% for name, items in buckets.items() %}
+  {% if items %}
+  <div class="task-bucket {{ 'is-overdue' if name == 'Overdue' }}">
+    <h2 class="bucket-title">
+      {% if name == 'Overdue' %}<i class="bi bi-exclamation-triangle-fill"></i>{% elif name == 'Today' %}<i class="bi bi-sun"></i>{% elif name == 'Tomorrow' %}<i class="bi bi-arrow-right-circle"></i>{% elif name == 'No due date' %}<i class="bi bi-infinity"></i>{% else %}<i class="bi bi-calendar3"></i>{% endif %}
+      {{ name }} <span class="count-chip">{{ items | length }}</span>
+    </h2>
+    {% for t in items %}
+    <div class="task-row">
+      <form method="post" action="/admin/tasks/{{ t.id }}/toggle">
+        <input type="hidden" name="next" value="/admin/tasks">
+        <button class="task-check" type="submit" title="Mark done"><i class="bi bi-circle"></i></button>
+      </form>
+      <span class="task-kind"><i class="bi {{ TASK_ICONS[t.kind] }}"></i>{{ t.kind }}</span>
+      <span class="task-title">{{ t.title }}</span>
+      {% if t.lead_id %}<a class="task-lead" href="/admin/crm/{{ t.lead_id }}"><i class="bi bi-person"></i>{{ lead_names[t.lead_id] }}</a>{% endif %}
+      <span class="task-due {{ 'overdue' if name == 'Overdue' }}">{{ t.due_at | duefmt }}</span>
+      <span class="task-actions">
+        <form method="post" action="/admin/tasks/{{ t.id }}/snooze" class="inline-form">
+          <input type="hidden" name="next" value="/admin/tasks">
+          {% if name == 'Overdue' %}<button class="chip-btn" name="to" value="today" title="Reschedule to today 9am">Today</button>{% endif %}
+          <button class="chip-btn" name="to" value="+1d" title="Push one day">+1d</button>
+          <button class="chip-btn" name="to" value="+1w" title="Push one week">+1w</button>
+        </form>
+        <form method="post" action="/admin/tasks/{{ t.id }}/delete" class="inline-form" onsubmit="return confirm('Delete this task?')">
+          <input type="hidden" name="next" value="/admin/tasks">
+          <button class="chip-btn danger" title="Delete"><i class="bi bi-trash"></i></button>
+        </form>
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endfor %}
+
+{% if not open_count %}
+<div class="empty card">
+  <i class="bi bi-cup-hot"></i>
+  <p><b>Nothing scheduled.</b></p>
+  <p class="muted">Add a task above — calls, follow-ups, errands, whatever moves the day.</p>
+</div>
+{% endif %}
+
+{% if done_recent %}
+<details class="done-wrap">
+  <summary>Completed recently <span class="count-chip">{{ done_recent | length }}</span></summary>
+  {% for t in done_recent %}
+  <div class="task-row done">
+    <form method="post" action="/admin/tasks/{{ t.id }}/toggle">
+      <input type="hidden" name="next" value="/admin/tasks">
+      <button class="task-check done" type="submit" title="Reopen"><i class="bi bi-check-circle-fill"></i></button>
+    </form>
+    <span class="task-kind"><i class="bi {{ TASK_ICONS[t.kind] }}"></i>{{ t.kind }}</span>
+    <span class="task-title">{{ t.title }}</span>
+    {% if t.lead_id %}<a class="task-lead" href="/admin/crm/{{ t.lead_id }}"><i class="bi bi-person"></i>{{ lead_names[t.lead_id] }}</a>{% endif %}
+    <span class="task-due">done {{ t.done_at | localdate if t.done_at else '' }}</span>
+    <span class="task-actions">
+      <form method="post" action="/admin/tasks/{{ t.id }}/delete" class="inline-form">
+        <input type="hidden" name="next" value="/admin/tasks">
+        <button class="chip-btn danger" title="Delete"><i class="bi bi-trash"></i></button>
+      </form>
+    </span>
+  </div>
+  {% endfor %}
+</details>
+{% endif %}
+{% endblock %}

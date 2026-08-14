@@ -8,27 +8,63 @@
 </div>
 {% if rows %}
 <table>
-  <tr><th>Business</th>{% if role == 'admin' %}<th>Owner</th>{% endif %}<th>Live link</th><th>Template</th><th>GitHub</th><th>Updated</th><th></th></tr>
+  <tr><th>Business</th>{% if role == 'admin' %}<th>Owner</th>{% endif %}<th>Live link</th><th>Publishing</th><th>Updated</th><th></th></tr>
   {% for site in rows %}
   <tr>
-    <td><a class="rowlink" href="/edit/{{ site.id }}">{{ site.business_name }}</a></td>
+    <td><a class="rowlink" href="/edit/{{ site.id }}">{{ site.business_name }}</a>
+        <div class="subtext">{{ site.template or 'v1 generated' }}</div></td>
     {% if role == 'admin' %}<td class="muted">{{ owners.get(site.owner_id, 'me') }}</td>{% endif %}
     <td><a href="/s/{{ site.slug }}" target="_blank">/s/{{ site.slug }}</a></td>
-    <td class="muted">{{ site.template or 'v1 generated' }}</td>
-    <td class="muted">{% if site.github_repo %}<i class="bi bi-github"></i> {{ site.github_repo.split('/')[-1] }}{% else %}—{% endif %}</td>
-    <td class="muted">{{ site.updated_at.strftime("%b %-d") }}</td>
+    <td>
+      {% if site.github_repo %}
+        <div class="sync"><i class="bi bi-github"></i> {{ site.github_repo }}</div>
+        {% if site.last_push_ok is true %}
+          <div class="subtext sync-ok"><i class="bi bi-check-circle-fill"></i> live · pushed {{ site.last_push_at | duefmt if site.last_push_at else '' }}</div>
+        {% elif site.last_push_ok is false %}
+          <div class="subtext sync-bad" title="{{ site.last_push_msg }}"><i class="bi bi-x-octagon-fill"></i> last push FAILED — {{ site.last_push_msg | truncate(60) }}</div>
+        {% else %}
+          <div class="subtext"><i class="bi bi-dash-circle"></i> linked, nothing pushed yet</div>
+        {% endif %}
+      {% else %}
+        <div class="subtext"><i class="bi bi-dash-circle"></i> not linked — edits stay local</div>
+        {% if role == 'admin' %}
+        <details class="linkrepo">
+          <summary>Link repo</summary>
+          <form method="post" action="/admin/sites/{{ site.id }}/github" class="linkrepo-form">
+            <input type="text" name="github_repo" placeholder="corbanCodes/toddtrope" required>
+            <label class="chk"><input type="checkbox" name="push_now" value="1" checked> push current version now</label>
+            <button class="btn sm" type="submit">Link</button>
+          </form>
+        </details>
+        {% endif %}
+      {% endif %}
+    </td>
+    <td class="muted">{{ site.updated_at | localdate }}</td>
     <td style="white-space:nowrap">
       <a class="btn primary sm" href="/edit/{{ site.id }}" style="background:var(--orange);color:#fff">Edit</a>
+      {% if site.github_repo %}
+      <form method="post" action="/admin/sites/{{ site.id }}/push" style="display:inline"><button class="btn ghost sm" type="submit" title="Commit the current version to GitHub → Netlify redeploys">Push now</button></form>
+      {% endif %}
       <a class="btn ghost sm" href="/admin/sites/{{ site.id }}/download">HTML</a>
       {% if revisions.get(site.id) %}
       <form method="post" action="/admin/sites/{{ site.id }}/revert" style="display:inline" onsubmit="return confirm('Restore the previous saved version?')"><button class="btn ghost sm" type="submit">Undo save</button></form>
+      {% endif %}
+      {% if site.github_repo and role == 'admin' %}
+      <form method="post" action="/admin/sites/{{ site.id }}/github" style="display:inline" onsubmit="return confirm('Unlink {{ site.github_repo }}? Edits will stop publishing.')"><input type="hidden" name="action" value="unlink"><button class="btn ghost sm" type="submit">Unlink</button></form>
       {% endif %}
       <form method="post" action="/admin/sites/{{ site.id }}/delete" style="display:inline" onsubmit="return confirm('Delete this site?')"><button class="btn danger sm" type="submit">Delete</button></form>
     </td>
   </tr>
   {% endfor %}
 </table>
+{% if role == 'admin' %}
+<p class="muted" style="margin-top:12px"><i class="bi bi-info-circle"></i> Publishing = every editor Save auto-commits <code>index.html</code> to the linked repo, and Netlify redeploys the client's domain. One server token powers all of it — status in <a href="/admin/setup">Setup</a>.</p>
+{% endif %}
 {% else %}
-<div class="card muted">No sites yet. “+ New site” → pick one of the 25 industry templates (or blank) → edit it live like a doc.</div>
+<div class="empty card">
+  <i class="bi bi-window-plus"></i>
+  <p><b>No sites yet.</b></p>
+  <p class="muted">“+ New site” → pick one of the 25 industry templates (or blank) → edit it live like a doc.</p>
+</div>
 {% endif %}
 {% endblock %}

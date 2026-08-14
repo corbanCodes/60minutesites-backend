@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% set active = 'setup' %}
+{% block title %}Setup | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>Setup &amp; Playbook <span class="muted" style="font-size:14px;font-weight:400">(only you can see this)</span></h1></div>
+
+{% if alerts %}
+<h2 style="margin-top:0">Needs attention <span class="count-chip">{{ alerts | length }}</span></h2>
+<div class="alert-list">
+  {% for a in alerts %}
+  <a class="alert-card {{ a.level }}" href="#{{ a.guide }}">
+    <i class="bi {{ a.icon }}"></i>
+    <div>
+      <div class="alert-title">{{ a.title }}</div>
+      <div class="alert-body">{{ a.body }}</div>
+    </div>
+    <span class="alert-cta">Guide ↓</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="flash"><i class="bi bi-check-circle"></i><span>Everything's configured — nothing needs attention.</span></div>
+{% endif %}
+
+<div class="card" style="margin:18px 0">
+  <h2 style="margin-top:0">System status</h2>
+  <table>
+    <tr><td>GitHub publishing</td>
+        <td>{% if s.github %}<span class="pill" style="background:#2E7D4F">Connected</span> — Saves push to linked repos{% else %}<span class="pill" style="background:#B3362B">Off</span> — no <code>GITHUB_TOKEN</code> on the server (guide below){% endif %}</td>
+        <td style="text-align:right"><form method="post" action="/admin/setup/test-github"><button class="btn ghost sm" type="submit">Test connection</button></form></td></tr>
+    <tr><td>Email notifications (Resend)</td>
+        <td colspan="2">{% if s.resend %}<span class="pill" style="background:#2E7D4F">Connected</span> — leads email their form's owner{% if not s.admin_email %} · <b>set <code>ADMIN_EMAIL</code> so YOUR forms email you too</b>{% endif %}{% else %}<span class="pill" style="background:#B3362B">Off</span> — set <code>RESEND_API_KEY</code> in Railway{% endif %}</td></tr>
+    <tr><td>Editor AI</td>
+        <td colspan="2">{% if s.openai %}<span class="pill" style="background:#2E7D4F">Connected</span>{% else %}<span class="pill" style="background:#888">Off</span> — set <code>OPENAI_API_KEY</code> (optional){% endif %}</td></tr>
+  </table>
+</div>
+
+<h2>Guides</h2>
+
+<details class="guide" id="github" {{ 'open' if not s.github }}>
+  <summary><i class="bi bi-github"></i> GitHub publishing — the ONE token that makes client edits go live <span class="guide-tag">do this once, never again</span></summary>
+  <div class="guide-body">
+    <p><b>How publishing works:</b> each client site links to a GitHub repo. When anyone hits Save in the editor, HQ commits the page to that repo, and Netlify (watching the repo) redeploys the client's real domain within a minute. The missing piece is a single server-side token — <b>set once for ALL sites and all future clients. You do NOT need a new token per site or per save.</b></p>
+    <ol>
+      <li>Go to <code>github.com/settings/personal-access-tokens</code> → <b>Generate new token</b> (fine-grained).</li>
+      <li>Name it <code>60ms-hq-publisher</code>. Expiration: 1 year (put a task in <a href="/admin/tasks">Tasks</a> to renew it — seriously, do it now).</li>
+      <li><b>Repository access:</b> “Only select repositories” → tick every client repo (e.g. <code>corbanCodes/toddtrope</code>). You'll add new client repos to this same token later.</li>
+      <li><b>Permissions → Repository permissions → Contents: Read and write.</b> Nothing else.</li>
+      <li>Generate, copy the <code>github_pat_…</code> value.</li>
+      <li>Railway → your <b>app service</b> → <b>Variables</b> → add <code>GITHUB_TOKEN</code> = the token → it redeploys automatically.</li>
+      <li>Come back here → <b>Test connection</b>. It checks the token AND every linked repo, and tells you exactly which repo is missing access if any.</li>
+    </ol>
+    <p class="muted">When you onboard a new client later, the only GitHub chore is: add their repo to this token's repository list (github.com/settings/personal-access-tokens → your token → Repository access).</p>
+  </div>
+</details>
+
+<details class="guide" id="linksite">
+  <summary><i class="bi bi-link-45deg"></i> Link an EXISTING site to its repo <span class="guide-tag">the Todd situation</span></summary>
+  <div class="guide-body">
+    <p>Already created the site in HQ (uploaded/built it) but it's not connected to GitHub? You don't need to recreate anything:</p>
+    <ol>
+      <li>If the repo doesn't exist yet: <code>github.com/new</code> → name it after the client (e.g. <code>toddtrope</code>) → create it empty (no README needed).</li>
+      <li>If GitHub publishing is on (guide above), make sure this repo is in the token's repository list.</li>
+      <li><b>Sites → find the site → “Link repo”</b> → type <code>owner/repo</code> → keep “push current version now” checked → <b>Link</b>. HQ verifies access and pushes the current page as the first commit.</li>
+      <li>Netlify → <b>Add new site → Import an existing project → GitHub</b> → pick the repo → deploy. Then Domain settings → add the client's custom domain and follow the DNS records it shows.</li>
+      <li>Prove the loop: open the editor, change one word, Save — the Sites page will show <span class="sync-ok" style="font-size:13px"><i class="bi bi-check-circle-fill"></i> live</span> with a timestamp, and the commit appears in GitHub.</li>
+    </ol>
+    <p class="muted">“Push now” on the Sites page re-publishes any time without opening the editor. If a push fails you'll see exactly why, right on the row (and as an alert up top).</p>
+  </div>
+</details>
+
+<details class="guide" id="onboard">
+  <summary><i class="bi bi-person-plus"></i> Onboard a paying client, start to finish</summary>
+  <div class="guide-body">
+    <ol>
+      <li><b>Customers → Add</b> — name, email, cell, <b>monthly price + setup fee</b> (you can fill these in later too — there's a reminder if you skip it). Copy the generated password; text it to them.</li>
+      <li><b>Site:</b> either <b>Sites → + New site</b> (template or GitHub import, Owner = the client), or link an existing site's repo (guide above).</li>
+      <li><b>Forms → Create</b> — name it after them, <b>Owner = the client</b>. In the editor, “+ Form” and pick their form. Their submissions land in <i>their</i> CRM (you still see everything as admin) and email them via Resend.</li>
+      <li><b>Test the publish loop</b> — editor → change a word → Save → “live” status on Sites.</li>
+      <li>Log in as them once (their email + password) to see their view: their dashboard, site, CRM, tasks — nothing of yours.</li>
+      <li>Money shows up automatically on <a href="/admin/revenue">Revenue</a> once the monthly price is set.</li>
+    </ol>
+  </div>
+</details>
+
+<details class="guide" id="resend">
+  <summary><i class="bi bi-envelope"></i> Lead email alerts (Resend)</summary>
+  <div class="guide-body">
+    <ol>
+      <li>resend.com → API Keys → create key → Railway Variables → <code>RESEND_API_KEY</code>.</li>
+      <li>Set <code>ADMIN_EMAIL</code> = your email, so leads from <i>your own</i> forms reach you (client forms email the client automatically).</li>
+      <li>Until you verify your domain at resend.com/domains, emails send from the shared test address and may only deliver to your own inbox. Verify the domain, then set <code>RESEND_FROM</code> = <code>60 Minute Sites &lt;leads@yourdomain&gt;</code>.</li>
+    </ol>
+  </div>
+</details>
+
+<details class="guide" id="billing">
+  <summary><i class="bi bi-currency-dollar"></i> Billing &amp; the Revenue dashboard</summary>
+  <div class="guide-body">
+    <p>Set each customer's <b>monthly price</b> (and one-time setup fee) on the <a href="/admin/customers">Customers</a> page — inline, any time, before or after creating them. <a href="/admin/revenue">Revenue</a> then shows MRR, ARR run-rate, and a 12-month projection. Put a <b>$/mo deal value</b> on CRM leads and the weighted pipeline (New 10% → Built 75%) forecasts what's coming.</p>
+  </div>
+</details>
+
+<details class="guide" id="openai">
+  <summary><i class="bi bi-stars"></i> Editor AI (optional)</summary>
+  <div class="guide-body">
+    <p>Railway Variables → <code>OPENAI_API_KEY</code> (platform.openai.com → API keys). Enables “AI rewrite” on any text and “AI restyle” for whole-page design instructions in the site editor.</p>
+  </div>
+</details>
+
+<details class="guide" id="broke">
+  <summary><i class="bi bi-wrench-adjustable"></i> If something breaks</summary>
+  <div class="guide-body">
+    <ul>
+      <li><b>Client wrecked their page:</b> Sites → <b>Undo save</b> restores the previous version and re-pushes to GitHub. Every save keeps the last 20 versions.</li>
+      <li><b>Save says the push failed:</b> the exact reason is on the Sites row and up top here. 9 times out of 10 the repo isn't in the token's repository list.</li>
+      <li><b>Form redirect typo / wrong URL:</b> forms can't be edited yet — delete and recreate (the embed code changes; re-paste it).</li>
+      <li><b>Railway deploy loses data:</b> it shouldn't (Postgres) — if it ever does, check the app service still has <code>DATABASE_URL = ${{'{{'}}Postgres.DATABASE_URL{{'}}'}}</code>.</li>
+      <li><b>Times look off:</b> HQ displays {{ 'America/Los_Angeles' }} by default — set <code>APP_TZ</code> in Railway (e.g. <code>America/Denver</code>) to change it.</li>
+    </ul>
+  </div>
+</details>
+
+<div class="card" style="margin-top:18px">
+  <h2 style="margin-top:0">Who sees what</h2>
+  <table>
+    <tr><th></th><th>You (admin)</th><th>Customer</th></tr>
+    <tr><td>CRM &amp; Tasks</td><td>Everyone's</td><td>Only their own</td></tr>
+    <tr><td>Sites / Forms / Funnels</td><td>Everyone's</td><td>Only their own</td></tr>
+    <tr><td>Revenue, Customers, Flipbooks, Setup</td><td>Yes</td><td>Hidden</td></tr>
+    <tr><td>Lead emails</td><td>Your forms → <code>ADMIN_EMAIL</code></td><td>Their forms → their email</td></tr>
+  </table>
+</div>
+{% endblock %}

@@ -8,20 +8,27 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/static-admin/admin.css">
+  <link rel="icon" href="/favicon_io%20(4)/favicon-32x32.png" type="image/png">
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar">
     <a class="logo" href="/admin"><span>60</span>MS&nbsp;HQ</a>
+    <div class="nav-sec">Work</div>
     <a class="nav-item {{ 'active' if active == 'dashboard' }}" href="/admin"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-    <a class="nav-item {{ 'active' if active == 'leads' }}" href="/admin/leads"><i class="bi bi-person-lines-fill"></i>Leads</a>
+    <a class="nav-item {{ 'active' if active == 'crm' }}" href="/admin/crm"><i class="bi bi-kanban"></i>CRM</a>
+    <a class="nav-item {{ 'active' if active == 'tasks' }}" href="/admin/tasks"><i class="bi bi-check2-square"></i>Tasks</a>
+    <div class="nav-sec">Build</div>
     <a class="nav-item {{ 'active' if active == 'sites' }}" href="/admin/sites"><i class="bi bi-window-sidebar"></i>Sites</a>
     <a class="nav-item {{ 'active' if active == 'forms' }}" href="/admin/forms"><i class="bi bi-envelope-paper"></i>Forms</a>
     <a class="nav-item {{ 'active' if active == 'funnels' }}" href="/admin/funnels"><i class="bi bi-lightning-charge"></i>Funnels</a>
     {% if role == 'admin' %}
+    <div class="nav-sec">Business</div>
+    <a class="nav-item {{ 'active' if active == 'revenue' }}" href="/admin/revenue"><i class="bi bi-graph-up-arrow"></i>Revenue</a>
     <a class="nav-item {{ 'active' if active == 'customers' }}" href="/admin/customers"><i class="bi bi-people"></i>Customers</a>
     <a class="nav-item {{ 'active' if active == 'flipbooks' }}" href="/admin/flipbooks"><i class="bi bi-journal-richtext"></i>Flipbooks</a>
-    <a class="nav-item {{ 'active' if active == 'help' }}" href="/admin/help"><i class="bi bi-life-preserver"></i>Playbook</a>
+    <a class="nav-item {{ 'active' if active == 'setup' }}" href="/admin/setup"><i class="bi bi-gear"></i>Setup
+      {% if alert_count %}<span class="nav-badge">{{ alert_count }}</span>{% endif %}</a>
     {% endif %}
     <div class="spacer"></div>
     {% if me %}<span class="nav-item" style="cursor:default;opacity:.7"><i class="bi bi-person-circle"></i>{{ me.name }}</span>{% endif %}
@@ -29,11 +36,26 @@
     <a class="nav-item" href="/logout"><i class="bi bi-door-open"></i>Log out</a>
   </aside>
   <main class="main">
-    {% with messages = get_flashed_messages() %}
-      {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      <div id="flashes">
+      {% for cat, m in messages %}
+        <div class="flash{{ ' flash-error' if cat == 'error' }}{{ ' flash-sticky' if cat == 'sticky' }}">
+          <i class="bi {{ 'bi-exclamation-triangle-fill' if cat == 'error' else 'bi-pin-angle-fill' if cat == 'sticky' else 'bi-check-circle' }}"></i>
+          <span>{{ m }}</span>
+          <button class="flash-x" onclick="this.parentElement.remove()" aria-label="Dismiss">&times;</button>
+        </div>
+      {% endfor %}
+      </div>
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
 </div>
+<script>
+  // only routine success toasts auto-dismiss; errors and must-read info stay put
+  document.querySelectorAll('#flashes .flash:not(.flash-error):not(.flash-sticky)').forEach(function (f) {
+    setTimeout(function () { f.classList.add('fade-out'); }, 7000);
+    setTimeout(function () { f.remove(); }, 7600);
+  });
+</script>
 </body>
 </html>

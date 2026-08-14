@@ -6,28 +6,85 @@
   <h1>{{ 'Dashboard' if role == 'admin' else 'Welcome, ' + me.name.split(' ')[0] }}</h1>
   <a class="btn" href="/admin/sites/new">+ New site</a>
 </div>
+
+{% if role == 'admin' %}
+  {% set critical = alerts | selectattr('level', 'equalto', 'critical') | list %}
+  {% if critical %}
+  <a class="alert-banner" href="/admin/setup">
+    <i class="bi bi-exclamation-octagon-fill"></i>
+    <span><b>{{ critical[0].title }}</b>{% if critical | length > 1 %} — and {{ critical | length - 1 }} more issue(s){% endif %}</span>
+    <span class="alert-cta">Fix it →</span>
+  </a>
+  {% endif %}
+{% endif %}
+
 <div class="cards">
   <div class="card stat"><div class="num">{{ stats.leads }}</div><div class="label">Leads</div></div>
   <div class="card stat"><div class="num">{{ stats.booked }}</div><div class="label">Booked+</div></div>
   <div class="card stat"><div class="num">{{ stats.sites }}</div><div class="label">Sites</div></div>
+  {% if role == 'admin' %}
+  <div class="card stat linkable" onclick="location='/admin/revenue'"><div class="num">{{ stats.mrr | money }}</div><div class="label">MRR →</div></div>
+  {% else %}
   <div class="card stat"><div class="num">{{ stats.forms }}</div><div class="label">Forms</div></div>
+  {% endif %}
 </div>
-<h2>Latest leads</h2>
-{% if recent %}
-<table>
-  <tr><th>Name</th><th>Business</th><th>Phone</th><th>Source</th><th>Status</th><th>Added</th></tr>
-  {% for lead in recent %}
-  <tr>
-    <td><a class="rowlink" href="/admin/leads/{{ lead.id }}">{{ lead.name }}</a></td>
-    <td>{{ lead.business or "—" }}</td>
-    <td>{{ lead.phone or "—" }}</td>
-    <td>{{ lead.source }}</td>
-    <td><span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}">{{ lead.status }}</span></td>
-    <td class="muted">{{ lead.created_at.strftime("%b %-d") }}</td>
-  </tr>
-  {% endfor %}
-</table>
-{% else %}
-<div class="card muted">No leads yet — embed a form (Forms → copy the snippet, or “+ Form” in the site editor) and submissions appear here automatically.</div>
-{% endif %}
+
+<div class="row2" style="align-items:start">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <h2 style="margin-top:0">Up next</h2>
+      <a class="muted" href="/admin/tasks" style="text-decoration:none;font-weight:700">All tasks →</a>
+    </div>
+    {% if overdue or today %}
+      {% for t in overdue %}
+      <div class="task-row">
+        <form method="post" action="/admin/tasks/{{ t.id }}/toggle">
+          <input type="hidden" name="next" value="/admin">
+          <button class="task-check" type="submit" title="Mark done"><i class="bi bi-circle"></i></button>
+        </form>
+        <span class="task-kind"><i class="bi {{ TASK_ICONS[t.kind] }}"></i>{{ t.kind }}</span>
+        <span class="task-title">{{ t.title }}</span>
+        {% if t.lead_id %}<a class="task-lead" href="/admin/crm/{{ t.lead_id }}"><i class="bi bi-person"></i>{{ task_leads[t.lead_id] }}</a>{% endif %}
+        <span class="task-due overdue">{{ t.due_at | duefmt }}</span>
+      </div>
+      {% endfor %}
+      {% for t in today %}
+      <div class="task-row">
+        <form method="post" action="/admin/tasks/{{ t.id }}/toggle">
+          <input type="hidden" name="next" value="/admin">
+          <button class="task-check" type="submit" title="Mark done"><i class="bi bi-circle"></i></button>
+        </form>
+        <span class="task-kind"><i class="bi {{ TASK_ICONS[t.kind] }}"></i>{{ t.kind }}</span>
+        <span class="task-title">{{ t.title }}</span>
+        {% if t.lead_id %}<a class="task-lead" href="/admin/crm/{{ t.lead_id }}"><i class="bi bi-person"></i>{{ task_leads[t.lead_id] }}</a>{% endif %}
+        <span class="task-due">{{ t.due_at | duefmt }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="muted" style="margin-bottom:0">Nothing due today. <a href="/admin/tasks">Schedule something</a> — tomorrow-you will thank you.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <h2 style="margin-top:0">Latest leads</h2>
+      <a class="muted" href="/admin/crm" style="text-decoration:none;font-weight:700">Open CRM →</a>
+    </div>
+    {% if recent %}
+    <table>
+      <tr><th>Name</th><th>Business</th><th>Status</th><th>Added</th></tr>
+      {% for lead in recent %}
+      <tr>
+        <td><a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a></td>
+        <td>{{ lead.business or "—" }}</td>
+        <td><span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}">{{ lead.status }}</span></td>
+        <td class="muted">{{ lead.created_at | localdate }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted" style="margin-bottom:0">No leads yet — embed a form (Forms → copy the snippet) and submissions appear here automatically.</p>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}

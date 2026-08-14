@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% set active = 'revenue' %}
+{% block title %}Revenue | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Revenue</h1>
+  <a class="btn ghost" href="/admin/customers">Manage billing →</a>
+</div>
+
+<div class="cards">
+  <div class="card stat"><div class="num">{{ mrr | money }}</div><div class="label">MRR — monthly recurring</div></div>
+  <div class="card stat"><div class="num">{{ (mrr * 12) | money }}</div><div class="label">ARR run-rate</div></div>
+  <div class="card stat"><div class="num">{{ pipeline_weighted | money }}</div><div class="label">Weighted pipeline ($/mo)</div></div>
+  <div class="card stat"><div class="num">{{ setup_total | money }}</div><div class="label">Setup fees (one-time)</div></div>
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+    <h2 style="margin:0">Next 12 months — cumulative collections</h2>
+    <div class="chart-legend">
+      <span><i class="sw" style="background:#B93A10"></i>Committed (current MRR)</span>
+      <span><i class="sw sw-up" style="background:#F08A4B"></i>If weighted pipeline closes</span>
+    </div>
+  </div>
+  {% if mrr or pipeline_weighted %}
+  <div class="revchart" role="img" aria-label="Cumulative projected collections over the next 12 months">
+    {% for m in months %}
+    {% set i = loop.index0 %}
+    {% set total = base_cum[i] + upside_cum[i] %}
+    <div class="revcol" title="{{ m }}: {{ base_cum[i] | money }} committed{% if upside_cum[i] %} + {{ upside_cum[i] | money }} upside{% endif %}">
+      {% if loop.index in (3, 6, 12) %}<div class="revlabel">{{ total | money }}</div>{% endif %}
+      <div class="revbars">
+        {% if upside_cum[i] %}<div class="revbar up" style="height: {{ (upside_cum[i] / chart_max * 100) | round(2) }}%"></div>{% endif %}
+        <div class="revbar base" style="height: {{ (base_cum[i] / chart_max * 100) | round(2) }}%"></div>
+      </div>
+      <div class="revmonth">{{ m }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <details class="muted" style="margin-top:10px">
+    <summary style="cursor:pointer">Table view</summary>
+    <table style="margin-top:10px">
+      <tr><th>Month</th><th>Committed (cum.)</th><th>With pipeline (cum.)</th></tr>
+      {% for m in months %}{% set i = loop.index0 %}
+      <tr><td>{{ m }}</td><td>{{ base_cum[i] | money }}</td><td>{{ (base_cum[i] + upside_cum[i]) | money }}</td></tr>
+      {% endfor %}
+    </table>
+  </details>
+  {% else %}
+  <p class="muted" style="margin-bottom:0">Set a monthly price on a customer (or a $/mo value on a lead) and the projection draws itself.</p>
+  {% endif %}
+</div>
+
+<div class="row2" style="align-items:start">
+  <div class="card">
+    <h2 style="margin-top:0">MRR by customer</h2>
+    {% if paying %}
+    {% set top = paying[0].monthly_price %}
+    {% for u in paying %}
+    <div class="hbar-row">
+      <span class="hbar-name">{{ u.name }}</span>
+      <span class="hbar-track"><span class="hbar" style="width: {{ (u.monthly_price / top * 100) | round(1) }}%"></span></span>
+      <span class="hbar-val">{{ u.monthly_price | money }}/mo</span>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="muted">No paying customers recorded yet — set a monthly price on the <a href="/admin/customers">Customers</a> page (you can add it before or after creating them).</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">Open pipeline <span class="muted" style="font-weight:400;font-size:13px">{{ pipeline_raw | money }}/mo raw · weighted by stage</span></h2>
+    {% if open_leads %}
+    <table>
+      <tr><th>Lead</th><th>Stage</th><th>$/mo</th><th>Weighted</th></tr>
+      {% for l in open_leads %}
+      <tr>
+        <td><a class="rowlink" href="/admin/crm/{{ l.id }}">{{ l.name }}</a></td>
+        <td><span class="pill" style="background: {{ STATUS_COLORS[l.status] }}">{{ l.status }}</span></td>
+        <td>{{ l.deal_value | money }}</td>
+        <td class="muted">{{ (l.deal_value * STATUS_WEIGHTS.get(l.status, 0)) | money }} <span class="subtext" style="display:inline">({{ (STATUS_WEIGHTS.get(l.status, 0) * 100) | int }}%)</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="muted" style="margin-bottom:0">Weights: New 10% · Contacted 25% · Booked 50% · Built 75% — a rough “how likely is this money” haircut.</p>
+    {% else %}
+    <p class="muted">No open deals with a $/mo value. Put a value on leads in the <a href="/admin/crm">CRM</a> and this fills in.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% set active = 'crm' %}
+{% block title %}Pipeline board | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>CRM</h1>
+  <div class="topbar-actions">
+    <div class="viewtabs">
+      <a class="viewtab" href="/admin/crm"><i class="bi bi-list-ul"></i> List</a>
+      <a class="viewtab active" href="/admin/crm/board"><i class="bi bi-kanban"></i> Board</a>
+    </div>
+    <a class="btn" href="/admin/crm/new">+ Add lead</a>
+  </div>
+</div>
+<p class="muted" style="margin:-10px 0 14px">Drag a card to move it through the pipeline — the change saves instantly and gets logged on the lead.</p>
+
+<div class="board">
+  {% for s in STATUSES %}
+  <div class="board-col" data-status="{{ s }}">
+    <div class="board-head" style="--col: {{ STATUS_COLORS[s] }}">
+      <span class="dot"></span>{{ s }}
+      <span class="board-count">{{ cols[s] | length }}</span>
+      <span class="board-total" {% if not totals[s] %}hidden{% endif %}>{{ (totals[s] | money if totals[s] else '') }}{% if totals[s] %}/mo{% endif %}</span>
+    </div>
+    <div class="board-cards" data-status="{{ s }}">
+      {% for lead in cols[s] %}
+      {% set nxt = next_steps.get(lead.id) %}
+      <a class="board-card" draggable="true" data-id="{{ lead.id }}" data-value="{{ lead.deal_value or 0 }}" href="/admin/crm/{{ lead.id }}">
+        <div class="bc-name">{{ lead.name }}</div>
+        {% if lead.business %}<div class="bc-biz">{{ lead.business }}</div>{% endif %}
+        <div class="bc-meta">
+          {% if lead.deal_value %}<span class="bc-val">{{ lead.deal_value | money }}/mo</span>{% endif %}
+          {% if nxt %}
+            <span class="bc-next {{ 'overdue' if nxt.due_at and nxt.due_at < now }}"><i class="bi {{ TASK_ICONS[nxt.kind] }}"></i>{{ nxt.due_at | duefmt if nxt.due_at else nxt.title | truncate(18) }}</span>
+          {% elif s not in ('Client', 'Dead') %}
+            <span class="bc-next none"><i class="bi bi-exclamation-circle"></i>no next step</span>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+(function () {
+  var dragged = null;
+  document.querySelectorAll('.board-card').forEach(function (card) {
+    card.addEventListener('dragstart', function (e) {
+      dragged = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.id);
+    });
+    card.addEventListener('dragend', function () {
+      card.classList.remove('dragging');
+      dragged = null;
+    });
+    card.addEventListener('click', function (e) {
+      if (card.classList.contains('dragging')) e.preventDefault();
+    });
+  });
+  document.querySelectorAll('.board-cards').forEach(function (col) {
+    col.addEventListener('dragover', function (e) { e.preventDefault(); col.classList.add('over'); });
+    col.addEventListener('dragleave', function () { col.classList.remove('over'); });
+    col.addEventListener('drop', function (e) {
+      e.preventDefault();
+      col.classList.remove('over');
+      if (!dragged) return;
+      var status = col.dataset.status, card = dragged;
+      var from = card.parentElement;
+      if (from === col) return;
+      col.prepend(card);
+      refreshCounts();
+      fetch('/admin/crm/' + card.dataset.id + '/status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status })
+      }).then(function (r) {
+        // an expired session 302s to the login page (HTML) — treat as failure
+        if (!r.ok || (r.headers.get('content-type') || '').indexOf('json') === -1) throw new Error('bad response');
+        return r.json();
+      }).then(function (j) {
+        if (!j.ok) revert(card, from);
+      }).catch(function () { revert(card, from); });
+    });
+  });
+  function revert(card, from) {
+    from.prepend(card);
+    refreshCounts();
+    boardError("Couldn't save that move — check your connection (or log back in) and try again.");
+  }
+  function boardError(msg) {
+    var old = document.getElementById('board-err');
+    if (old) old.remove();
+    var d = document.createElement('div');
+    d.id = 'board-err';
+    d.className = 'flash flash-error';
+    d.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i><span></span>' +
+      '<button class="flash-x" aria-label="Dismiss">&times;</button>';
+    d.querySelector('span').textContent = msg;
+    d.querySelector('.flash-x').onclick = function () { d.remove(); };
+    document.querySelector('.main').prepend(d);
+  }
+  function money(n) {
+    return '$' + Math.round(n).toLocaleString();
+  }
+  function refreshCounts() {
+    document.querySelectorAll('.board-col').forEach(function (colEl) {
+      var cards = colEl.querySelectorAll('.board-card');
+      colEl.querySelector('.board-count').textContent = cards.length;
+      var total = 0;
+      cards.forEach(function (c) { total += parseFloat(c.dataset.value) || 0; });
+      var totalEl = colEl.querySelector('.board-total');
+      if (total > 0) { totalEl.hidden = false; totalEl.textContent = money(total) + '/mo'; }
+      else { totalEl.hidden = true; }
+    });
+  }
+})();
+</script>
+{% endblock %}

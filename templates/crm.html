@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% set active = 'crm' %}
+{% block title %}CRM | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>CRM</h1>
+  <div class="topbar-actions">
+    <div class="viewtabs">
+      <a class="viewtab active" href="/admin/crm"><i class="bi bi-list-ul"></i> List</a>
+      <a class="viewtab" href="/admin/crm/board"><i class="bi bi-kanban"></i> Board</a>
+    </div>
+    <a class="btn" href="/admin/crm/new">+ Add lead</a>
+  </div>
+</div>
+<form class="searchbar" method="get">
+  <input type="text" name="q" placeholder="Search name, phone, email, business…" value="{{ q }}">
+  <select name="status" onchange="this.form.submit()">
+    <option value="">All statuses</option>
+    {% for s in STATUSES %}<option value="{{ s }}" {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}
+  </select>
+  <button class="btn ghost" type="submit">Search</button>
+</form>
+{% if rows %}
+<table>
+  <tr><th>Name</th><th>Business</th><th>Phone</th><th>$/mo</th><th>Status</th><th>Next step</th><th>Added</th></tr>
+  {% for lead in rows %}
+  {% set nxt = next_steps.get(lead.id) %}
+  <tr>
+    <td><a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a>
+        {% if lead.source and lead.source != 'manual' %}<div class="subtext">{{ lead.source }}</div>{% endif %}</td>
+    <td>{{ lead.business or "—" }}{% if lead.business_type %}<div class="subtext">{{ lead.business_type }}</div>{% endif %}</td>
+    <td>{{ lead.phone or "—" }}</td>
+    <td>{{ lead.deal_value | money if lead.deal_value else "—" }}</td>
+    <td><span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}">{{ lead.status }}</span></td>
+    <td>
+      {% if nxt %}
+        <span class="nextstep {{ 'overdue' if nxt.due_at and nxt.due_at < now }}">
+          <i class="bi {{ TASK_ICONS[nxt.kind] }}"></i> {{ nxt.title }}
+          <span class="subtext">{{ nxt.due_at | duefmt if nxt.due_at else '' }}</span>
+        </span>
+      {% elif lead.status not in ('Client', 'Dead') %}
+        <a class="nextstep none" href="/admin/crm/{{ lead.id }}#tasks"><i class="bi bi-plus-circle-dotted"></i> no next step</a>
+      {% else %}—{% endif %}
+    </td>
+    <td class="muted">{{ lead.created_at | localdate }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="empty card">
+  <i class="bi bi-person-plus"></i>
+  <p><b>No leads match.</b></p>
+  <p class="muted">Every form submission lands here automatically, or hit “+ Add lead” after a call.</p>
+</div>
+{% endif %}
+{% endblock %}
