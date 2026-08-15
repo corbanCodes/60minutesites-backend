@@ -54,6 +54,7 @@
         {% endif %}
       </div>
       <p class="muted" style="margin:10px 0 0">Old leads welcome: map a “Date added” column and they keep their original dates, so your CRM history stays honest.</p>
+      <p class="muted" style="margin:6px 0 0">Website, Job title, Phone 2, address fields, and any “Custom field…” columns are saved onto each lead as an <b>Imported details</b> note — nothing is lost, and no existing leads are touched.</p>
     </div>
 
     <input type="hidden" name="mapping" id="mapping">
@@ -88,10 +89,19 @@
 
   function guess(header) {
     var h = (header || '').toLowerCase();
+    if (/first.?name|\bfname\b|given/.test(h)) return 'first_name';
+    if (/last.?name|\blname\b|surname|family/.test(h)) return 'last_name';
     if (/business.?type|industry|category|type of/.test(h)) return 'business_type';
     if (/business|company|organi[sz]ation/.test(h)) return 'business';
     if (/e-?mail/.test(h)) return 'email';
+    if (/(phone|cell|mobile|tel).*(2|second|alt|other)|(second|other|alt).*(phone|cell|mobile)/.test(h)) return 'phone_2';
     if (/phone|cell|mobile|number|tel/.test(h)) return 'phone';
+    if (/web.?site|\burl\b|domain/.test(h)) return 'website';
+    if (/\btitle\b|\brole\b|position/.test(h)) return 'title';
+    if (/address|street/.test(h)) return 'address';
+    if (/\bcity\b|\btown\b/.test(h)) return 'city';
+    if (/\bstate\b|province/.test(h)) return 'state';
+    if (/\bzip\b|postal/.test(h)) return 'zip';
     if (/source|channel|utm|campaign|how.*hear/.test(h)) return 'source';
     if (/status|stage/.test(h)) return 'status';
     if (/value|price|deal|mrr|\$|amount|monthly/.test(h)) return 'deal_value';
@@ -103,7 +113,9 @@
 
   function build() {
     if (!rows.length) return;
-    var prev = selects.map(function (s) { return s.value; }); // keep manual fixes across re-renders
+    var prev = selects.map(function (s) { // keep manual fixes across re-renders
+      return s.sel.value === '__custom__' ? 'custom:' + s.ci.value.trim() : s.sel.value;
+    });
     var hasHeader = document.getElementById('hasheader').checked;
     var headers = hasHeader ? rows[0] : rows[0].map(function (_, i) { return 'Column ' + (i + 1); });
     var data = hasHeader ? rows.slice(1) : rows;
@@ -115,14 +127,34 @@
       var td = document.createElement('td');
       var sel = document.createElement('select');
       FIELDS.forEach(function (f) {
+        if (f[0] === 'skip') {
+          var co = document.createElement('option');
+          co.value = '__custom__'; co.textContent = 'Custom field…';
+          sel.appendChild(co);
+        }
         var o = document.createElement('option');
         o.value = f[0]; o.textContent = f[1];
         sel.appendChild(o);
       });
-      sel.value = prev[i] !== undefined ? prev[i] : (hasHeader ? guess(h) : 'skip');
-      sel.addEventListener('change', sync);
-      selects.push(sel);
+      var ci = document.createElement('input');
+      ci.type = 'text'; ci.maxLength = 40; ci.hidden = true;
+      ci.placeholder = 'Field name (e.g. LinkedIn)';
+      ci.style.cssText = 'display:block;width:100%;margin-top:4px;font-size:12px;padding:4px 6px';
+      var pv = prev[i];
+      if (pv !== undefined && pv.indexOf('custom:') === 0) {
+        sel.value = '__custom__'; ci.value = pv.slice(7); ci.hidden = false;
+      } else {
+        sel.value = pv !== undefined ? pv : (hasHeader ? guess(h) : 'skip');
+      }
+      sel.addEventListener('change', function () {
+        ci.hidden = sel.value !== '__custom__';
+        if (!ci.hidden) ci.focus();
+        sync();
+      });
+      ci.addEventListener('input', sync);
+      selects.push({sel: sel, ci: ci});
       td.appendChild(sel);
+      td.appendChild(ci);
       trSel.appendChild(td);
     });
     t.appendChild(trSel);
@@ -148,9 +180,18 @@
   }
 
   function sync() {
-    var m = selects.map(function (s) { return s.value; });
+    var m = selects.map(function (s) {
+      if (s.sel.value === '__custom__') {
+        var label = s.ci.value.trim().slice(0, 40);
+        return label ? 'custom:' + label : 'skip';
+      }
+      return s.sel.value;
+    });
     document.getElementById('mapping').value = JSON.stringify(m);
-    var ok = m.some(function (v) { return v === 'name' || v === 'phone' || v === 'email'; });
+    var ok = m.some(function (v) {
+      return v === 'name' || v === 'phone' || v === 'email' ||
+             v === 'first_name' || v === 'last_name';
+    });
     var btn = document.getElementById('gobtn');
     btn.disabled = !ok;
     btn.title = ok ? '' : 'Map at least one of Name, Phone, or Email';

@@ -80,11 +80,18 @@ STATUS_COLORS = {
 STATUS_WEIGHTS = {"New": 0.10, "Contacted": 0.25, "Booked": 0.50, "Built": 0.75}
 LEAD_FIELDS = ["name", "phone", "email", "business", "business_type"]
 # CSV import: mappable targets (key, label shown in the mapping dropdowns)
-CSV_FIELDS = [("name", "Name"), ("phone", "Phone"), ("email", "Email"),
+CSV_FIELDS = [("name", "Name"), ("first_name", "First name"), ("last_name", "Last name"),
+              ("phone", "Phone"), ("phone_2", "Phone 2"), ("email", "Email"),
               ("business", "Business"), ("business_type", "Business type"),
-              ("source", "Source"), ("status", "Status"),
+              ("title", "Job title"), ("website", "Website"),
+              ("address", "Address"), ("city", "City"), ("state", "State"),
+              ("zip", "ZIP"), ("source", "Source"), ("status", "Status"),
               ("deal_value", "Deal value ($/mo)"), ("note", "Note"),
               ("created_at", "Date added"), ("skip", "— ignore column —")]
+# mapped types with no Lead column — they land in an "Imported details" note
+CSV_EXTRA_FIELDS = {"phone_2": "Phone 2", "title": "Title", "website": "Website",
+                    "address": "Address", "city": "City", "state": "State",
+                    "zip": "ZIP"}
 TASK_KINDS = ["Call", "Text", "Email", "Meeting", "Follow-up", "To-do"]
 TASK_ICONS = {"Call": "bi-telephone", "Text": "bi-chat-left-dots",
               "Email": "bi-envelope", "Meeting": "bi-people",
@@ -1050,11 +1057,17 @@ def crm_import():
     except ValueError:
         mapping = []
     valid = {k for k, _ in CSV_FIELDS}
-    mapping = [m if m in valid else "skip" for m in mapping] if isinstance(mapping, list) else []
+
+    def _norm_target(m):
+        if isinstance(m, str) and m.startswith("custom:"):
+            label = m[7:].strip()[:40]
+            return ("custom:" + label) if label else "skip"
+        return m if m in valid else "skip"
+    mapping = [_norm_target(m) for m in mapping] if isinstance(mapping, list) else []
     if not text_data.strip() or not mapping:
         flash("Upload a CSV and map its columns first.", "error")
         return redirect(url_for("crm_import"))
-    if not any(m in ("name", "phone", "email") for m in mapping):
+    if not any(m in ("name", "first_name", "last_name", "phone", "email") for m in mapping):
         flash("Map at least one of Name, Phone, or Email so each lead is identifiable.", "error")
         return redirect(url_for("crm_import"))
 
@@ -1105,15 +1118,27 @@ def crm_import():
 
     added = updated = skipped = unusable = 0
     for row in rows:
-        vals, note_parts = {}, []
+        vals, note_parts, extras, name_parts = {}, [], [], {}
         for i, target in enumerate(mapping):
             v = row[i].strip() if i < len(row) else ""
             if not v or target == "skip":
                 continue
             if target == "note":
                 note_parts.append(v)
+            elif target in ("first_name", "last_name"):
+                name_parts[target] = v
+            elif target in CSV_EXTRA_FIELDS:
+                extras.append((CSV_EXTRA_FIELDS[target], v))
+            elif target.startswith("custom:"):
+                extras.append((target[7:], v))
             else:
                 vals[target] = v
+        if not vals.get("name") and name_parts:
+            vals["name"] = " ".join(p for p in (name_parts.get("first_name"),
+                                                name_parts.get("last_name")) if p)
+        if extras:
+            note_parts.insert(0, "Imported details: " + " · ".join(
+                f"{k}: {v}" for k, v in extras))
         email = vals.get("email", "").strip().lower()
         phone = phone_key(vals.get("phone", ""))
         if not (vals.get("name") or email or phone):
