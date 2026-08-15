@@ -307,8 +307,32 @@
       }).catch(function(){ /* booking still shown; Calendly re-captures contact info */ });
     }
 
+    function submitToHQ(contact){
+      fetch('/form/test-14a2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          name: contact.name,
+          phone: contact.phone,
+          email: contact.email,
+          business: contact.business,
+          business_type: answers.business_type || '',
+          current_website: answers.current_website || '',
+          timeline: answers.timeline || '',
+          fill_seconds: Math.round((Date.now() - t0) / 1000),
+          traffic_source: utm('utm_source') || document.referrer || 'direct',
+          utm_campaign: utm('utm_campaign'),
+          utm_content: utm('utm_content'),
+          landing_page: '/start.html',
+          source: utm('utm_content') || 'Ad Funnel /start',
+          _gotcha: document.getElementById('lead-gotcha').value
+        })
+      }).catch(function(){ /* CRM copy is best-effort; Formspree + Calendly still capture */ });
+    }
+
     function finishQuiz(contact){
       submitToFormspree(contact);
+      submitToHQ(contact);
       if (window.fbq) {
         fbq('track', 'Lead', {
           content_name: 'qualify_form',
