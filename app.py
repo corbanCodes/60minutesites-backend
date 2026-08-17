@@ -1412,7 +1412,7 @@ def form_submit(slug):
 @app.route("/admin/ai-studio")
 @login_required
 def ai_studio():
-    sites = owner_filter(Site.query, Site).order_by(Site.name).all()
+    sites = owner_filter(Site.query, Site).order_by(Site.business_name).all()
     return render_template("ai_studio.html", sites=sites, has_ai=bool(OPENAI_API_KEY))
 
 

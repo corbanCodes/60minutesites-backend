@@ -26,7 +26,7 @@
         <div class="ai-field">
           <label>Publish to site</label>
           <select id="blog-site">
-            {% for s in sites %}<option value="{{ s.id }}">{{ s.name }}{% if s.live_url %} — {{ s.live_url }}{% endif %}</option>{% else %}<option value="">(no sites yet — create one in Build → Sites)</option>{% endfor %}
+            {% for s in sites %}<option value="{{ s.id }}">{{ s.business_name }}{% if s.live_url %} — {{ s.live_url }}{% endif %}</option>{% else %}<option value="">(no sites yet — create one in Build → Sites)</option>{% endfor %}
           </select>
         </div>
         <div class="ai-field">
@@ -99,7 +99,7 @@
         <div class="ai-field">
           <label>For site / business</label>
           <select id="asset-site">
-            {% for s in sites %}<option>{{ s.name }}</option>{% else %}<option>(no sites yet)</option>{% endfor %}
+            {% for s in sites %}<option>{{ s.business_name }}</option>{% else %}<option>(no sites yet)</option>{% endfor %}
           </select>
         </div>
         <div class="ai-field">
