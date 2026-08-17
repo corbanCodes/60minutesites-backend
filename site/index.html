@@ -178,24 +178,6 @@ src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></
     </div>
   </section>
 
-  <!-- Featured Video -->
-  <section class="section" style="padding-top:0;">
-    <div class="container">
-      <div class="section-header">
-        <span class="section-badge">Watch It Happen</span>
-        <h2>A Real Website, Built in Real Time</h2>
-        <p>See exactly what happens on your 60-minute call.</p>
-      </div>
-      <div style="max-width:900px;margin:0 auto;"><div class="video-container">
-          <video id="build-video" controls playsinline poster="ads/casual-talking-thumb.jpg" preload="metadata"></video>
-          <div class="video-overlay" id="build-overlay">
-            <button class="play-btn-large" id="build-play">
-              <i class="fas fa-play"></i>
-            </button>
-          </div>
-        </div></div>
-    </div>
-  </section>
 
 
   <!-- Custom Sites Banner -->
@@ -886,20 +868,6 @@ src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></
       }
     });
   </script>
-<script>
-(function() {
-  var v = document.getElementById('build-video');
-  if (!v) return;
-  var src = '/ads/casual-talking-captions.mp4';
-  var ov = document.getElementById('build-overlay');
-  var btn = document.getElementById('build-play');
-  v.src = src;
-  function start() { v.play(); if (ov) ov.classList.add('hidden'); }
-  if (btn) btn.addEventListener('click', start);
-  if (ov) ov.addEventListener('click', start);
-  v.addEventListener('play', function() { if (ov) ov.classList.add('hidden'); });
-})();
-</script>
 <script>
 (function(){
   var t0 = Date.now();
