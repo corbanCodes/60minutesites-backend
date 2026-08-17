@@ -1409,6 +1409,13 @@ def form_submit(slug):
     return redirect(dest or url_for("form_thanks", slug=slug))
 
 
+@app.route("/admin/ai-studio")
+@login_required
+def ai_studio():
+    sites = owner_filter(Site.query, Site).order_by(Site.name).all()
+    return render_template("ai_studio.html", sites=sites, has_ai=bool(OPENAI_API_KEY))
+
+
 @app.route("/admin/invoices")
 @login_required
 def invoices():

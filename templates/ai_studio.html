@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% set active = 'ai_studio' %}
+{% block title %}AI Studio | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>AI Studio</h1>
+  <div class="viewtabs">
+    <button class="viewtab active" data-tab="blog"><i class="bi bi-file-richtext"></i> Blog Creator</button>
+    <button class="viewtab" data-tab="assets"><i class="bi bi-megaphone"></i> Marketing Assets</button>
+  </div>
+</div>
+
+{% if not has_ai %}
+<div class="flash flash-sticky" style="margin-bottom:18px">
+  <i class="bi bi-key"></i>
+  <span><b>Demo mode.</b> Add your marketing API key (<code>OPENAI_API_KEY</code> in Setup) to switch from sample content to live AI generation. Everything below works — the words just get real.</span>
+</div>
+{% endif %}
+
+<!-- ============================== BLOG TAB ============================== -->
+<div class="ai-tab" id="tab-blog">
+  <div class="ai-grid">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <h2 style="margin-top:0"><i class="bi bi-file-richtext"></i> New blog post</h2>
+        <div class="ai-field">
+          <label>Publish to site</label>
+          <select id="blog-site">
+            {% for s in sites %}<option value="{{ s.id }}">{{ s.name }}{% if s.live_url %} — {{ s.live_url }}{% endif %}</option>{% else %}<option value="">(no sites yet — create one in Build → Sites)</option>{% endfor %}
+          </select>
+        </div>
+        <div class="ai-field">
+          <label>Topic</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="blog-topic" placeholder="e.g. 5 signs your roof needs repair before winter" style="flex:1">
+            <button class="btn ghost" id="blog-suggest" title="Suggest fresh topics">Suggest</button>
+          </div>
+          <p class="muted" id="topic-check" style="margin:6px 0 0;font-size:12px"></p>
+        </div>
+        <button class="btn" id="blog-generate"><i class="bi bi-stars"></i> Generate post</button>
+        <span class="muted" id="blog-busy" style="display:none;margin-left:10px"><i class="bi bi-arrow-repeat spin"></i> writing…</span>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <h2 style="margin-top:0"><i class="bi bi-collection"></i> Batch generation</h2>
+        <p class="muted" style="margin-top:0;font-size:13px">Queue several posts at once — each title is checked against everything already written so topics never repeat.</p>
+        <textarea id="batch-topics" rows="3" placeholder="One topic per line (or hit Suggest above a few times)" style="width:100%"></textarea>
+        <button class="btn ghost" id="batch-run" style="margin-top:10px"><i class="bi bi-lightning-charge"></i> Generate batch</button>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-top:0"><i class="bi bi-arrow-repeat"></i> Auto-publish</h2>
+        <div class="ai-field">
+          <label>Schedule</label>
+          <select id="auto-freq">
+            <option value="">Off</option>
+            <option value="weekly">Weekly — 1 fresh post</option>
+            <option value="biweekly">Every 2 weeks</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <p class="muted" style="font-size:13px"><i class="bi bi-check-circle" style="color:var(--good)"></i> New titles are compared against every existing post title on the site — auto-posts are always a new topic.</p>
+        <div class="cap-meter">
+          <div class="cap-row"><span><b id="cap-used">0</b>/5 posts this month</span><span class="muted" id="cap-note"></span></div>
+          <div class="cap-bar"><div class="cap-fill" id="cap-fill"></div></div>
+          <p class="muted" style="font-size:12px;margin:6px 0 0">Hard cap keeps credit spend predictable. Resets on the 1st.</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card blog-preview" id="blog-preview">
+        <div class="empty" id="blog-empty">
+          <i class="bi bi-file-richtext"></i>
+          <p><b>Your post preview appears here.</b></p>
+          <p class="muted">Pick a site, drop in a topic (or hit Suggest), and Generate. The template matches the client's live site look.</p>
+        </div>
+        <article id="blog-article" style="display:none">
+          <p class="bp-site" id="bp-site"></p>
+          <h1 class="bp-title" id="bp-title"></h1>
+          <p class="bp-meta" id="bp-meta"></p>
+          <div class="bp-body" id="bp-body"></div>
+          <div class="no-print" style="margin-top:18px;display:flex;gap:10px">
+            <button class="btn" id="bp-publish"><i class="bi bi-rocket-takeoff"></i> Publish to site</button>
+            <button class="btn ghost" id="bp-copy"><i class="bi bi-clipboard"></i> Copy HTML</button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== ASSETS TAB ============================== -->
+<div class="ai-tab" id="tab-assets" style="display:none">
+  <div class="ai-grid">
+    <div>
+      <div class="card">
+        <h2 style="margin-top:0"><i class="bi bi-megaphone"></i> Marketing asset</h2>
+        <div class="ai-field">
+          <label>For site / business</label>
+          <select id="asset-site">
+            {% for s in sites %}<option>{{ s.name }}</option>{% else %}<option>(no sites yet)</option>{% endfor %}
+          </select>
+        </div>
+        <div class="ai-field">
+          <label>Asset type</label>
+          <select id="asset-type">
+            <option>Facebook ad copy (3 variants)</option>
+            <option>Google Business post</option>
+            <option>Email blast</option>
+            <option>SMS follow-up (3 variants)</option>
+            <option>Review request message</option>
+            <option>Seasonal promo headline pack</option>
+          </select>
+        </div>
+        <div class="ai-field">
+          <label>Angle / offer (optional)</label>
+          <input type="text" id="asset-angle" placeholder="e.g. $250 off setup this week only">
+        </div>
+        <button class="btn" id="asset-generate"><i class="bi bi-stars"></i> Generate</button>
+      </div>
+    </div>
+    <div id="asset-out">
+      <div class="empty card">
+        <i class="bi bi-megaphone"></i>
+        <p><b>Generated assets land here.</b></p>
+        <p class="muted">Ad copy, posts, emails, and texts — each with a one-click copy button.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .ai-grid { display: grid; grid-template-columns: 380px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .ai-grid { grid-template-columns: 1fr; } }
+  .ai-field { margin-bottom: 14px; }
+  .ai-field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-2); margin-bottom: 5px; }
+  .ai-field input, .ai-field select, #batch-topics { width: 100%; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 9px; font-family: var(--font); background: #FBF8F5; }
+  .viewtabs button.viewtab { cursor: pointer; font-family: var(--font); }
+  .spin { display: inline-block; animation: aispin 1s linear infinite; }
+  @keyframes aispin { to { transform: rotate(360deg); } }
+  .cap-meter { margin-top: 14px; }
+  .cap-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .cap-bar { height: 8px; background: #F0EAE2; border-radius: 999px; overflow: hidden; }
+  .cap-fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--orange), var(--orange-dark)); transition: width .4s ease; }
+  .blog-preview { min-height: 420px; padding: 34px 38px; }
+  .bp-site { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--orange); margin: 0 0 8px; }
+  .bp-title { font-size: 26px; letter-spacing: -0.02em; margin: 0 0 8px; line-height: 1.2; }
+  .bp-meta { color: var(--ink-2); font-size: 13px; margin: 0 0 18px; }
+  .bp-body h3 { font-size: 16px; margin: 20px 0 6px; }
+  .bp-body p { line-height: 1.65; color: #3D362F; }
+  .asset-card { background: var(--surface); border: 1px solid #EAE3DA; border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(28,24,20,.04); }
+  .asset-card h4 { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); }
+  .asset-card p { margin: 0; line-height: 1.55; }
+  .asset-copy { float: right; }
+</style>
+
+<script>
+(function () {
+  // ---------- tabs ----------
+  document.querySelectorAll('[data-tab]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('[data-tab]').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      document.getElementById('tab-blog').style.display = b.dataset.tab === 'blog' ? '' : 'none';
+      document.getElementById('tab-assets').style.display = b.dataset.tab === 'assets' ? '' : 'none';
+    });
+  });
+
+  // ---------- monthly cap (5/mo, per-browser for now) ----------
+  var CAPKEY = 'ms60-ai-cap', CAP = 5;
+  function capState() {
+    var ym = new Date().toISOString().slice(0, 7), d;
+    try { d = JSON.parse(localStorage.getItem(CAPKEY)); } catch (e) {}
+    if (!d || d.ym !== ym) d = { ym: ym, used: 0 };
+    return d;
+  }
+  function capDraw() {
+    var d = capState();
+    document.getElementById('cap-used').textContent = d.used;
+    document.getElementById('cap-fill').style.width = (d.used / CAP * 100) + '%';
+    document.getElementById('cap-note').textContent = d.used >= CAP ? 'cap reached — resets on the 1st' : '';
+    return d;
+  }
+  function capSpend(n) { var d = capState(); d.used = Math.min(CAP, d.used + n); localStorage.setItem(CAPKEY, JSON.stringify(d)); capDraw(); }
+  capDraw();
+
+  // ---------- title history / freshness check ----------
+  var TKEY = 'ms60-ai-titles';
+  function titles() { try { return JSON.parse(localStorage.getItem(TKEY)) || []; } catch (e) { return []; } }
+  function isFresh(t) { return !titles().some(function (x) { return x.toLowerCase() === t.toLowerCase(); }); }
+  function remember(t) { var l = titles(); l.push(t); localStorage.setItem(TKEY, JSON.stringify(l.slice(-200))); }
+
+  var topicIn = document.getElementById('blog-topic');
+  topicIn.addEventListener('input', function () {
+    var t = topicIn.value.trim(), el = document.getElementById('topic-check');
+    if (!t) { el.textContent = ''; return; }
+    el.innerHTML = isFresh(t) ? '<i class="bi bi-check-circle" style="color:var(--good)"></i> new topic — nothing like it published yet'
+                              : '<i class="bi bi-exclamation-triangle" style="color:#B3362B"></i> already written — pick a fresh angle';
+  });
+
+  // ---------- demo content ----------
+  var SUGGESTIONS = [
+    '5 signs it’s time to replace, not repair',
+    'What a job really costs in 2026 (honest numbers)',
+    'How to spot a lowball quote before it burns you',
+    'The 15-minute maintenance habit that saves thousands',
+    'Why the cheapest bid is usually the most expensive',
+    'What to ask before you hire anyone (checklist)',
+    'Busy season is coming — how to book smart',
+    'DIY vs. pro: where the line actually is'
+  ];
+  var si = 0;
+  document.getElementById('blog-suggest').addEventListener('click', function () {
+    topicIn.value = SUGGESTIONS[si++ % SUGGESTIONS.length];
+    topicIn.dispatchEvent(new Event('input'));
+  });
+
+  function siteName() { var s = document.getElementById('blog-site'); return s.options[s.selectedIndex] ? s.options[s.selectedIndex].text.split(' — ')[0] : 'Your Business'; }
+
+  function buildPost(topic) {
+    var biz = siteName();
+    return '<h3>Why this matters</h3><p>Most ' + biz + ' customers wait until small problems become expensive ones. ' +
+      'This guide breaks down "' + topic + '" in plain English — what to look for, what it costs, and when to pick up the phone.</p>' +
+      '<h3>The short version</h3><p>Catch it early and it’s a quick fix. Wait, and you’re paying two to three times more for the same outcome. ' +
+      'We see it every week, and the pattern never changes.</p>' +
+      '<h3>What to do next</h3><p>If any of this sounds familiar, call us — a five-minute conversation is free, and honest answers are kind of our thing. ' +
+      'No pressure, no upsell, just a straight read on where you stand.</p>' +
+      '<p><i>— The ' + biz + ' team</i></p>';
+  }
+
+  function showPost(topic) {
+    document.getElementById('blog-empty').style.display = 'none';
+    var a = document.getElementById('blog-article');
+    a.style.display = '';
+    document.getElementById('bp-site').textContent = siteName() + ' • Blog';
+    document.getElementById('bp-title').textContent = topic;
+    document.getElementById('bp-meta').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' • 3 min read • AI draft';
+    document.getElementById('bp-body').innerHTML = buildPost(topic);
+  }
+
+  document.getElementById('blog-generate').addEventListener('click', function () {
+    var t = topicIn.value.trim();
+    if (!t) { topicIn.focus(); return; }
+    if (capState().used >= CAP) { alert('Monthly cap reached (5 posts). Resets on the 1st — or raise the cap in Setup.'); return; }
+    var busy = document.getElementById('blog-busy');
+    busy.style.display = '';
+    setTimeout(function () {
+      busy.style.display = 'none';
+      showPost(t); remember(t); capSpend(1);
+      topicIn.dispatchEvent(new Event('input'));
+    }, 900);
+  });
+
+  document.getElementById('batch-run').addEventListener('click', function () {
+    var lines = document.getElementById('batch-topics').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!lines.length) return;
+    var d = capState(), room = CAP - d.used;
+    if (room <= 0) { alert('Monthly cap reached (5 posts).'); return; }
+    var fresh = lines.filter(isFresh).slice(0, room);
+    var skipped = lines.length - fresh.length;
+    fresh.forEach(remember); capSpend(fresh.length);
+    if (fresh.length) showPost(fresh[fresh.length - 1]);
+    alert('Batch queued: ' + fresh.length + ' post' + (fresh.length === 1 ? '' : 's') + ' generated' + (skipped ? ' • ' + skipped + ' skipped (duplicate title or over cap)' : '') + '.');
+  });
+
+  document.getElementById('bp-publish').addEventListener('click', function () {
+    alert('Demo mode — with your marketing API key set, this pushes the post straight to the client’s live site with their template.');
+  });
+  document.getElementById('bp-copy').addEventListener('click', function () {
+    var html = '<h1>' + document.getElementById('bp-title').textContent + '</h1>' + document.getElementById('bp-body').innerHTML;
+    navigator.clipboard.writeText(html).then(function () { alert('HTML copied.'); });
+  });
+
+  // ---------- marketing assets ----------
+  function assetDemo(type, biz, angle) {
+    var a = angle || 'this month’s offer';
+    var mk = function (title, body) { return { title: title, body: body }; };
+    if (type.indexOf('Facebook') === 0) return [
+      mk('Variant A — straight talk', biz + ' — no runaround, no mystery pricing. ' + a + '. Call today and talk to a real person.'),
+      mk('Variant B — social proof', 'Your neighbors already trust ' + biz + '. See why — and grab ' + a + ' while it lasts.'),
+      mk('Variant C — urgency', a + ' ends soon. ' + biz + ' books up fast this season — lock in your spot today.')
+    ];
+    if (type.indexOf('Google') === 0) return [mk('Google Business post', 'Now booking at ' + biz + '! ' + a + '. Tap to call — we answer.')];
+    if (type.indexOf('Email') === 0) return [mk('Subject: Quick one from ' + biz, 'Hi there — just a heads up that ' + a + ' is live. Reply to this email or call us and we’ll take care of you. — ' + biz)];
+    if (type.indexOf('SMS') === 0) return [
+      mk('SMS 1', 'Hey, it’s ' + biz + ' — ' + a + '. Want in? Text YES and we’ll call you.'),
+      mk('SMS 2', biz + ' here! We had a spot open up this week — want it?'),
+      mk('SMS 3', 'Last call on ' + a + ' from ' + biz + ' — reply STOP to opt out.')
+    ];
+    if (type.indexOf('Review') === 0) return [mk('Review request', 'Thanks again for choosing ' + biz + '! If we did right by you, a quick Google review means the world: [your review link]')];
+    return [mk('Headline pack', '“' + a + '” • “Done right. Done fast. ' + biz + '.” • “The call that pays for itself.”')];
+  }
+
+  document.getElementById('asset-generate').addEventListener('click', function () {
+    var type = document.getElementById('asset-type').value;
+    var biz = document.getElementById('asset-site').value;
+    var angle = document.getElementById('asset-angle').value.trim();
+    var out = document.getElementById('asset-out');
+    out.innerHTML = '';
+    assetDemo(type, biz, angle).forEach(function (c) {
+      var div = document.createElement('div');
+      div.className = 'asset-card';
+      var btn = document.createElement('button');
+      btn.className = 'btn ghost asset-copy'; btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+      btn.addEventListener('click', function () { navigator.clipboard.writeText(c.body); btn.innerHTML = '<i class="bi bi-check-lg"></i>'; });
+      var h = document.createElement('h4'); h.textContent = c.title;
+      var p = document.createElement('p'); p.textContent = c.body;
+      div.appendChild(btn); div.appendChild(h); div.appendChild(p);
+      out.appendChild(div);
+    });
+  });
+})();
+</script>
+{% endblock %}
