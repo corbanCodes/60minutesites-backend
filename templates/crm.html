@@ -22,13 +22,17 @@
     {% for u in scope_users %}<option value="{{ u.id }}" {{ 'selected' if scope == u.id | string }}>{{ u.name }}</option>{% endfor %}
   </select>
   {% endif %}
-  <input type="text" name="q" placeholder="Search name, phone, email, business…" value="{{ q }}">
+  <div class="search-wrap"><i class="bi bi-search"></i>
+    <input type="text" name="q" placeholder="Search name, phone, email, business…" value="{{ q }}">
+  </div>
   <select name="status" onchange="this.form.submit()">
-    <option value="">All statuses</option>
+    <option value="">All stages</option>
     {% for s in STATUSES %}<option value="{{ s }}" {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}
   </select>
-  <button class="btn ghost" type="submit">Search</button>
+  <button class="btn" type="submit">Search</button>
+  {% if q or status %}<a class="btn ghost" href="/admin/crm{% if scope and scope != 'mine' %}?scope={{ scope }}{% endif %}">Clear</a>{% endif %}
 </form>
+{% if q or status %}<p class="result-count"><i class="bi bi-funnel"></i> {{ rows | length }} lead{{ '' if rows | length == 1 else 's' }} match</p>{% endif %}
 {% if role == 'admin' and scope != 'mine' %}
 <p class="muted" style="margin:-8px 0 14px"><i class="bi bi-eye"></i> Viewing {{ 'everyone&#39;s leads' | safe if scope == 'all' else 'a customer&#39;s leads' | safe }} — <a href="/admin/crm">back to my leads</a></p>
 {% endif %}

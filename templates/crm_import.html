@@ -40,7 +40,7 @@
           <select name="default_status">{% for s in STATUSES %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select>
         </div>
         <div>
-          <label>Source for rows without one</label>
+          <label>Tag / source for this import (shows on every lead)</label>
           <input type="text" name="default_source" value="csv-import">
         </div>
         {% if role == 'admin' and users %}

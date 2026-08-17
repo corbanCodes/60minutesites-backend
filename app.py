@@ -71,13 +71,13 @@ except Exception:
 
 db = SQLAlchemy(app)
 
-LEAD_STATUSES = ["New", "Contacted", "Booked", "Built", "Client", "Dead"]
+LEAD_STATUSES = ["New", "Contacted", "Qualified", "Booked", "Built", "Client", "Dead"]
 STATUS_COLORS = {
-    "New": "#2E86DE", "Contacted": "#9A6B14", "Booked": "#E85D2A",
+    "New": "#2E86DE", "Contacted": "#9A6B14", "Qualified": "#0F8A72", "Booked": "#E85D2A",
     "Built": "#8E44AD", "Client": "#2E7D4F", "Dead": "#888888",
 }
 # how much of a deal's monthly value counts toward the weighted pipeline
-STATUS_WEIGHTS = {"New": 0.10, "Contacted": 0.25, "Booked": 0.50, "Built": 0.75}
+STATUS_WEIGHTS = {"New": 0.10, "Contacted": 0.25, "Qualified": 0.35, "Booked": 0.50, "Built": 0.75}
 LEAD_FIELDS = ["name", "phone", "email", "business", "business_type"]
 # CSV import: mappable targets (key, label shown in the mapping dropdowns)
 CSV_FIELDS = [("name", "Name"), ("first_name", "First name"), ("last_name", "Last name"),
@@ -1407,6 +1407,12 @@ def form_submit(slug):
     if dest and not dest.startswith(("http://", "https://", "/")):
         dest = "https://" + dest  # "60minutesites.com/thanks.html" style values
     return redirect(dest or url_for("form_thanks", slug=slug))
+
+
+@app.route("/admin/invoices")
+@login_required
+def invoices():
+    return render_template("invoices.html")
 
 
 @app.route("/form/<slug>/thanks")
