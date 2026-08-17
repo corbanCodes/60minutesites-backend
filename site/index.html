@@ -134,6 +134,50 @@ src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></
     </div>
   </section>
 
+  <!-- Demo Video Section -->
+  <section class="section demo-video-section">
+    <div class="container">
+      <div class="demo-video-grid">
+        <div class="demo-video-copy">
+          <h2>See how it works</h2>
+          <p>Watch how we take your business from idea to live website in under 60 minutes. No technical skills required on your end.</p>
+          <ul class="demo-video-list">
+            <li>Choose from 560+ professional templates</li>
+            <li>One call to gather your content</li>
+            <li>We handle all the technical work</li>
+            <li>Live and ready to generate leads</li>
+          </ul>
+          <a href="book-demo.html" class="btn btn-primary" target="_blank">Book Your Free Demo</a>
+        </div>
+        <div class="demo-video-player">
+          <div class="video-container">
+            <video id="demo-video" playsinline poster="https://customer-394md8sxxno51fu2.cloudflarestream.com/43862ff626c736ec00da633790b51100/thumbnails/thumbnail.jpg"></video>
+            <div class="video-overlay" id="video-overlay">
+              <button class="play-btn-large" id="play-btn-large">
+                <i class="fas fa-play"></i>
+              </button>
+            </div>
+            <div class="video-controls" id="video-controls">
+              <button class="control-btn" id="play-pause-btn">
+                <i class="fas fa-play"></i>
+              </button>
+              <div class="progress-bar" id="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+              <button class="control-btn" id="mute-btn">
+                <i class="fas fa-volume-up"></i>
+              </button>
+              <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.1" value="1">
+              <button class="control-btn" id="fullscreen-btn">
+                <i class="fas fa-expand"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Featured Video -->
   <section class="section" style="padding-top:0;">
     <div class="container">
@@ -143,7 +187,7 @@ src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></
         <p>See exactly what happens on your 60-minute call.</p>
       </div>
       <div style="max-width:900px;margin:0 auto;"><div class="video-container">
-          <video id="build-video" controls playsinline poster="https://customer-394md8sxxno51fu2.cloudflarestream.com/40bc5ab0b3a955b5c0a04fcb4f45cb29/thumbnails/thumbnail.jpg"></video>
+          <video id="build-video" controls playsinline poster="ads/casual-talking-thumb.jpg" preload="metadata"></video>
           <div class="video-overlay" id="build-overlay">
             <button class="play-btn-large" id="build-play">
               <i class="fas fa-play"></i>
@@ -723,7 +767,7 @@ src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></
     document.addEventListener('DOMContentLoaded', function() {
       // Hero video (autoplay, muted, looping)
       const heroVideo = document.getElementById('hero-video');
-      const heroSrc = 'https://customer-394md8sxxno51fu2.cloudflarestream.com/43862ff626c736ec00da633790b51100/manifest/video.m3u8';
+      const heroSrc = 'https://customer-394md8sxxno51fu2.cloudflarestream.com/b09f87e8ec539db284c506ae3355850d/manifest/video.m3u8';
 
       if (heroVideo) {
         if (Hls.isSupported()) {
@@ -741,20 +785,115 @@ src="https://www.facebook.com/tr?id=3728691617450623&ev=PageView&noscript=1"/></
         }
       }
 
+      // Demo video with controls
+      const demoVideo = document.getElementById('demo-video');
+      const demoSrc = 'https://customer-394md8sxxno51fu2.cloudflarestream.com/43862ff626c736ec00da633790b51100/manifest/video.m3u8';
+
+      if (demoVideo) {
+        const overlay = document.getElementById('video-overlay');
+        const playBtnLarge = document.getElementById('play-btn-large');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const muteBtn = document.getElementById('mute-btn');
+        const volumeSlider = document.getElementById('volume-slider');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressFill = document.getElementById('progress-fill');
+        const videoControls = document.getElementById('video-controls');
+
+        let demoHls;
+
+        // Initialize HLS
+        if (Hls.isSupported()) {
+          demoHls = new Hls();
+          demoHls.loadSource(demoSrc);
+          demoHls.attachMedia(demoVideo);
+        } else if (demoVideo.canPlayType('application/vnd.apple.mpegurl')) {
+          demoVideo.src = demoSrc;
+        }
+
+        // Play/Pause
+        function togglePlay() {
+          if (demoVideo.paused) {
+            demoVideo.play();
+            overlay.classList.add('hidden');
+            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+          } else {
+            demoVideo.pause();
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+          }
+        }
+
+        // Big play button - stop propagation to prevent double trigger
+        playBtnLarge.addEventListener('click', function(e) {
+          e.stopPropagation();
+          togglePlay();
+        });
+
+        playPauseBtn.addEventListener('click', togglePlay);
+
+        // Overlay click (but not on the button itself)
+        overlay.addEventListener('click', function(e) {
+          if (e.target === overlay) {
+            togglePlay();
+          }
+        });
+
+        // Click on video to pause/play (normal video behavior)
+        demoVideo.addEventListener('click', function() {
+          togglePlay();
+        });
+
+        demoVideo.addEventListener('ended', function() {
+          overlay.classList.remove('hidden');
+          playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        });
+
+        // Progress bar
+        demoVideo.addEventListener('timeupdate', function() {
+          const progress = (demoVideo.currentTime / demoVideo.duration) * 100;
+          progressFill.style.width = progress + '%';
+        });
+
+        progressBar.addEventListener('click', function(e) {
+          const rect = progressBar.getBoundingClientRect();
+          const percent = (e.clientX - rect.left) / rect.width;
+          demoVideo.currentTime = percent * demoVideo.duration;
+        });
+
+        // Volume
+        muteBtn.addEventListener('click', function() {
+          demoVideo.muted = !demoVideo.muted;
+          muteBtn.innerHTML = demoVideo.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+          volumeSlider.value = demoVideo.muted ? 0 : demoVideo.volume;
+        });
+
+        volumeSlider.addEventListener('input', function() {
+          demoVideo.volume = volumeSlider.value;
+          demoVideo.muted = volumeSlider.value == 0;
+          muteBtn.innerHTML = demoVideo.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        });
+
+        // Fullscreen
+        fullscreenBtn.addEventListener('click', function() {
+          if (demoVideo.requestFullscreen) {
+            demoVideo.requestFullscreen();
+          } else if (demoVideo.webkitRequestFullscreen) {
+            demoVideo.webkitRequestFullscreen();
+          } else if (demoVideo.msRequestFullscreen) {
+            demoVideo.msRequestFullscreen();
+          }
+        });
+      }
     });
   </script>
 <script>
 (function() {
   var v = document.getElementById('build-video');
   if (!v) return;
-  var src = 'https://customer-394md8sxxno51fu2.cloudflarestream.com/40bc5ab0b3a955b5c0a04fcb4f45cb29/manifest/video.m3u8';
+  var src = '/ads/casual-talking-captions.mp4';
   var ov = document.getElementById('build-overlay');
   var btn = document.getElementById('build-play');
-  if (window.Hls && Hls.isSupported()) {
-    var h = new Hls(); h.loadSource(src); h.attachMedia(v);
-  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    v.src = src;
-  }
+  v.src = src;
   function start() { v.play(); if (ov) ov.classList.add('hidden'); }
   if (btn) btn.addEventListener('click', start);
   if (ov) ov.addEventListener('click', start);
