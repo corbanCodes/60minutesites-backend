@@ -116,8 +116,11 @@
   </div>
 </div>
 
-<form method="post" style="margin-top:18px" onsubmit="return confirm('Delete this lead, its notes, and its tasks?')">
-  <input type="hidden" name="action" value="delete">
-  <button class="btn danger sm" type="submit">Delete lead</button>
-</form>
+<div style="margin-top:18px;display:flex;gap:10px;align-items:center">
+  <a class="btn ghost sm" href="/admin/crm/{{ lead.id }}/agreement"><i class="bi bi-pen"></i> Agreement</a>
+  <form method="post" style="margin:0" onsubmit="return confirm('Delete this lead, its notes, and its tasks?')">
+    <input type="hidden" name="action" value="delete">
+    <button class="btn danger sm" type="submit">Delete lead</button>
+  </form>
+</div>
 {% endblock %}

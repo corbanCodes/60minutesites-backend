@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Service Agreement — 60 Minute Sites</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: #F7F4F1; color: #1C1814; font-size: 17px; line-height: 1.6; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
+    .brand { text-align: center; font-weight: 800; font-size: 20px; margin: 10px 0 4px; }
+    .brand span { color: #FF6B35; }
+    .steps { text-align: center; color: #6B6259; font-size: 14px; margin-bottom: 18px; }
+    .card { background: #fff; border: 1px solid #E5DDD4; border-radius: 16px; padding: 24px 22px; box-shadow: 0 8px 30px rgba(28,24,20,.07); }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 17px; margin: 22px 0 6px; }
+    .muted { color: #6B6259; }
+    table.fees { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 16px; }
+    table.fees td { padding: 9px 6px; border-bottom: 1px solid #F0EAE2; }
+    table.fees td:last-child { text-align: right; font-weight: 700; white-space: nowrap; }
+    ul { padding-left: 20px; } li { margin-bottom: 8px; }
+    label { display: block; font-weight: 700; font-size: 15px; margin: 18px 0 6px; }
+    input[type=text] { width: 100%; padding: 16px 14px; font-size: 19px; border: 2px solid #E5DDD4; border-radius: 12px; font-family: inherit; }
+    input[type=text]:focus { border-color: #FF6B35; outline: none; }
+    .btn { display: block; width: 100%; background: #FF6B35; color: #fff; border: none; border-radius: 14px; padding: 18px; font-size: 19px; font-weight: 800; font-family: inherit; cursor: pointer; margin-top: 20px; }
+    .btn:disabled { background: #E0D6CC; }
+    .btn.ghost { background: #fff; color: #1C1814; border: 2px solid #E5DDD4; font-weight: 700; }
+    #pad { width: 100%; height: 220px; border: 2px dashed #C9BFB5; border-radius: 12px; background: #FFFDFB; touch-action: none; display: block; }
+    .sign-hint { text-align: center; color: #A79C90; font-size: 14px; margin-top: 6px; }
+    .done { text-align: center; padding: 30px 10px; }
+    .done .big { font-size: 52px; }
+    .step { display: none; } .step.active { display: block; }
+    .err { color: #B3362B; font-weight: 700; display: none; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">60<span>MinuteSites</span></div>
+  <div class="steps" id="stepline">Step 1 of 2 — review &amp; type your name</div>
+
+  <!-- STEP 1: agreement + name -->
+  <div class="card step active" id="step1">
+    <h1>Service Agreement</h1>
+    <p class="muted" style="margin-top:0">Between <b>60 Minute Sites (Corban Damukaitis)</b> and <b>{{ lead.name }}</b>{% if lead.business and lead.business != lead.name %} ({{ lead.business }}){% endif %}.</p>
+
+    <h2>What we provide</h2>
+    <ul>
+      <li>Your professional website — built, hosted, secured, and maintained, with your phone number front and center.</li>
+      <li>Your Facebook &amp; Instagram advertising — built and managed for you, running across the United States.</li>
+      <li>A real person to call. Changes and questions handled directly by Corban.</li>
+    </ul>
+
+    <h2>Pricing</h2>
+    <table class="fees">
+      <tr><td>One-time setup</td><td>$150</td></tr>
+      <tr><td>Website, hosting &amp; ad management (includes the 10% management fee)</td><td>$100 / month</td></tr>
+      <tr><td>Your advertising budget — paid to Facebook for your ads; Facebook receipts sent to you</td><td>$500 / month</td></tr>
+    </table>
+
+    <h2>Plain-English terms</h2>
+    <ul>
+      <li><b>No guarantees.</b> Advertising results can never be guaranteed — no specific number of phone calls, customers, or income is promised. We promise professional work and honest reporting, and we review results together after the first 30 days.</li>
+      <li><b>Month to month — cancel anytime.</b> Just say the word; billing stops at the end of the month and ads are turned off within one business day. No contracts, no cancellation fee.</li>
+      <li><b>Receipts.</b> Facebook advertising receipts are sent to you so you always see where your ad budget went.</li>
+      <li><b>No refunds</b> on money already spent with Facebook or on work already delivered (including the setup fee once your website is live).</li>
+      <li><b>Your website content belongs to you.</b></li>
+    </ul>
+
+    <label for="fullname">Type your full name</label>
+    <input type="text" id="fullname" autocomplete="name" placeholder="Your full name">
+    <p class="err" id="err1">Please type your full name first.</p>
+    <button class="btn" id="next">Next &rarr;</button>
+  </div>
+
+  <!-- STEP 2: signature -->
+  <div class="card step" id="step2">
+    <h1>Sign here</h1>
+    <p class="muted" style="margin-top:0">Use your finger to sign in the box, just like signing a receipt.</p>
+    <canvas id="pad"></canvas>
+    <p class="sign-hint">Sign above with your finger</p>
+    <p class="err" id="err2">Please sign in the box first.</p>
+    <button class="btn ghost" id="clear" type="button">Clear &amp; try again</button>
+    <button class="btn" id="agree">I Agree &amp; Sign</button>
+    <p class="muted" style="font-size:13px;text-align:center">Signing as <b id="signing-as"></b> on <span id="today"></span></p>
+  </div>
+
+  <!-- STEP 3: done -->
+  <div class="card step done" id="step3">
+    <div class="big">🎉</div>
+    <h1>You're all set!</h1>
+    <p>Your signed agreement was sent to Corban.<br>A copy is kept safe for you — welcome aboard!</p>
+    <p class="muted">Questions any time: <a href="tel:1-800-604-5433" style="color:#FF6B35;font-weight:700">1-800-60-4-LIFE</a></p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var name = document.getElementById('fullname');
+  var canvas = document.getElementById('pad'), ctx, drawn = false;
+
+  function show(n) {
+    [1,2,3].forEach(function (i) { document.getElementById('step' + i).classList.toggle('active', i === n); });
+    document.getElementById('stepline').textContent = n === 1 ? 'Step 1 of 2 — review & type your name'
+      : n === 2 ? 'Step 2 of 2 — sign with your finger' : 'All done!';
+    window.scrollTo(0, 0);
+  }
+
+  document.getElementById('next').addEventListener('click', function () {
+    if (!name.value.trim()) { document.getElementById('err1').style.display = 'block'; name.focus(); return; }
+    document.getElementById('err1').style.display = 'none';
+    document.getElementById('signing-as').textContent = name.value.trim();
+    document.getElementById('today').textContent = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    show(2);
+    setTimeout(initPad, 50);
+  });
+
+  function initPad() {
+    var r = canvas.getBoundingClientRect();
+    canvas.width = r.width * 2; canvas.height = r.height * 2;
+    ctx = canvas.getContext('2d');
+    ctx.scale(2, 2); ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#1C1814';
+    var down = false, last = null;
+    function pos(e) {
+      var t = e.touches ? e.touches[0] : e, rc = canvas.getBoundingClientRect();
+      return { x: t.clientX - rc.left, y: t.clientY - rc.top };
+    }
+    function start(e) { down = true; last = pos(e); e.preventDefault(); }
+    function move(e) {
+      if (!down) return;
+      var p = pos(e);
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      last = p; drawn = true; e.preventDefault();
+    }
+    function end() { down = false; }
+    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false }); canvas.addEventListener('touchmove', move, { passive: false }); canvas.addEventListener('touchend', end);
+  }
+
+  document.getElementById('clear').addEventListener('click', function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); drawn = false;
+  });
+
+  document.getElementById('agree').addEventListener('click', function () {
+    if (!drawn) { document.getElementById('err2').style.display = 'block'; return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Saving…';
+    fetch(window.location.pathname, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.value.trim(), signature: canvas.toDataURL('image/png') })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.ok) { show(3); } else { throw new Error(); }
+    }).catch(function () {
+      btn.disabled = false; btn.textContent = 'I Agree & Sign';
+      alert('Hmm, that didn\'t save — please try once more, or call Corban.');
+    });
+  });
+})();
+</script>
+</body>
+</html>

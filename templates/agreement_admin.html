@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% set active = 'crm' %}
+{% block title %}Agreement — {{ lead.name }} | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar no-print">
+  <h1>Agreement — {{ lead.name }}</h1>
+  <div class="topbar-actions">
+    <a class="btn ghost" href="/admin/crm/{{ lead.id }}">&larr; Back to lead</a>
+    {% if signed %}<button class="btn" onclick="window.print()"><i class="bi bi-printer"></i> Print / Save PDF</button>{% endif %}
+  </div>
+</div>
+
+{% if not signed %}
+<div class="card" style="max-width:640px">
+  <h2 style="margin-top:0"><i class="bi bi-send"></i> Not signed yet — text them this link</h2>
+  <p class="muted">It opens a big-text, two-step signing page: type name &rarr; sign with a finger &rarr; done. The signed copy lands right here.</p>
+  <div style="display:flex;gap:8px">
+    <input type="text" id="slink" readonly value="{{ sign_url }}" style="flex:1;padding:10px 12px;border:1.5px solid var(--line);border-radius:9px;font-family:var(--font);background:#FBF8F5">
+    <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('slink').value).then(()=>{this.innerHTML='<i class=\'bi bi-check-lg\'></i> Copied'})"><i class="bi bi-clipboard"></i> Copy</button>
+  </div>
+</div>
+{% else %}
+<div class="card" style="max-width:680px;padding:34px 38px" id="signed-doc">
+  <h2 style="margin:0 0 2px">Service Agreement</h2>
+  <p class="muted" style="margin:0 0 16px">60 Minute Sites (Corban Damukaitis) &amp; {{ lead.name }}{% if lead.business and lead.business != lead.name %} ({{ lead.business }}){% endif %}</p>
+
+  <table style="border:none;box-shadow:none">
+    <tr><td>One-time setup</td><td style="text-align:right"><b>$150</b></td></tr>
+    <tr><td>Website, hosting &amp; ad management (incl. 10% management fee)</td><td style="text-align:right"><b>$100 / month</b></td></tr>
+    <tr><td>Advertising budget — paid to Facebook; receipts provided</td><td style="text-align:right"><b>$500 / month</b></td></tr>
+  </table>
+
+  <ul style="font-size:14px;color:#3D362F;line-height:1.6">
+    <li><b>No guarantees</b> of calls, customers, or income; professional work and honest reporting promised; 30-day joint review.</li>
+    <li><b>Month to month, cancel anytime</b>; ads off within one business day; no cancellation fee.</li>
+    <li>Facebook receipts provided; <b>no refunds</b> on ad spend already with Facebook or work already delivered.</li>
+    <li>Website content belongs to the client.</li>
+  </ul>
+
+  <div style="margin-top:22px;padding-top:14px;border-top:2px solid var(--ink)">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap">
+      <div>
+        <img src="{{ sig.signature }}" alt="signature" style="max-width:280px;max-height:110px;display:block">
+        <div style="border-top:1px solid var(--line);padding-top:6px;font-weight:700">{{ sig.name }}</div>
+        <div class="muted" style="font-size:13px">Signed {{ sig.when }}</div>
+      </div>
+      <div class="muted" style="font-size:12px;text-align:right">
+        Recorded electronically via 60MS HQ<br>Reference: lead #{{ lead.id }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<style>
+@media print {
+  .sidebar, #flashes, .no-print, .nav-toggle { display: none !important; }
+  .main { padding: 0; max-width: none; }
+  .card { box-shadow: none; border: none; max-width: none !important; }
+  body { background: #fff; }
+}
+</style>
+{% endblock %}

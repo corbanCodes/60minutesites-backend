@@ -1409,6 +1409,61 @@ def form_submit(slug):
     return redirect(dest or url_for("form_thanks", slug=slug))
 
 
+# ---------------------------------------------------------- e-sign agreements
+SIGN_MARKER = "SIGNED-AGREEMENT-JSON: "
+
+
+def _sign_token(lead_id):
+    import hmac as _hmac, hashlib as _hashlib
+    return _hmac.new(app.secret_key.encode(), f"sign-{lead_id}".encode(),
+                     _hashlib.sha256).hexdigest()[:20]
+
+
+def _latest_signature(lead_id):
+    for n in (Note.query.filter_by(lead_id=lead_id)
+              .order_by(Note.created_at.desc()).all()):
+        if n.body.startswith(SIGN_MARKER):
+            try:
+                d = json.loads(n.body[len(SIGN_MARKER):])
+                d["when"] = (n.created_at.strftime("%B %-d, %Y at %-I:%M %p UTC")
+                             if n.created_at else "")
+                return d
+            except ValueError:
+                continue
+    return None
+
+
+@app.route("/sign/<int:lead_id>/<token>", methods=["GET", "POST"])
+def sign_agreement(lead_id, token):
+    if token != _sign_token(lead_id):
+        abort(404)
+    lead = Lead.query.get_or_404(lead_id)
+    if request.method == "GET":
+        return render_template("sign.html", lead=lead)
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()[:120]
+    sig = str(data.get("signature", ""))
+    if not name or not sig.startswith("data:image/png;base64,") or len(sig) > 300_000:
+        return jsonify(ok=False), 400
+    db.session.add(Note(lead_id=lead.id, body=SIGN_MARKER + json.dumps(
+        {"name": name, "signature": sig,
+         "ua": request.headers.get("User-Agent", "")[:200]})))
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route("/admin/crm/<int:lead_id>/agreement")
+@login_required
+def lead_agreement(lead_id):
+    lead = Lead.query.get_or_404(lead_id)
+    if not can_touch(lead):
+        abort(403)
+    sig = _latest_signature(lead_id)
+    sign_url = request.host_url.rstrip("/") + f"/sign/{lead_id}/{_sign_token(lead_id)}"
+    return render_template("agreement_admin.html", lead=lead, signed=bool(sig),
+                           sig=sig, sign_url=sign_url)
+
+
 @app.route("/admin/ai-studio")
 @login_required
 def ai_studio():
