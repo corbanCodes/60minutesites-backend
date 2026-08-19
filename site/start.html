@@ -334,6 +334,17 @@
       submitToFormspree(contact);
       submitToHQ(contact);
       if (window.fbq) {
+        // Manual advanced matching: pass the lead's real info so Meta can match
+        // this Lead to the person who clicked the ad. The pixel hashes every value
+        // with SHA-256 in-browser — nothing leaves the page as plain text.
+        var nm = (contact.name || '').trim().split(/\s+/);
+        fbq('init', '3728691617450623', {
+          em: (contact.email || '').trim().toLowerCase(),
+          ph: (contact.phone || '').replace(/\D/g, ''),
+          fn: (nm[0] || '').toLowerCase(),
+          ln: (nm.slice(1).join(' ') || '').toLowerCase(),
+          ct: 'us'
+        });
         fbq('track', 'Lead', {
           content_name: 'qualify_form',
           content_category: answers.business_type || '',
