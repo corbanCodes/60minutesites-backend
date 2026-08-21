@@ -374,3 +374,11 @@ a.rowlink:hover { color: var(--orange); }
 /* empty states */
 .empty { text-align: center; padding: 44px 20px; }
 .empty i { font-size: 30px; color: #D8CEC3; }
+
+/* ---- form-answers boxes on lead detail ---- */
+.note.extras { background: #FBF8F5; border: 1px solid #EAE3DA; }
+.extras-title { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 10px; display: flex; gap: 6px; align-items: center; }
+.extras-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.extras-box { background: #fff; border: 1px solid #EEE7DE; border-radius: 9px; padding: 8px 11px; display: flex; flex-direction: column; gap: 2px; }
+.extras-label { font-size: 11px; font-weight: 700; color: #A79C90; text-transform: uppercase; letter-spacing: .03em; }
+.extras-val { font-size: 14px; font-weight: 600; color: var(--ink); word-break: break-word; }

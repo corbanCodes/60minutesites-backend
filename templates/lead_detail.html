@@ -105,8 +105,19 @@
       <button class="btn sm" type="submit">Add note</button>
     </form>
     {% for note in lead.notes %}
+      {% set kv = note.body | extras_kv %}
       {% if note.body.startswith('Status changed:') %}
         <div class="note sys"><i class="bi bi-arrow-left-right"></i> {{ note.body }}<div class="when">{{ note.created_at | local }}</div></div>
+      {% elif kv %}
+        <div class="note extras">
+          <div class="extras-title"><i class="bi bi-clipboard-data"></i> {{ 'Form answers' if note.body.startswith('Form extras') else 'Imported details' }}</div>
+          <div class="extras-grid">
+            {% for label, value in kv %}
+            <div class="extras-box"><span class="extras-label">{{ label }}</span><span class="extras-val">{{ value }}</span></div>
+            {% endfor %}
+          </div>
+          <div class="when">{{ note.created_at | local }}</div>
+        </div>
       {% else %}
         <div class="note">{{ note.body }}<div class="when">{{ note.created_at | local }}</div></div>
       {% endif %}

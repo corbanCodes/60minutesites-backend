@@ -482,6 +482,48 @@ def filter_money(v):
     return f"${v:,.0f}" if v == int(v) else f"${v:,.2f}"
 
 
+_EXTRA_LABELS = {
+    "has_website": "Has website", "website_url": "Current site",
+    "timeline": "Timeline", "goals": "Goals", "ads_experience": "Ran ads before",
+    "wants_ads": "Wants ads", "ad_budget": "Ad budget", "can_pay": "Can pay $100/mo",
+    "fill_seconds": "Time to fill", "landing_page": "Landing page",
+    "submission_type": "Submission", "traffic_source": "Traffic source",
+    "utm_source": "UTM source", "utm_medium": "UTM medium",
+    "utm_campaign": "UTM campaign", "utm_content": "UTM content / ad",
+    "phone_2": "Phone 2", "title": "Title", "current_website": "Current website",
+}
+
+
+@app.template_filter("extras_kv")
+def filter_extras_kv(body):
+    """Turn a 'Form extras: {json}' or 'Imported details: k: v · ...' note into an
+    ordered list of (label, value) pairs for tidy boxes. Returns None otherwise."""
+    if body.startswith("Form extras: "):
+        try:
+            d = json.loads(body[len("Form extras: "):])
+        except ValueError:
+            return None
+        if not isinstance(d, dict):
+            return None
+        out = []
+        for k, v in d.items():
+            if v in ("", None):
+                continue
+            label = _EXTRA_LABELS.get(k, k.replace("_", " ").capitalize())
+            if k == "fill_seconds":
+                v = f"{v}s"
+            out.append((label, str(v)))
+        return out or None
+    if body.startswith("Imported details: "):
+        out = []
+        for part in body[len("Imported details: "):].split(" · "):
+            if ": " in part:
+                k, v = part.split(": ", 1)
+                out.append((k, v))
+        return out or None
+    return None
+
+
 @app.template_filter("duefmt")
 def filter_duefmt(dt):
     """Human due label: Today 3:00 PM · Tomorrow · Aug 20."""
