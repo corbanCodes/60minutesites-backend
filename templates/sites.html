@@ -57,7 +57,7 @@
     </td>
     <td class="muted">{{ site.updated_at | localdate }}</td>
     <td style="white-space:nowrap">
-      <a class="btn primary sm" href="/edit/{{ site.id }}" style="background:var(--orange);color:#fff">Edit</a>
+      <a class="btn primary sm" href="{% if site.github_repo %}/edit-page/{{ site.id }}{% else %}/edit/{{ site.id }}{% endif %}" style="background:var(--orange);color:#fff">Edit</a>
       {% if site.github_repo %}<a class="btn ghost sm" href="/admin/sites/{{ site.id }}/pages" title="Every page of the live repo, editable one by one"><i class="bi bi-files"></i> Pages</a>{% endif %}
       {% if site.github_repo %}
       <form method="post" action="/admin/sites/{{ site.id }}/push" style="display:inline"><button class="btn ghost sm" type="submit" title="Commit the current version to GitHub → Netlify redeploys">Push now</button></form>

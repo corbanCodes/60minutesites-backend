@@ -1879,6 +1879,11 @@ def editor(site_id):
         site.html = render_template("public_site.html", site=site, services=services)
         db.session.commit()
     html = site.html
+    # relative css/js/img resolve against the LIVE site so the page looks real
+    if site.live_url and "<base" not in html[:2000]:
+        base = f'<base href="{site.live_url.rstrip("/")}/" data-wys="1">'
+        html = (html.replace("<head>", "<head>" + base, 1) if "<head>" in html
+                else base + html)
     my_forms = owner_filter(Form.query, Form).all()
     boot = ("<script data-wys=\"1\">window.WYS = " + json.dumps({
         "siteId": site.id, "slug": site.slug, "ai": bool(OPENAI_API_KEY),
