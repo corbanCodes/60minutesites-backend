@@ -3,6 +3,7 @@
 (function () {
   "use strict";
   var W = window.WYS || { siteId: 0, slug: "", ai: false, forms: [] };
+  var HQ = (W && W.hqOrigin) || "";
   var lastEl = null;
 
   /* ---------------- toolbar ---------------- */
@@ -28,7 +29,7 @@
     (W.ai ? '<button class="wys-btn ai" data-act="ai">AI</button>' : '') +
     '<span class="wys-spacer"></span>' +
     '<span id="wys-status"></span>' +
-    '<a class="wys-btn" href="' + (W.viewUrl || "/s/" + W.slug) + '" target="_blank">View</a>' +
+    '<a class="wys-btn" href="' + (W.viewUrl || HQ + "/s/" + W.slug) + '" target="_blank">View</a>' +
     (W.pagePath ? '<span class="wys-sep"></span><span style="opacity:.7;font-size:12px;align-self:center">' + W.pagePath + '</span>' : '') +
     '<button class="wys-btn primary" data-act="save">Save</button>';
   document.body.appendChild(bar);
@@ -93,10 +94,10 @@
       var fd = new FormData();
       fd.append("file", input.files[0]);
       status("Uploading…");
-      fetch("/media", { method: "POST", body: fd })
+      fetch(HQ + "/media", { method: "POST", body: fd })
         .then(function (r) { return r.json(); })
         .then(function (j) {
-          if (j.ok) { img.src = j.url; img.removeAttribute("srcset"); status("Image swapped ✓"); }
+          if (j.ok) { img.src = HQ + j.url; img.removeAttribute("srcset"); status("Image swapped ✓"); }
           else status(j.error || "Upload failed", false);
         })
         .catch(function () { status("Upload failed", false); });
@@ -163,13 +164,13 @@
       var fd = new FormData();
       fd.append("file", input.files[0]);
       status("Uploading…");
-      fetch("/media", { method: "POST", body: fd })
+      fetch(HQ + "/media", { method: "POST", body: fd })
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (!j.ok) { status(j.error || "Upload failed", false); return; }
           var el = accept.indexOf("video") === 0
-            ? '<video controls playsinline src="' + j.url + '" style="display:block;max-width:100%;width:720px;margin:24px auto;border-radius:14px"></video>'
-            : '<img src="' + j.url + '" alt="" style="display:block;max-width:100%;width:720px;margin:24px auto;border-radius:14px">';
+            ? '<video controls playsinline src="' + HQ + j.url + '" style="display:block;max-width:100%;width:720px;margin:24px auto;border-radius:14px"></video>'
+            : '<img src="' + HQ + j.url + '" alt="" style="display:block;max-width:100%;width:720px;margin:24px auto;border-radius:14px">';
           var anchor = lastEl && lastEl.closest("section, main, div");
           if (anchor) anchor.insertAdjacentHTML("afterend", el);
           else document.body.insertAdjacentHTML("beforeend", el);
@@ -196,7 +197,7 @@
     if (mode === "text") {
       if (!lastEl) { status("Click into some text first", false); return; }
       status("AI writing…");
-      fetch("/ai/text", {
+      fetch(HQ + "/ai/text", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instruction: inst, text: lastEl.innerText }),
       }).then(function (r) { return r.json(); }).then(function (j) {
@@ -216,7 +217,7 @@
         if (outline.indexOf(sig) === -1) outline.push(sig);
       }
       var cur = document.getElementById("wys-ai-style");
-      fetch("/ai/design", {
+      fetch(HQ + "/ai/design", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instruction: inst, outline: outline.join("\n"),
                                current_css: cur ? cur.textContent : "" }),
@@ -253,7 +254,7 @@
       if (!el.className) el.removeAttribute("class");
     });
     var html = "<!DOCTYPE html>\n" + doc.outerHTML;
-    fetch(W.pagePath ? "/edit-page/" + W.siteId + "/save" : "/edit/" + W.siteId + "/save", {
+    fetch(HQ + (W.pagePath ? "/edit-page/" + W.siteId + "/save" : "/edit/" + W.siteId + "/save"), {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(W.pagePath ? { html: html, path: W.pagePath } : { html: html }),
     }).then(function (r) { return r.json(); }).then(function (j) {

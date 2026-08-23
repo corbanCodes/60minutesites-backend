@@ -864,6 +864,14 @@ EDITOR_SNIPPET = ('<link rel="stylesheet" href="/static-admin/editor.css" data-w
                   '<script src="/static-admin/editor.js" data-wys="1" defer></script>')
 
 
+def editor_snippet():
+    """Editor css/js with ABSOLUTE urls — an injected <base> tag must never
+    redirect them to the client's domain."""
+    hq = request.host_url.rstrip("/")
+    return (f'<link rel="stylesheet" href="{hq}/static-admin/editor.css" data-wys="1">'
+            f'<script src="{hq}/static-admin/editor.js" data-wys="1" defer></script>')
+
+
 def strip_editor_artifacts(html):
     html = re.sub(r"<[^>]+data-wys=\"1\"[^>]*>\s*(</script>)?", "", html)
     html = re.sub(r"<div id=\"wys-toolbar\".*?</div>\s*(?=</body>)", "", html, flags=re.S)
@@ -1637,9 +1645,10 @@ def page_editor_frame(site_id):
     boot = ("<script data-wys=\"1\">window.WYS = " + json.dumps({
         "siteId": site.id, "slug": site.slug, "ai": bool(OPENAI_API_KEY),
         "pagePath": path, "viewUrl": view_url,
+        "hqOrigin": request.host_url.rstrip("/"),
         "forms": [{"name": f.name, "slug": f.slug} for f in my_forms],
     }) + ";</script>")
-    inject = boot + EDITOR_SNIPPET
+    inject = boot + editor_snippet()
     if "</body>" in html:
         html = html.replace("</body>", inject + "</body>", 1)
     else:
@@ -1887,9 +1896,10 @@ def editor(site_id):
     my_forms = owner_filter(Form.query, Form).all()
     boot = ("<script data-wys=\"1\">window.WYS = " + json.dumps({
         "siteId": site.id, "slug": site.slug, "ai": bool(OPENAI_API_KEY),
+        "hqOrigin": request.host_url.rstrip("/"),
         "forms": [{"name": f.name, "slug": f.slug} for f in my_forms],
     }) + ";</script>")
-    inject = boot + EDITOR_SNIPPET
+    inject = boot + editor_snippet()
     if "</body>" in html:
         html = html.replace("</body>", inject + "</body>", 1)
     else:
