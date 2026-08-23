@@ -868,11 +868,22 @@ _EDITOR_V = str(int(os.path.getmtime(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "editor.js"))))
 
 
+def hq_origin():
+    """Public origin, HTTPS-correct behind a TLS-terminating proxy (Railway
+    forwards plain HTTP internally, so request.host_url says http://).
+    Honors X-Forwarded-Proto; forces https for any non-local host."""
+    proto = request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip()
+    host = request.host
+    if not proto:
+        proto = "http" if host.startswith(("localhost", "127.0.0.1")) else "https"
+    return f"{proto}://{host}"
+
+
 def editor_snippet():
     """Editor css/js with ABSOLUTE urls — an injected <base> tag must never
     redirect them to the client's domain. ?v busts stale browser caches on
     every deploy."""
-    hq = request.host_url.rstrip("/")
+    hq = hq_origin()
     return (f'<link rel="stylesheet" href="{hq}/static-admin/editor.css?v={_EDITOR_V}" data-wys="1">'
             f'<script src="{hq}/static-admin/editor.js?v={_EDITOR_V}" data-wys="1" defer></script>')
 
@@ -1527,7 +1538,7 @@ def forms():
     users = User.query.order_by(User.name).all() if session.get("admin") else []
     owners = {u.id: u.name for u in users}
     return render_template("forms.html", rows=rows, counts=counts, users=users,
-                           owners=owners, host=request.host_url.rstrip("/"))
+                           owners=owners, host=hq_origin())
 
 
 @app.route("/admin/forms/<int:form_id>/delete", methods=["POST"])
@@ -1650,7 +1661,7 @@ def page_editor_frame(site_id):
     boot = ("<script data-wys=\"1\">window.WYS = " + json.dumps({
         "siteId": site.id, "slug": site.slug, "ai": bool(OPENAI_API_KEY),
         "pagePath": path, "viewUrl": view_url,
-        "hqOrigin": request.host_url.rstrip("/"),
+        "hqOrigin": hq_origin(),
         "forms": [{"name": f.name, "slug": f.slug} for f in my_forms],
     }) + ";</script>")
     inject = boot + editor_snippet()
@@ -1760,7 +1771,7 @@ def lead_agreement(lead_id):
     if not can_touch(lead):
         abort(403)
     sig = _latest_signature(lead_id)
-    sign_url = request.host_url.rstrip("/") + f"/sign/{lead_id}/{_sign_token(lead_id)}"
+    sign_url = hq_origin() + f"/sign/{lead_id}/{_sign_token(lead_id)}"
     return render_template("agreement_admin.html", lead=lead, signed=bool(sig),
                            sig=sig, sign_url=sign_url)
 
@@ -1901,7 +1912,7 @@ def editor(site_id):
     my_forms = owner_filter(Form.query, Form).all()
     boot = ("<script data-wys=\"1\">window.WYS = " + json.dumps({
         "siteId": site.id, "slug": site.slug, "ai": bool(OPENAI_API_KEY),
-        "hqOrigin": request.host_url.rstrip("/"),
+        "hqOrigin": hq_origin(),
         "forms": [{"name": f.name, "slug": f.slug} for f in my_forms],
     }) + ";</script>")
     inject = boot + editor_snippet()
@@ -2049,7 +2060,7 @@ def funnels():
     rows = owner_filter(Site.query, Site).order_by(Site.updated_at.desc()).all()
     my_forms = owner_filter(Form.query, Form).all()
     return render_template("funnels.html", rows=rows, my_forms=my_forms,
-                           host=request.host_url.rstrip("/"))
+                           host=hq_origin())
 
 
 @app.route("/admin/sites/<int:site_id>/download")
@@ -2063,7 +2074,7 @@ def site_download(site_id):
         services = [s.strip() for s in (site.services or "").splitlines() if s.strip()]
         html = render_template("public_site.html", site=site, services=services)
     # absolutize root-relative assets so the file renders anywhere it's hosted
-    base = request.host_url.rstrip("/")
+    base = hq_origin()
     html = re.sub(r'(src|href|action)="/(?!/)', rf'\1="{base}/', html)
     return Response(html, mimetype="text/html", headers={
         "Content-Disposition": f'attachment; filename="{site.slug}.html"'})
@@ -2414,7 +2425,7 @@ def setup_page():
     status = {
         "resend": bool(RESEND_KEY), "github": bool(GITHUB_TOKEN),
         "openai": bool(OPENAI_API_KEY), "admin_email": ADMIN_EMAIL,
-        "host": request.host_url.rstrip("/"),
+        "host": hq_origin(),
         "sqlite": USING_SQLITE, "railway": IS_RAILWAY,
     }
     linked = Site.query.filter(Site.github_repo.isnot(None),
@@ -2627,7 +2638,7 @@ def flipbooks():
             FlipbookPage.text != "").first() is not None
         meta[b.id] = {"toc": toc_n, "search": has_text}
     return render_template("flipbooks.html", rows=rows, meta=meta,
-                           host=request.host_url.rstrip("/"),
+                           host=hq_origin(),
                            has_ai=bool(OPENAI_API_KEY))
 
 
@@ -2695,7 +2706,7 @@ def flipbook_view(slug):
     return render_template("flipbook_view.html", book=book, first=first,
                            toc=toc, has_text=has_text,
                            embed=request.args.get("embed") == "1",
-                           host=request.host_url.rstrip("/"))
+                           host=hq_origin())
 
 
 @app.route("/f/<slug>/page/<int:num>.png")
@@ -2788,7 +2799,7 @@ def chat_widgets():
     owners = {u.id: u.name for u in users}
     return render_template("chat.html", rows=rows, counts=counts, month=month,
                            users=users, owners=owners,
-                           host=request.host_url.rstrip("/"),
+                           host=hq_origin(),
                            has_ai=bool(OPENAI_API_KEY))
 
 
