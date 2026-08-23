@@ -16,6 +16,7 @@
     {% with messages = get_flashed_messages() %}
       {% for m in messages %}<div class="flash" style="background:#F8E4E1;color:#B3362B">{{ m }}</div>{% endfor %}
     {% endwith %}
+    <input type="text" name="_gotcha" style="display:none !important" tabindex="-1" autocomplete="off">
     <div><label for="name">Your name</label><input type="text" id="name" name="name" required autofocus></div>
     <div><label for="email">Email</label><input type="email" id="email" name="email" required></div>
     <div><label for="password">Password (6+ characters)</label><input type="password" id="password" name="password" minlength="6" required></div>

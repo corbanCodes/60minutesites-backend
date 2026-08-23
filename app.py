@@ -806,6 +806,22 @@ def notify_lead(form, lead):
         pass
 
 
+def send_email(to, subject, html, reply_to=None):
+    """Best-effort transactional email via Resend; never raises."""
+    if not (RESEND_KEY and to):
+        return
+    payload = {"from": RESEND_FROM, "to": [to] if isinstance(to, str) else to,
+               "subject": subject, "html": html}
+    if reply_to:
+        payload["reply_to"] = reply_to
+    try:
+        http.post("https://api.resend.com/emails",
+                  headers={"Authorization": f"Bearer {RESEND_KEY}"},
+                  json=payload, timeout=15)
+    except Exception:
+        pass
+
+
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             "site", "landing-pages")
 
@@ -920,6 +936,8 @@ def signup():
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        if request.form.get("_gotcha"):  # honeypot — bots fill every field
+            return redirect(url_for("login"))
         if not (name and email and len(password) >= 6):
             flash("Name, email, and a 6+ character password required.", "error")
         elif User.query.filter_by(email=email).first():
@@ -928,7 +946,27 @@ def signup():
             user = User(name=name, email=email,
                         password_hash=generate_password_hash(password))
             db.session.add(user)
+            # every signup is a lead in the admin CRM — never lose one again
+            lead = Lead(owner_id=None, name=name, email=email,
+                        source="Self-signup", status="New")
+            db.session.add(lead)
+            db.session.flush()
+            db.session.add(Note(lead_id=lead.id,
+                                body="Created an HQ account via /signup."))
             db.session.commit()
+            send_email(email, "Welcome to 60 Minute Sites",
+                       f"<div style='font-family:sans-serif;font-size:15px'>"
+                       f"<h2>Welcome aboard, {name}!</h2>"
+                       f"<p>Your 60 Minute Sites account is ready. Log in any time at "
+                       f"<a href='https://60minutesites.com/login'>60minutesites.com/login</a>.</p>"
+                       f"<p>Questions? Just reply to this email or call "
+                       f"<b>1-800-60-4-LIFE</b> — a real person answers.</p>"
+                       f"<p>— Corban, 60 Minute Sites</p></div>",
+                       reply_to="hello@60minute-sites.com")
+            if ADMIN_EMAIL:
+                send_email(ADMIN_EMAIL, f"New HQ signup: {name}",
+                           f"<p style='font-family:sans-serif'>{name} ({email}) just "
+                           f"created an account. They're in your CRM as a Self-signup lead.</p>")
             session.clear()
             session["uid"] = user.id
             return redirect(url_for("dashboard"))
@@ -1562,6 +1600,21 @@ def site_pages(site_id):
 @app.route("/edit-page/<int:site_id>")
 @login_required
 def page_editor(site_id):
+    """WordPress-style shell: pages down the left, live editor on the right."""
+    site = Site.query.get_or_404(site_id)
+    if not can_touch(site):
+        abort(403)
+    pages = github_list_pages(site.github_repo) if site.github_repo else None
+    path = request.args.get("path", "")
+    if not PAGE_RE.match(path):
+        path = "index.html" if (pages and "index.html" in pages) else (pages[0] if pages else "")
+    return render_template("site_editor_shell.html", site=site, pages=pages or [],
+                           path=path, has_token=bool(GITHUB_TOKEN))
+
+
+@app.route("/edit-page/<int:site_id>/frame")
+@login_required
+def page_editor_frame(site_id):
     site = Site.query.get_or_404(site_id)
     if not can_touch(site):
         abort(403)
@@ -1570,10 +1623,17 @@ def page_editor(site_id):
         abort(404)
     html = github_fetch_file(site.github_repo, path)
     if html is None:
-        flash(f"Couldn't load {path} from GitHub — check the repo link and token.", "error")
-        return redirect(url_for("site_pages", site_id=site.id))
+        return Response(f"<body style='font-family:sans-serif;padding:40px'>"
+                        f"Couldn't load <b>{path}</b> from GitHub — check the repo "
+                        f"link and the GITHUB_TOKEN (Setup page).</body>",
+                        mimetype="text/html")
     my_forms = owner_filter(Form.query, Form).all()
     view_url = (site.live_url.rstrip("/") + "/" + path) if site.live_url else ""
+    # relative css/js/img resolve against the LIVE site, so the page looks real
+    if site.live_url:
+        base = f'<base href="{site.live_url.rstrip("/")}/" data-wys="1">'
+        html = (html.replace("<head>", "<head>" + base, 1) if "<head>" in html
+                else base + html)
     boot = ("<script data-wys=\"1\">window.WYS = " + json.dumps({
         "siteId": site.id, "slug": site.slug, "ai": bool(OPENAI_API_KEY),
         "pagePath": path, "viewUrl": view_url,
