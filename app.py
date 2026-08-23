@@ -864,12 +864,17 @@ EDITOR_SNIPPET = ('<link rel="stylesheet" href="/static-admin/editor.css" data-w
                   '<script src="/static-admin/editor.js" data-wys="1" defer></script>')
 
 
+_EDITOR_V = str(int(os.path.getmtime(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "editor.js"))))
+
+
 def editor_snippet():
     """Editor css/js with ABSOLUTE urls — an injected <base> tag must never
-    redirect them to the client's domain."""
+    redirect them to the client's domain. ?v busts stale browser caches on
+    every deploy."""
     hq = request.host_url.rstrip("/")
-    return (f'<link rel="stylesheet" href="{hq}/static-admin/editor.css" data-wys="1">'
-            f'<script src="{hq}/static-admin/editor.js" data-wys="1" defer></script>')
+    return (f'<link rel="stylesheet" href="{hq}/static-admin/editor.css?v={_EDITOR_V}" data-wys="1">'
+            f'<script src="{hq}/static-admin/editor.js?v={_EDITOR_V}" data-wys="1" defer></script>')
 
 
 def strip_editor_artifacts(html):
