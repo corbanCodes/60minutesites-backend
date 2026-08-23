@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% set active = 'email' %}
+{% block title %}Email | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar"><h1>Email</h1></div>
+
+{% if role == 'admin' %}
+<div class="card" style="margin-bottom:18px">
+  <h2 style="margin-top:0"><i class="bi bi-plus-circle"></i> Add a mailbox</h2>
+  <p class="muted" style="margin-top:0;font-size:13px">Create the account at <a href="https://purelymail.com" target="_blank">purelymail.com</a> first, then record it here so the client can see their login on this page.</p>
+  <form method="post" class="import-opts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end">
+    <div><label>Email address</label><input type="text" name="address" placeholder="robert@cigcasp.com" required></div>
+    <div><label>Password</label><input type="text" name="password" placeholder="the mailbox password" required></div>
+    <div><label>Belongs to</label>
+      <select name="owner_id"><option value="">Me (admin)</option>
+        {% for u in users %}<option value="{{ u.id }}">{{ u.name }} — {{ u.email }}</option>{% endfor %}
+      </select></div>
+    <div><label>Notes (optional)</label><input type="text" name="notes" placeholder="main inbox / forms inbox…"></div>
+    <div><button class="btn" type="submit">Save mailbox</button></div>
+  </form>
+</div>
+{% endif %}
+
+{% for a in rows %}
+<div class="card" style="margin-bottom:14px">
+  <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+    <h2 style="margin:0"><i class="bi bi-envelope-at"></i> {{ a.address }}
+      {% if role == 'admin' %}<span class="muted" style="font-weight:400;font-size:13px">· {{ owners.get(a.owner_id, 'me') }}</span>{% endif %}</h2>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a class="btn sm" href="https://inbox.purelymail.com" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Open webmail</a>
+      {% if role == 'admin' %}
+      <form method="post" action="/admin/email/{{ a.id }}/delete" onsubmit="return confirm('Remove this mailbox from the dashboard? (The real account is not deleted.)')"><button class="btn danger sm">Remove</button></form>
+      {% endif %}
+    </div>
+  </div>
+  {% if a.notes %}<p class="muted" style="margin:6px 0 0">{{ a.notes }}</p>{% endif %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px">
+    <div class="extras-box"><span class="extras-label">Username</span><span class="extras-val" style="user-select:all">{{ a.address }}</span></div>
+    <div class="extras-box"><span class="extras-label">Password <a href="#" onclick="var v=this.closest('.extras-box').querySelector('.pw');v.textContent=v.textContent==='••••••••'?v.dataset.pw:'••••••••';return false" style="font-weight:400">(show/hide)</a></span><span class="extras-val pw" data-pw="{{ a.password }}" style="user-select:all">••••••••</span></div>
+    <div class="extras-box"><span class="extras-label">Log in at</span><span class="extras-val">inbox.purelymail.com</span></div>
+  </div>
+  <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:13px">Phone / Outlook / Apple Mail settings</summary>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">
+      <div class="extras-box"><span class="extras-label">Incoming (IMAP)</span><span class="extras-val">imap.purelymail.com · port 993 · SSL</span></div>
+      <div class="extras-box"><span class="extras-label">Outgoing (SMTP)</span><span class="extras-val">smtp.purelymail.com · port 465 · SSL</span></div>
+      <div class="extras-box"><span class="extras-label">Username for both</span><span class="extras-val">your full email address</span></div>
+    </div>
+  </details>
+</div>
+{% else %}
+<div class="empty card" style="margin-bottom:18px">
+  <i class="bi bi-envelope-at"></i>
+  <p><b>No mailboxes here yet.</b></p>
+  <p class="muted">{{ 'Add one above after creating it on purelymail.com.' if role == 'admin' else 'Want a professional email address for your business (you@yourbusiness.com)? Just ask — we set it up for you and your login appears right here.' }}</p>
+</div>
+{% endfor %}
+
+<div class="card" style="margin-top:4px">
+  <h2 style="margin-top:0"><i class="bi bi-inbox"></i> Where your form leads go</h2>
+  <p class="muted" style="margin-top:0;font-size:13px">Every form below emails its leads to these addresses (and always lands in the CRM). Change recipients on the <a href="/admin/forms">Forms page</a>.</p>
+  {% for f in my_forms %}
+  <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line)">
+    <b>{{ f.name }}</b>
+    <span class="muted">{{ f.notify_emails or 'owner login email (default)' }}</span>
+  </div>
+  {% else %}<p class="muted">No forms yet.</p>{% endfor %}
+</div>
+{% endblock %}

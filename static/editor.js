@@ -28,7 +28,8 @@
     (W.ai ? '<button class="wys-btn ai" data-act="ai">AI</button>' : '') +
     '<span class="wys-spacer"></span>' +
     '<span id="wys-status"></span>' +
-    '<a class="wys-btn" href="/s/' + W.slug + '" target="_blank">View</a>' +
+    '<a class="wys-btn" href="' + (W.viewUrl || "/s/" + W.slug) + '" target="_blank">View</a>' +
+    (W.pagePath ? '<span class="wys-sep"></span><span style="opacity:.7;font-size:12px;align-self:center">' + W.pagePath + '</span>' : '') +
     '<button class="wys-btn primary" data-act="save">Save</button>';
   document.body.appendChild(bar);
   document.body.classList.add("wys-editing");
@@ -252,9 +253,9 @@
       if (!el.className) el.removeAttribute("class");
     });
     var html = "<!DOCTYPE html>\n" + doc.outerHTML;
-    fetch("/edit/" + W.siteId + "/save", {
+    fetch(W.pagePath ? "/edit-page/" + W.siteId + "/save" : "/edit/" + W.siteId + "/save", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html: html }),
+      body: JSON.stringify(W.pagePath ? { html: html, path: W.pagePath } : { html: html }),
     }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j.ok) { status("Save failed", false); return; }
       if (j.github === "synced") status("Saved ✓ · pushed to GitHub, going live", true);

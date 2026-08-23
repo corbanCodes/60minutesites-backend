@@ -141,6 +141,17 @@ class Task(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class EmailAccount(db.Model):
+    """A client mailbox we provisioned (Purelymail). Password is stored so the
+    CLIENT can read it from their dashboard — shared-knowledge credential by design."""
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, nullable=True)
+    address = db.Column(db.String(200), nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    notes = db.Column(db.String(300), default="")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     lead_id = db.Column(db.Integer, db.ForeignKey("lead.id"), nullable=False)
@@ -154,6 +165,7 @@ class Form(db.Model):
     name = db.Column(db.String(120), nullable=False)
     slug = db.Column(db.String(140), unique=True, nullable=False)
     redirect_url = db.Column(db.String(400), default="")
+    notify_emails = db.Column(db.String(500), default="")  # comma-separated extra recipients
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -279,6 +291,7 @@ def ensure_schema():
                  "github_repo": "VARCHAR(200)", "live_url": "VARCHAR(300)",
                  "last_push_at": "TIMESTAMP",
                  "last_push_ok": "BOOLEAN", "last_push_msg": "VARCHAR(300)"},
+        "form": {"notify_emails": "VARCHAR(500)"},
         "user": {"phone": "VARCHAR(40)", "monthly_price": "FLOAT",
                  "setup_fee": "FLOAT"},
         "flipbook": {"toc": "TEXT"},
@@ -703,6 +716,61 @@ def github_check_repo(repo):
         return False, f"Couldn't reach GitHub ({type(e).__name__})"
 
 
+PAGE_RE = re.compile(r"^[A-Za-z0-9._-]+\.html$")
+
+
+def github_list_pages(repo):
+    """Root-level .html files in the repo, or None on any failure."""
+    if not (repo and GITHUB_TOKEN):
+        return None
+    try:
+        r = http.get(f"https://api.github.com/repos/{repo}/contents/", timeout=20,
+                     headers={"Authorization": f"Bearer {GITHUB_TOKEN}",
+                              "Accept": "application/vnd.github+json"})
+        if r.status_code != 200:
+            return None
+        return sorted(f["name"] for f in r.json()
+                      if f.get("type") == "file" and f["name"].endswith(".html"))
+    except Exception:
+        return None
+
+
+def github_fetch_file(repo, path):
+    hdr = {"Accept": "application/vnd.github.raw"}
+    if GITHUB_TOKEN:
+        hdr["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+    try:
+        r = http.get(f"https://api.github.com/repos/{repo}/contents/{path}",
+                     headers=hdr, timeout=20)
+        return r.text if r.status_code == 200 else None
+    except Exception:
+        return None
+
+
+def github_push_file(repo, path, content):
+    """Commit one file to the repo. Returns (ok, msg)."""
+    if not GITHUB_TOKEN:
+        return False, "GITHUB_TOKEN not set on the server — see Setup"
+    # media uploaded through the editor lives on HQ — absolutize for client domains
+    content = content.replace('src="/media/', 'src="https://60minutesites.com/media/')
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    hdr = {"Authorization": f"Bearer {GITHUB_TOKEN}",
+           "Accept": "application/vnd.github+json"}
+    try:
+        r = http.get(url, headers=hdr, timeout=20)
+        sha = r.json().get("sha") if r.status_code == 200 else None
+        payload = {"message": f"Edit {path} via 60MS HQ editor",
+                   "content": base64.b64encode(content.encode()).decode()}
+        if sha:
+            payload["sha"] = sha
+        r2 = http.put(url, headers=hdr, json=payload, timeout=30)
+        if r2.status_code in (200, 201):
+            return True, "Live — committed to GitHub, Netlify is redeploying"
+        return False, GITHUB_ERRORS.get(r2.status_code, f"GitHub error {r2.status_code}")
+    except Exception as e:
+        return False, f"Couldn't reach GitHub ({type(e).__name__})"
+
+
 def form_tag(form):
     """Stable subject token for inbox rules: C<client id>-F<form id>.
     'subject contains [60MS C3' = one forwarding rule per client;
@@ -715,13 +783,15 @@ def notify_lead(form, lead):
     if not RESEND_KEY:
         return
     owner = db.session.get(User, form.owner_id) if form.owner_id else None
-    to = owner.email if owner else ADMIN_EMAIL
+    to = [e.strip() for e in (form.notify_emails or "").split(",") if e.strip()]
+    if not to:
+        to = [owner.email] if owner and owner.email else ([ADMIN_EMAIL] if ADMIN_EMAIL else [])
     if not to:
         return
     rows = "".join(f"<tr><td style='padding:4px 12px 4px 0;color:#888'>{k}</td><td><b>{v}</b></td></tr>"
                    for k, v in [("Name", lead.name), ("Cell", lead.phone), ("Email", lead.email),
                                 ("Business", lead.business), ("Source", lead.source)] if v)
-    payload = {"from": RESEND_FROM, "to": [to],
+    payload = {"from": RESEND_FROM, "to": to[:10],
                "subject": f"New lead: {lead.name} — {form.name} {form_tag(form)}",
                "html": f"<h2 style='font-family:sans-serif'>New lead from “{form.name}”</h2>"
                        f"<table style='font-family:sans-serif;font-size:15px'>{rows}</table>"
@@ -766,6 +836,7 @@ def instantiate_template(name, business_name):
                   "", html)
     html = re.sub(r"<noscript><img[^>]*facebook[^>]*></noscript>", "", html)
     html = re.sub(r"<script src=\"/js/components.js\"></script>", "", html)
+    html = re.sub(r"<script data-crm-mirror.*?</script>", "", html, flags=re.S)
     html = html.replace('<div id="site-header"></div>', "")
     html = html.replace('<div id="site-footer"></div>', "")
     html = re.sub(r"<title>.*?</title>",
@@ -1418,6 +1489,120 @@ def form_delete(form_id):
     db.session.commit()
     flash("Form deleted (its leads are kept).")
     return redirect(url_for("forms"))
+
+
+@app.route("/admin/forms/<int:form_id>/notify", methods=["POST"])
+@login_required
+def form_notify(form_id):
+    form = Form.query.get_or_404(form_id)
+    if not can_touch(form):
+        abort(403)
+    raw = request.form.get("notify_emails", "")
+    emails = [e.strip() for e in raw.replace(";", ",").split(",") if e.strip()][:10]
+    form.notify_emails = ", ".join(emails)[:500]
+    db.session.commit()
+    flash(("Lead emails for \u201c%s\u201d now go to: %s" % (form.name, form.notify_emails))
+          if emails else "Recipients cleared — lead emails fall back to the owner's login email.")
+    return redirect(url_for("forms"))
+
+
+# ------------------------------------------------------------- client email
+@app.route("/admin/email", methods=["GET", "POST"])
+@login_required
+def email_accounts():
+    if request.method == "POST":
+        if not session.get("admin"):
+            abort(403)
+        address = request.form.get("address", "").strip()[:200]
+        password = request.form.get("password", "").strip()[:200]
+        if not address or not password:
+            flash("Address and password are both required.", "error")
+            return redirect(url_for("email_accounts"))
+        acct = EmailAccount(address=address, password=password,
+                            notes=request.form.get("notes", "").strip()[:300],
+                            owner_id=int(request.form["owner_id"])
+                            if request.form.get("owner_id") else None)
+        db.session.add(acct)
+        db.session.commit()
+        flash(f"Mailbox {address} saved — the client can now see it on their Email page.")
+        return redirect(url_for("email_accounts"))
+    rows = owner_filter(EmailAccount.query, EmailAccount).order_by(
+        EmailAccount.created_at.desc()).all()
+    users = User.query.order_by(User.name).all() if session.get("admin") else []
+    owners = {u.id: u.name for u in users}
+    my_forms = owner_filter(Form.query, Form).order_by(Form.name).all()
+    return render_template("email.html", rows=rows, users=users, owners=owners,
+                           my_forms=my_forms)
+
+
+@app.route("/admin/email/<int:acct_id>/delete", methods=["POST"])
+@login_required
+def email_account_delete(acct_id):
+    if not session.get("admin"):
+        abort(403)
+    acct = EmailAccount.query.get_or_404(acct_id)
+    db.session.delete(acct)
+    db.session.commit()
+    flash("Mailbox removed from the dashboard (the actual Purelymail account is untouched).")
+    return redirect(url_for("email_accounts"))
+
+
+# ------------------------------------------------------- multi-page editing
+@app.route("/admin/sites/<int:site_id>/pages")
+@login_required
+def site_pages(site_id):
+    site = Site.query.get_or_404(site_id)
+    if not can_touch(site):
+        abort(403)
+    pages = github_list_pages(site.github_repo) if site.github_repo else None
+    return render_template("site_pages.html", site=site, pages=pages,
+                           has_token=bool(GITHUB_TOKEN))
+
+
+@app.route("/edit-page/<int:site_id>")
+@login_required
+def page_editor(site_id):
+    site = Site.query.get_or_404(site_id)
+    if not can_touch(site):
+        abort(403)
+    path = request.args.get("path", "")
+    if not (site.github_repo and PAGE_RE.match(path)):
+        abort(404)
+    html = github_fetch_file(site.github_repo, path)
+    if html is None:
+        flash(f"Couldn't load {path} from GitHub — check the repo link and token.", "error")
+        return redirect(url_for("site_pages", site_id=site.id))
+    my_forms = owner_filter(Form.query, Form).all()
+    view_url = (site.live_url.rstrip("/") + "/" + path) if site.live_url else ""
+    boot = ("<script data-wys=\"1\">window.WYS = " + json.dumps({
+        "siteId": site.id, "slug": site.slug, "ai": bool(OPENAI_API_KEY),
+        "pagePath": path, "viewUrl": view_url,
+        "forms": [{"name": f.name, "slug": f.slug} for f in my_forms],
+    }) + ";</script>")
+    inject = boot + EDITOR_SNIPPET
+    if "</body>" in html:
+        html = html.replace("</body>", inject + "</body>", 1)
+    else:
+        html += inject
+    return Response(html, mimetype="text/html")
+
+
+@app.route("/edit-page/<int:site_id>/save", methods=["POST"])
+@login_required
+def page_editor_save(site_id):
+    site = Site.query.get_or_404(site_id)
+    if not can_touch(site):
+        abort(403)
+    payload = request.get_json(silent=True) or {}
+    path, html = payload.get("path", ""), payload.get("html", "")
+    if not (site.github_repo and PAGE_RE.match(path) and html):
+        return jsonify(ok=False, error="bad request"), 400
+    ok, msg = github_push_file(site.github_repo, path, strip_editor_artifacts(html))
+    site.last_push_at = utcnow_naive()
+    site.last_push_ok = ok
+    site.last_push_msg = f"{path}: {msg}"[:300]
+    db.session.commit()
+    return jsonify(ok=True, msg=msg, github="synced" if ok else "failed")
 
 
 @app.route("/form/<slug>", methods=["GET", "POST", "OPTIONS"])

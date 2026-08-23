@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% set active = 'sites' %}
+{% block title %}Pages — {{ site.business_name }} | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Pages — {{ site.business_name }}</h1>
+  <a class="btn ghost" href="/admin/sites">&larr; Back to Sites</a>
+</div>
+
+{% if not site.github_repo %}
+<div class="card"><p style="margin:0">This site isn't linked to a GitHub repo yet — link it on the Sites page first, then every page becomes editable here.</p></div>
+{% elif not has_token %}
+<div class="flash flash-error" style="margin-bottom:14px"><i class="bi bi-exclamation-triangle-fill"></i><span>No <code>GITHUB_TOKEN</code> on the server — page listing and editing need it. The Setup page has the 2-minute guide.</span></div>
+{% elif pages is none %}
+<div class="card"><p style="margin:0">Couldn't list pages for <code>{{ site.github_repo }}</code> — check that the token can see this repo (Setup page).</p></div>
+{% else %}
+<p class="muted" style="margin:-8px 0 14px"><i class="bi bi-github"></i> {{ site.github_repo }} · {{ pages | length }} page{{ '' if pages|length == 1 else 's' }} · edits commit straight to the repo and Netlify redeploys</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px">
+  {% for p in pages %}
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px">
+    <div style="min-width:0">
+      <b style="display:block;overflow:hidden;text-overflow:ellipsis">{{ p }}</b>
+      {% if site.live_url %}<a class="muted" style="font-size:12px" href="{{ site.live_url.rstrip('/') }}/{{ p }}" target="_blank">view live</a>{% endif %}
+    </div>
+    <a class="btn sm" href="/edit-page/{{ site.id }}?path={{ p }}">Edit</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
