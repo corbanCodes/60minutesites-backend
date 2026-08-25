@@ -57,8 +57,17 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-only-secret-change-me")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "changeme60")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
-RESEND_KEY = (os.environ.get("RESEND_API_KEY") or os.environ.get("RESEND_API")
-              or os.environ.get("resend-api") or os.environ.get("resend_api", ""))
+def _env_any(*names, default=""):
+    """Find an env var regardless of case or -/_ separators, so RESEND_API_KEY,
+    resend-api, Resend_Api etc. all resolve to the same value."""
+    wanted = {"".join(ch for ch in n.lower() if ch.isalnum()) for n in names}
+    for k, v in os.environ.items():
+        if "".join(ch for ch in k.lower() if ch.isalnum()) in wanted and v:
+            return v
+    return default
+
+
+RESEND_KEY = _env_any("RESEND_API_KEY", "RESEND_API", "RESEND_KEY", "RESEND")
 RESEND_FROM = os.environ.get("RESEND_FROM", "60MS HQ <onboarding@resend.dev>")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
