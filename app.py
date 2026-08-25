@@ -12,6 +12,8 @@ every editor Save commits to the linked repo. APP_TZ controls display times.
 """
 import base64
 import csv
+import hashlib
+import hmac
 import io
 import json
 import math
@@ -60,6 +62,10 @@ RESEND_KEY = (os.environ.get("RESEND_API_KEY") or os.environ.get("RESEND_API")
 RESEND_FROM = os.environ.get("RESEND_FROM", "60MS HQ <onboarding@resend.dev>")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+# Meta lead-ads webhook (Instant Forms) — all optional; feature is off until set
+FB_VERIFY_TOKEN = os.environ.get("FB_VERIFY_TOKEN", "")
+FB_PAGE_TOKEN = os.environ.get("FB_PAGE_TOKEN", "")
+FB_APP_SECRET = os.environ.get("FB_APP_SECRET", "")
 # domain aliases: hosts in REDIRECT_HOSTS 301 to CANONICAL_HOST (SEO: one URL)
 CANONICAL_HOST = os.environ.get("CANONICAL_HOST", "").strip().lower()
 REDIRECT_HOSTS = {h.strip().lower() for h in
@@ -1719,6 +1725,109 @@ def form_submit(slug):
     if dest and not dest.startswith(("http://", "https://", "/")):
         dest = "https://" + dest  # "60minutesites.com/thanks.html" style values
     return redirect(dest or url_for("form_thanks", slug=slug))
+
+
+# -------------------------------------------- Meta Instant Form (lead ads) webhook
+FB_FIELD_MAP = {
+    "full_name": "name", "first_name": "first_name", "last_name": "last_name",
+    "phone_number": "phone", "email": "email",
+    "company_name": "business", "job_title": "business_type",
+}
+
+
+def _fb_lead_to_crm(leadgen_id, form_id=None, ad_id=None):
+    """Fetch one lead from the Graph API and file it in the CRM."""
+    if not FB_PAGE_TOKEN:
+        return None
+    try:
+        r = http.get(f"https://graph.facebook.com/v21.0/{leadgen_id}",
+                     params={"access_token": FB_PAGE_TOKEN,
+                             "fields": "field_data,created_time,ad_id,form_id,campaign_name,ad_name"},
+                     timeout=20)
+        if r.status_code != 200:
+            app.logger.warning("FB lead fetch failed %s: %s", r.status_code, r.text[:200])
+            return None
+        data = r.json()
+    except Exception as e:
+        app.logger.warning("FB lead fetch error: %s", e)
+        return None
+
+    vals, extras, first, last = {}, {}, "", ""
+    for f in data.get("field_data", []):
+        key = (f.get("name") or "").lower()
+        val = (f.get("values") or [""])[0]
+        if not val:
+            continue
+        target = FB_FIELD_MAP.get(key)
+        if target == "first_name":
+            first = val
+        elif target == "last_name":
+            last = val
+        elif target:
+            vals[target] = val[:200]
+        else:  # custom qualifying questions
+            extras[key.replace("_", " ").strip().capitalize()] = val
+    if not vals.get("name"):
+        vals["name"] = (first + " " + last).strip()
+
+    # everything lands in one "Facebook Instant Form" bucket so notify/email works
+    crm_form = Form.query.filter_by(slug="facebook-instant-form").first()
+    if not crm_form:
+        crm_form = Form(owner_id=None, name="Facebook Instant Form",
+                        slug="facebook-instant-form")
+        db.session.add(crm_form)
+        db.session.flush()
+
+    src = data.get("ad_name") or data.get("campaign_name") or "Facebook Instant Form"
+    lead = Lead(owner_id=crm_form.owner_id, form_id=crm_form.id,
+                source=str(src)[:120], status="New",
+                name=vals.get("name") or "Unknown", phone=vals.get("phone", "")[:40],
+                email=vals.get("email", ""), business=vals.get("business", ""),
+                business_type=vals.get("business_type", ""))
+    db.session.add(lead)
+    db.session.flush()
+    extras.update({"Source": "Meta Instant Form", "Leadgen id": str(leadgen_id)})
+    if data.get("campaign_name"):
+        extras["Campaign"] = data["campaign_name"]
+    if data.get("ad_name"):
+        extras["Ad"] = data["ad_name"]
+    db.session.add(Note(lead_id=lead.id, body="Form extras: " +
+                        json.dumps(extras, ensure_ascii=False)[:2000]))
+    db.session.commit()
+    notify_lead(crm_form, lead)
+    return lead
+
+
+@app.route("/webhooks/meta-leads", methods=["GET", "POST"])
+def meta_leads_webhook():
+    if request.method == "GET":  # subscription handshake
+        if (request.args.get("hub.mode") == "subscribe"
+                and FB_VERIFY_TOKEN
+                and request.args.get("hub.verify_token") == FB_VERIFY_TOKEN):
+            return Response(request.args.get("hub.challenge", ""), mimetype="text/plain")
+        return Response("verification failed", status=403)
+
+    raw = request.get_data()
+    if FB_APP_SECRET:  # authenticity check — Meta signs every delivery
+        sig = request.headers.get("X-Hub-Signature-256", "")
+        expected = "sha256=" + hmac.new(FB_APP_SECRET.encode(), raw,
+                                        hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return Response("bad signature", status=403)
+
+    payload = request.get_json(silent=True) or {}
+    for entry in payload.get("entry", []):
+        for ch in entry.get("changes", []):
+            if ch.get("field") != "leadgen":
+                continue
+            v = ch.get("value", {})
+            if v.get("leadgen_id"):
+                try:
+                    _fb_lead_to_crm(v["leadgen_id"], v.get("form_id"), v.get("ad_id"))
+                except Exception as e:  # never let Meta retry-storm us
+                    db.session.rollback()
+                    app.logger.warning("FB lead handling failed: %s", e)
+    return jsonify(ok=True)  # always 200 so Meta doesn't disable the subscription
 
 
 # ---------------------------------------------------------- e-sign agreements
