@@ -977,6 +977,12 @@ def signup():
         password = request.form.get("password", "")
         if request.form.get("_gotcha"):  # honeypot — bots fill every field
             return redirect(url_for("login"))
+        # invite-only: accounts are created by 60MS, not by the public. Kills bot
+        # signups outright, which is why we don't need 2FA on this surface.
+        if request.form.get("access_code", "") != ADMIN_PASSWORD:
+            flash("That access code isn't right — accounts are created by 60 Minute "
+                  "Sites. Call 1-800-60-4-LIFE and we'll set you up.", "error")
+            return render_template("signup.html")
         if not (name and email and len(password) >= 6):
             flash("Name, email, and a 6+ character password required.", "error")
         elif User.query.filter_by(email=email).first():
@@ -985,13 +991,6 @@ def signup():
             user = User(name=name, email=email,
                         password_hash=generate_password_hash(password))
             db.session.add(user)
-            # every signup is a lead in the admin CRM — never lose one again
-            lead = Lead(owner_id=None, name=name, email=email,
-                        source="Self-signup", status="New")
-            db.session.add(lead)
-            db.session.flush()
-            db.session.add(Note(lead_id=lead.id,
-                                body="Created an HQ account via /signup."))
             db.session.commit()
             send_email(email, "Welcome to 60 Minute Sites",
                        f"<div style='font-family:sans-serif;font-size:15px'>"
