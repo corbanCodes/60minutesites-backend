@@ -1714,6 +1714,18 @@ def form_submit(slug):
     data = request.get_json(silent=True) or request.form.to_dict()
     if data.get("_gotcha"):  # honeypot
         return _cors(jsonify(ok=True))
+    # accept Meta lead-ads / Zapier native field names without any mapping setup
+    ALIASES = {"full_name": "name", "phone_number": "phone", "company_name": "business",
+               "business_name": "business", "job_title": "business_type",
+               "work_email": "email", "ad_name": "source"}
+    for src, dst in ALIASES.items():
+        if data.get(src) and not data.get(dst):
+            data[dst] = data[src]
+    if not data.get("name"):  # Meta sometimes splits the name
+        parts = [data.get("first_name", ""), data.get("last_name", "")]
+        joined = " ".join(p for p in parts if p).strip()
+        if joined:
+            data["name"] = joined
     lead = Lead(owner_id=form.owner_id, form_id=form.id,
                 source=data.get("source") or data.get("utm_content") or form.name,
                 **{f: str(data.get(f, ""))[:200] for f in LEAD_FIELDS})
