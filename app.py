@@ -1918,6 +1918,24 @@ def invoices():
     return render_template("invoices.html")
 
 
+@app.route("/debug/echo", methods=["GET", "POST", "PUT"])
+def debug_echo():
+    """Point any integration here to see EXACTLY what it sends. Read-only,
+    stores nothing. Invaluable when a webhook 'works' but arrives empty."""
+    body = request.get_data(as_text=True)[:4000]
+    return _cors(jsonify(
+        ok=True,
+        method=request.method,
+        content_type=request.headers.get("Content-Type", ""),
+        parsed_json=request.get_json(silent=True),
+        parsed_form=request.form.to_dict(),
+        query=request.args.to_dict(),
+        raw_body=body,
+        field_names=sorted(list((request.get_json(silent=True) or {}).keys())
+                           or list(request.form.keys())),
+    ))
+
+
 @app.route("/form/<slug>/thanks")
 def form_thanks(slug):
     form = Form.query.filter_by(slug=slug).first_or_404()
