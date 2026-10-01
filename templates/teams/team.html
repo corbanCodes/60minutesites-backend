@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% set active = 'team' %}
+{% block title %}Team | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Team <span class="count-chip">{{ usage.members }} of {{ usage.limit }} seats</span></h1>
+  <a class="btn ghost" href="/admin/team/log"><i class="bi bi-clock-history"></i> Activity log</a>
+</div>
+
+<div class="seatbar card">
+  <div class="seatbar-meter" title="{{ usage.used }} of {{ usage.limit }} seats in use">
+    {% for i in range(usage.limit) %}
+      <span class="seat {{ 'filled' if i < usage.members else ('pending' if i < usage.used else 'free') }}"></span>
+    {% endfor %}
+  </div>
+  <div class="seatbar-text">
+    <b>{{ usage.members }}</b> active{% if usage.pending %}, <b>{{ usage.pending }}</b> invited{% endif %},
+    <b>{{ usage.free }}</b> free.
+    {% if usage.full %}<span class="seat-warn"><i class="bi bi-exclamation-triangle-fill"></i>
+      All seats are in use — contact 60 Minute Sites to add more.</span>{% endif %}
+  </div>
+</div>
+
+{% if not usage.full %}
+<form class="form card invite-form" method="post" action="/admin/team/invite">
+  <h2 style="margin:0">Add someone to the team</h2>
+  <div class="row3">
+    <div><label>Their email</label><input type="email" name="email" required placeholder="rep@company.com"></div>
+    <div><label>Name <span class="muted">(optional)</span></label><input type="text" name="name" placeholder="Jordan Lee"></div>
+    <div><label>Job title <span class="muted">(optional)</span></label><input type="text" name="job_title" placeholder="Sales rep"></div>
+  </div>
+  <div>
+    <label>What can they do?</label>
+    <div class="rolepick">
+      {% for r in roles if r != 'owner' %}
+      <label class="rolecard">
+        <input type="radio" name="role" value="{{ r }}" {{ 'checked' if r == 'agent' }}>
+        <span class="rolecard-body">
+          <span class="rolecard-name">{{ role_labels[r] }}</span>
+          <span class="rolecard-blurb">{{ role_blurbs[r] }}</span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  <button class="btn" type="submit"><i class="bi bi-envelope-plus"></i> Send invitation</button>
+  <p class="muted" style="margin:0">They get an email with a link to pick their own password. The link works once and expires in 7 days.</p>
+</form>
+{% else %}
+<div class="card" style="border-left:4px solid #B98A2B;margin-bottom:22px">
+  <b>All {{ usage.limit }} seats are in use.</b>
+  <p class="muted" style="margin:6px 0 0">Free one up by deactivating someone below, or contact 60 Minute Sites to raise the limit.</p>
+</div>
+{% endif %}
+
+{% if invites %}
+<h2>Waiting to accept <span class="count-chip">{{ invites | length }}</span></h2>
+<table>
+  <tr><th>Email</th><th>Role</th><th>Invited</th><th>Expires</th><th></th></tr>
+  {% for i in invites %}
+  <tr>
+    <td><span class="rowlink">{{ i.email }}</span>{% if i.name %}<div class="subtext">{{ i.name }}</div>{% endif %}</td>
+    <td><span class="pill" style="background:#9A6B14">{{ role_labels[i.role] }}</span></td>
+    <td class="muted">{{ i.created_at | localdate }}</td>
+    <td class="muted">{{ i.expires_at | localdate }}</td>
+    <td style="white-space:nowrap;text-align:right">
+      <form method="post" action="/admin/team/invite/{{ i.id }}/resend" class="inline-form"><button class="chip-btn">Resend</button></form>
+      <form method="post" action="/admin/team/invite/{{ i.id }}/cancel" class="inline-form"><button class="chip-btn danger">Cancel</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2 style="margin-top:26px">People <span class="count-chip">{{ members | length }}</span></h2>
+<table>
+  <tr><th>Name</th><th>Role</th><th>Last login</th><th>Calls this week</th><th></th></tr>
+  {% for u in members %}
+  <tr class="{{ 'row-off' if u.active is false }}">
+    <td>
+      <span class="rowlink">{{ u.name }}</span>
+      {% if u.account_id is none %}<span class="pill owner-pill">Owner</span>{% endif %}
+      {% if u.active is false %}<span class="pill" style="background:#888">Deactivated</span>{% endif %}
+      <div class="subtext">{{ u.email }}{% if u.job_title %} · {{ u.job_title }}{% endif %}</div>
+    </td>
+    <td>
+      {% if u.account_id is none %}
+        <span class="muted">Account owner</span>
+      {% else %}
+      <form method="post" action="/admin/team/member/{{ u.id }}/role" class="inline-form">
+        <select name="role" onchange="this.form.submit()" class="scope-select">
+          {% for r in roles if r != 'owner' %}<option value="{{ r }}" {{ 'selected' if u.role == r }}>{{ role_labels[r] }}</option>{% endfor %}
+        </select>
+      </form>
+      {% endif %}
+    </td>
+    <td class="muted">{{ u.last_login_at | local if u.last_login_at else 'never' }}</td>
+    <td>{{ call_counts.get(u.id, 0) }}</td>
+    <td style="white-space:nowrap;text-align:right">
+      {% if u.account_id is not none %}
+      <form method="post" action="/admin/team/member/{{ u.id }}/reset" class="inline-form"><button class="chip-btn">Reset password</button></form>
+      {% if u.active is false %}
+        <form method="post" action="/admin/team/member/{{ u.id }}/reactivate" class="inline-form"><button class="chip-btn">Reactivate</button></form>
+      {% else %}
+        <form method="post" action="/admin/team/member/{{ u.id }}/deactivate" class="inline-form" onsubmit="return confirm('Deactivate {{ u.name }}? They lose access immediately and the seat is freed. Their notes and calls are kept.')"><button class="chip-btn danger">Deactivate</button></form>
+      {% endif %}
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<details class="guide" style="margin-top:24px">
+  <summary><i class="bi bi-shield-check"></i> Who can do what</summary>
+  <div class="guide-body">
+    <table class="matrix">
+      <tr><th>Permission</th>{% for r in roles %}<th>{{ role_labels[r] }}</th>{% endfor %}</tr>
+      {% for group in matrix %}
+      <tr class="matrix-group"><td colspan="{{ roles | length + 1 }}">{{ group.group }}</td></tr>
+      {% for row in group.rows %}
+      <tr>
+        <td>{{ row.label }}</td>
+        {% for r in roles %}
+        {% set s = row.by_role[r] %}
+        <td class="matrix-cell">
+          {% if s == 'all' %}<i class="bi bi-check-circle-fill yes"></i>
+          {% elif s == 'own' %}<span class="own">own only</span>
+          {% else %}<i class="bi bi-dash no"></i>{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+      {% endfor %}
+    </table>
+  </div>
+</details>
+{% endblock %}

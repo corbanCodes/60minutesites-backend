@@ -752,7 +752,20 @@ def inject_globals():
     ctx = {"STATUSES": LEAD_STATUSES, "STATUS_COLORS": STATUS_COLORS,
            "STATUS_WEIGHTS": STATUS_WEIGHTS, "TASK_KINDS": TASK_KINDS,
            "TASK_ICONS": TASK_ICONS, "CSV_FIELDS": CSV_FIELDS,
-           "role": role, "me": user, "alerts": [], "alert_count": 0}
+           "role": role, "me": user, "alerts": [], "alert_count": 0,
+           "show_dialer": False, "show_team": False, "can": lambda p: False}
+    # Nav items for the two flagged features. An account without the flag never
+    # sees them, and the blueprints 404 anyway.
+    if role:
+        try:
+            from dialer import disabled as _dialer_off
+            from dialer.settings_store import dialer_enabled, teams_enabled
+            from teams import perms as _perms
+            ctx["show_dialer"] = bool(dialer_enabled()) and not _dialer_off()
+            ctx["show_team"] = bool(teams_enabled()) and _perms.can(user, "team.manage")
+            ctx["can"] = lambda p, _u=user: _perms.can(_u, p)
+        except Exception:
+            pass
     # alert badge only for admin pages (skip public pages -> no extra queries)
     if role == "admin" and request.path.startswith("/admin"):
         alerts = setup_alerts()
@@ -1096,8 +1109,17 @@ def signup():
         elif User.query.filter_by(email=email).first():
             flash("That email already has an account — log in instead.", "error")
         else:
+            # Both features are off unless explicitly ticked. The access code
+            # has already been checked above, so only 60MS can set these.
+            want_team = bool(request.form.get("feature_multi_user"))
+            want_dialer = bool(request.form.get("feature_dialer"))
+            seats = request.form.get("seat_limit", type=int) or 5
             user = User(name=name, email=email,
-                        password_hash=generate_password_hash(password))
+                        password_hash=generate_password_hash(password),
+                        role="owner", active=True,
+                        feature_multi_user=want_team,
+                        feature_dialer=want_dialer,
+                        seat_limit=(max(1, min(seats, 200)) if want_team else 1))
             db.session.add(user)
             db.session.commit()
             send_email(email, "Welcome to 60 Minute Sites",
@@ -2071,10 +2093,17 @@ def customers():
         elif User.query.filter_by(email=email).first():
             flash("That email already exists.", "error")
         else:
+            want_team = bool(request.form.get("feature_multi_user"))
+            want_dialer = bool(request.form.get("feature_dialer"))
+            seats = request.form.get("seat_limit", type=int) or 5
             db.session.add(User(name=name, email=email, phone=phone,
                                 monthly_price=parse_money(request.form.get("monthly_price")),
                                 setup_fee=parse_money(request.form.get("setup_fee")),
-                                password_hash=generate_password_hash(password)))
+                                password_hash=generate_password_hash(password),
+                                role="owner", active=True,
+                                feature_multi_user=want_team,
+                                feature_dialer=want_dialer,
+                                seat_limit=(max(1, min(seats, 200)) if want_team else 1)))
             db.session.commit()
             flash(f"Customer “{name}” created — password: {password}", "sticky")
         return redirect(url_for("customers"))
@@ -2097,6 +2126,27 @@ def customer_action(user_id, action):
         new_pw = secrets.token_urlsafe(8)
         user.password_hash = generate_password_hash(new_pw)
         flash(f"New password for {user.name}: {new_pw}", "sticky")
+    elif action == "features":
+        user.feature_multi_user = bool(request.form.get("feature_multi_user"))
+        user.feature_dialer = bool(request.form.get("feature_dialer"))
+        seats = request.form.get("seat_limit", type=int)
+        if seats:
+            user.seat_limit = max(1, min(seats, 200))
+        elif not user.feature_multi_user:
+            user.seat_limit = 1
+        bits = []
+        if user.feature_multi_user:
+            bits.append(f"multi-user ({user.seat_limit} seats)")
+        if user.feature_dialer:
+            bits.append("AI calling")
+        flash(f"{user.name}: " + (", ".join(bits) + " switched on."
+                                  if bits else "both add-ons switched off."))
+        try:
+            from teams.models import log as _audit
+            _audit("account.features", target=user.email,
+                   detail=", ".join(bits) or "none", account_id=user.id)
+        except Exception:
+            pass
     elif action == "billing":
         user.monthly_price = parse_money(request.form.get("monthly_price"))
         user.setup_fee = parse_money(request.form.get("setup_fee"))

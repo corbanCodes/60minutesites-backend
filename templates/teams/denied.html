@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Not allowed | 60MS HQ{% endblock %}
+{% block content %}
+<div class="empty card" style="max-width:560px;margin:40px auto">
+  <i class="bi bi-shield-lock"></i>
+  <p><b>Your role doesn't include this.</b></p>
+  <p class="muted">Ask your account admin if you need access to it.</p>
+  <p><a class="btn ghost" href="/admin">Back to the dashboard</a></p>
+</div>
+{% endblock %}

@@ -138,10 +138,13 @@ def test_a_real_customers_view_is_unchanged(restored, client):
     r = client.get("/admin/crm")
     assert r.status_code == 200
     assert Lead.query.filter_by(owner_id=cust.id).count() == expected
-    # the new nav items must not appear for an unflagged account
+    # the new nav items must not appear for an unflagged account.
+    # (Match the nav LINKS, not any substring -- the stylesheet is always
+    # loaded and is legitimately called dialer.css.)
     body = r.get_data(as_text=True)
-    assert "/dialer" not in body
-    assert "/admin/team" not in body
+    assert 'href="/dialer"' not in body
+    assert 'href="/admin/team"' not in body
+    assert "Calling</a>" not in body
 
 
 def test_dialer_is_404_for_an_unflagged_account(restored, client):

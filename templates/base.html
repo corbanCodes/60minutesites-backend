@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/static-admin/admin.css">
+  <link rel="stylesheet" href="/static-admin/dialer.css">
   <link rel="icon" href="/favicon_io%20(4)/favicon-32x32.png" type="image/png">
 </head>
 <body>
@@ -21,6 +22,7 @@
     <a class="nav-item {{ 'active' if active == 'dashboard' }}" href="/admin"><i class="bi bi-grid-1x2"></i>Dashboard</a>
     <a class="nav-item {{ 'active' if active == 'crm' }}" href="/admin/crm"><i class="bi bi-kanban"></i>CRM</a>
     <a class="nav-item {{ 'active' if active == 'tasks' }}" href="/admin/tasks"><i class="bi bi-check2-square"></i>Tasks</a>
+    {% if show_dialer %}<a class="nav-item {{ 'active' if active == 'dialer' }}" href="/dialer"><i class="bi bi-telephone-outbound"></i>Calling</a>{% endif %}
     <div class="nav-sec">Build</div>
     <a class="nav-item {{ 'active' if active == 'sites' }}" href="/admin/sites"><i class="bi bi-window-sidebar"></i>Sites</a>
     <a class="nav-item {{ 'active' if active == 'forms' }}" href="/admin/forms"><i class="bi bi-envelope-paper"></i>Forms</a>
@@ -29,6 +31,10 @@
     <a class="nav-item {{ 'active' if active == 'invoices' }}" href="/admin/invoices"><i class="bi bi-receipt"></i>Invoices</a>
     <a class="nav-item {{ 'active' if active == 'ai_studio' }}" href="/admin/ai-studio"><i class="bi bi-stars"></i>AI Studio</a>
     <a class="nav-item {{ 'active' if active == 'email' }}" href="/admin/email"><i class="bi bi-envelope-at"></i>Email</a>
+    {% if show_team %}
+    <div class="nav-sec">Account</div>
+    <a class="nav-item {{ 'active' if active == 'team' }}" href="/admin/team"><i class="bi bi-people-fill"></i>Team</a>
+    {% endif %}
     {% if role == 'admin' %}
     <div class="nav-sec">Business</div>
     <a class="nav-item {{ 'active' if active == 'revenue' }}" href="/admin/revenue"><i class="bi bi-graph-up-arrow"></i>Revenue</a>

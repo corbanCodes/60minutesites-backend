@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set active = 'team' %}
+{% block title %}Activity log | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Activity log</h1>
+  <a class="btn ghost" href="/admin/team">← Back to team</a>
+</div>
+<p class="muted" style="margin-top:-10px">Team changes, key changes and compliance overrides. Append-only.</p>
+{% if rows %}
+<table>
+  <tr><th>When</th><th>Who</th><th>What</th><th>Detail</th></tr>
+  {% for r in rows %}
+  <tr>
+    <td class="muted" style="white-space:nowrap">{{ r.created_at | local }}</td>
+    <td>{{ r.actor }}</td>
+    <td><code>{{ r.action }}</code> {{ r.target }}</td>
+    <td class="muted">{{ r.detail | truncate(140) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="empty card"><i class="bi bi-clock-history"></i><p><b>Nothing logged yet.</b></p></div>
+{% endif %}
+{% endblock %}

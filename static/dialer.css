@@ -1,0 +1,55 @@
+/* ============================================================================
+   Teams + Calling. Append-only layer on top of admin.css -- it reuses the same
+   tokens (--orange, --ink, --line, --radius) and never redefines a selector
+   that already exists there.
+   ========================================================================= */
+
+/* ---------- seats ---------- */
+.seatbar { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; }
+.seatbar-meter { display: flex; gap: 4px; flex-wrap: wrap; }
+.seat { width: 16px; height: 22px; border-radius: 4px; background: #EFE8E0; box-shadow: inset 0 0 0 1px #E2D9CE; }
+.seat.filled { background: linear-gradient(170deg, var(--orange), var(--orange-dark)); box-shadow: 0 2px 6px rgba(255,107,53,.3); }
+.seat.pending { background: repeating-linear-gradient(135deg, #F0D9A8, #F0D9A8 3px, #FBEFD8 3px, #FBEFD8 6px); }
+.seatbar-text { font-size: 14px; color: var(--ink-2); }
+.seat-warn { display: block; margin-top: 4px; color: #B98A2B; font-weight: 700; font-size: 13px; }
+.owner-pill { background: #2E7D4F; }
+tr.row-off td { opacity: .55; }
+
+/* ---------- role picker ---------- */
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.rolepick { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.rolecard { position: relative; display: block; cursor: pointer; }
+.rolecard input { position: absolute; opacity: 0; pointer-events: none; }
+.rolecard-body { display: block; border: 1.5px solid var(--line); border-radius: 11px; padding: 11px 13px; background: #fff; transition: border-color .12s, box-shadow .12s, transform .12s; height: 100%; }
+.rolecard:hover .rolecard-body { border-color: #D8CCBE; transform: translateY(-1px); }
+.rolecard input:checked + .rolecard-body { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,.15); }
+.rolecard-name { display: block; font-weight: 800; font-size: 13.5px; }
+.rolecard-blurb { display: block; color: var(--ink-2); font-size: 12px; margin-top: 3px; line-height: 1.45; }
+.invite-form { max-width: none; margin-bottom: 24px; }
+
+/* ---------- permission matrix ---------- */
+table.matrix td, table.matrix th { font-size: 13px; padding: 8px 12px; }
+table.matrix { box-shadow: none; border-radius: 10px; }
+.matrix-cell { text-align: center; }
+.matrix-cell .yes { color: var(--good); }
+.matrix-cell .no { color: #CFC5B9; }
+.matrix-cell .own { font-size: 11px; font-weight: 800; color: #B98A2B; }
+tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-2); }
+
+@media (max-width: 760px) {
+  .row3 { grid-template-columns: 1fr; }
+}
+
+/* ---------- add-on checkboxes (signup + customers) ---------- */
+.addons { border: 1.5px solid var(--line); border-radius: 11px; padding: 14px 16px 16px; margin: 0; }
+.addons legend { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); padding: 0 6px; }
+.addon { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 7px 0; }
+.addon input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--orange); flex-shrink: 0; }
+.addon span { display: block; font-size: 13.5px; }
+.addon em { display: block; font-style: normal; color: var(--ink-2); font-size: 12px; margin-top: 2px; line-height: 1.45; }
+.addon-sub { display: flex; gap: 8px; align-items: center; padding: 2px 0 8px 26px; font-size: 13px; }
+.addon-sub input { width: 84px; padding: 6px 9px; border: 1.5px solid var(--line); border-radius: 7px; font-family: var(--font); }
+.addon-form { display: flex; gap: 6px; align-items: center; }
+.addon-form label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+.addon-form input[type=checkbox] { accent-color: var(--orange); }
+.addon-form .seatnum { width: 52px; padding: 5px 6px; border: 1.5px solid var(--line); border-radius: 6px; font-family: var(--font); font-size: 12.5px; }
