@@ -4,3 +4,8 @@ gunicorn==22.0.0
 PyMuPDF==1.28.2
 psycopg2-binary==2.9.12
 requests==2.32.3
+twilio==9.4.1
+cryptography==44.0.0
+phonenumbers==8.13.52
+itsdangerous==2.2.0
+pytest==8.3.4
