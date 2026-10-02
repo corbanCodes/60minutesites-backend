@@ -764,6 +764,8 @@ def inject_globals():
             ctx["show_dialer"] = bool(dialer_enabled()) and not _dialer_off()
             ctx["show_team"] = bool(teams_enabled()) and _perms.can(user, "team.manage")
             ctx["can"] = lambda p, _u=user: _perms.can(_u, p)
+            from dialer.models import DISPOSITION_LABELS
+            ctx["DISPOSITION_LABELS"] = DISPOSITION_LABELS
         except Exception:
             pass
     # alert badge only for admin pages (skip public pages -> no extra queries)
@@ -1300,8 +1302,16 @@ def lead_detail(lead_id):
         return redirect(url_for("lead_detail", lead_id=lead.id))
     open_tasks = [t for t in lead.tasks if not t.done]
     done_tasks = [t for t in lead.tasks if t.done]
+    lead_calls = []
+    try:
+        from dialer.models import Call
+        lead_calls = (Call.query.filter_by(lead_id=lead.id)
+                      .order_by(Call.started_at.desc()).limit(20).all())
+    except Exception:
+        pass
     return render_template("lead_detail.html", lead=lead, open_tasks=open_tasks,
-                           done_tasks=done_tasks, now=utcnow_naive())
+                           done_tasks=done_tasks, now=utcnow_naive(),
+                           lead_calls=lead_calls)
 
 
 @app.route("/admin/crm/<int:lead_id>/status", methods=["POST"])

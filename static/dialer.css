@@ -199,3 +199,17 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
   .two-up { grid-template-columns: 1fr; }
   .vendor-facts td:first-child { width: auto; }
 }
+
+/* ---------- CRM integration (click-to-call, bulk select) ---------- */
+.chkcol { width: 34px; text-align: center; }
+.chkcol input { accent-color: var(--orange); width: 15px; height: 15px; }
+.callnow { margin-left: 7px; color: var(--orange); text-decoration: none; opacity: .75; }
+.callnow:hover { opacity: 1; }
+.subtext.dnc { color: #B3362B; font-weight: 700; }
+.bulkbar { display: flex; align-items: center; gap: 12px; background: var(--dark); color: #fff;
+  border-radius: 12px; padding: 10px 16px; margin-bottom: 12px; font-size: 13.5px;
+  box-shadow: 0 8px 20px rgba(28,24,20,.25); }
+.bulkbar .btn.ghost { color: #EDE6DF; border-color: rgba(255,255,255,.25); background: transparent; }
+.bulkbar .btn.ghost:hover { background: rgba(255,255,255,.08); }
+.callnow-btn { background: var(--good); }
+.callnow-btn:hover { background: #276B43; }
