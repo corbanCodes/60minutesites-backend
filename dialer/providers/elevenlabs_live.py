@@ -392,6 +392,10 @@ class ElevenLabsAgent(VoiceAgent):
             has_transfer=bool(found_at),
             transfer_at=found_at,
             prompt_keys=sorted(prompt_cfg.keys()),
+            # The raw block, because built_in_tools comes back present with
+            # transfer_to_number nulled inside it, and the reason why is in
+            # whatever they put there instead.
+            built_in_tools=prompt_cfg.get("built_in_tools"),
             agent_keys=sorted(agent_cfg.keys()),
             tool_count=len(prompt_cfg.get("tools") or []),
             prompt_chars=len(prompt_cfg.get("prompt") or ""))
