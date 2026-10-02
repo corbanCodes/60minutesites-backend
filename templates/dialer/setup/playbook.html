@@ -1,20 +1,42 @@
 {% extends "dialer/setup/_shell.html" %}
 {% block step %}
 
+{% if playbooks and not real_playbooks %}
+<div class="card wiz-callout">
+  <i class="bi bi-exclamation-circle"></i>
+  <div>
+    <b>The only playbook here is sample data, so this step is not done.</b>
+    <p style="margin:4px 0 0">It is listed below and you can read it, but it came with the demo rather than
+      from you, and setup does not count it. Write one of your own and this step goes green. The quickest
+      way is the draft button underneath.</p>
+  </div>
+</div>
+{% endif %}
+
 {% if playbooks %}
-<h3 class="wiz-h3">Your playbooks <span class="count-chip">{{ playbooks | length }}</span></h3>
+<h3 class="wiz-h3">Your playbooks <span class="count-chip">{{ real_playbooks | length }}</span>{% if
+  playbooks | length != real_playbooks | length %}<span class="muted" style="font-weight:500; font-size:13px">
+  &nbsp;+ {{ playbooks | length - real_playbooks | length }} sample</span>{% endif %}</h3>
 <table class="cardtable">
-  <tr><th>Name</th><th>Steps</th><th>Questions</th><th>Objections</th><th></th></tr>
+  <tr><th>Name</th><th>Steps</th><th>Questions</th><th>Objections</th><th>Transfer</th><th></th></tr>
   {% for p in playbooks %}
-  <tr>
+  {% set is_demo = p.name.startswith(DEMO_PREFIX) %}
+  <tr{{ ' class=row-muted' | safe if is_demo }}>
     <td class="ct-title ct-wide">
       <a class="rowlink" href="/dialer/playbooks/{{ p.id }}">{{ p.name }}</a>
-      {% if p.is_default %}<span class="pill" style="background:#2E7D4F">Default</span>{% endif %}
+      {% if is_demo %}<span class="pill" style="background:#8A7F73">Sample</span>
+      {% elif p.is_default %}<span class="pill" style="background:#2E7D4F">Default</span>{% endif %}
       {% if p.description %}<div class="subtext">{{ p.description }}</div>{% endif %}
+      {% if is_demo %}<div class="subtext"><b>Does not count towards setup.</b> It came with the
+        demo, not from you.</div>{% endif %}
     </td>
     <td data-label="Steps">{{ p.steps | length }}</td>
     <td data-label="Questions">{{ p.questions | length }}</td>
     <td data-label="Objections">{{ p.objections | length }}</td>
+    <td data-label="Transfer">
+      {% if p.transfer_criteria %}<span class="pill" style="background:#2E7D4F">Set</span>
+      {% else %}<span class="pill" style="background:#B98A2B">Not set</span>{% endif %}
+    </td>
     <td class="ct-actions ct-wide" style="text-align:right">
       <a class="chip-btn" href="/dialer/playbooks/{{ p.id }}">Edit</a>
     </td>
@@ -35,8 +57,18 @@
   <p class="muted" style="margin:0 0 14px">A playbook holds four things: the steps of the call, the questions
     that decide whether a lead is worth your time, the objections you already know you will hear, and the line
     that says when to hand the call to a person.</p>
-  <form method="post" action="/dialer/playbooks/new">
-    <button class="btn" type="submit"><i class="bi bi-plus-lg"></i> Create a playbook</button>
+  <form method="post" action="/dialer/playbooks/draft" class="pb-draft">
+    <label for="pb-brief">Describe the call in a sentence or two and let the AI write the first draft</label>
+    <textarea id="pb-brief" name="brief" rows="3" required minlength="15"
+              placeholder="We give bars free napkins with a QR code on them. They get two hundred dollars and free drinks, and an advertiser pays for the napkins. I want to find out if I am talking to whoever decides that, then hand the call over."></textarea>
+    <span class="field-hint">It knows how a cold call is shaped. It does not know your offer, so the more
+      specific you are here the less you will rewrite. Costs well under a cent.</span>
+    <div class="pb-draft-actions">
+      <button class="btn" type="submit"><i class="bi bi-stars"></i> Write me a draft</button>
+      <span class="muted">or</span>
+      <button class="btn ghost" type="submit" formaction="/dialer/playbooks/new" formnovalidate>
+        Start from the blank template</button>
+    </div>
   </form>
 </div>
 

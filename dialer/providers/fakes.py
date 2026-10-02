@@ -256,6 +256,11 @@ class FakeLLM(LLM):
         if not json_mode:
             return ok(text="Simulated summary: spoke with the manager, interested, "
                            "asked for a callback with pricing.")
+        # The playbook writer asks the same complete() in json_mode but wants
+        # a completely different shape back. Keyed off the system prompt,
+        # because the user half is whatever the customer typed.
+        if "playbook" in (system or "").lower():
+            return ok(data=_sim_playbook(user or ""))
         # Look only at the transcript, never at the instructions wrapped
         # around it -- the schema itself mentions "voicemail_left".
         body = (user or "")
@@ -402,3 +407,53 @@ _SIM = _Simulator()
 
 def simulator():
     return _SIM
+
+
+def _sim_playbook(brief):
+    """A believable draft for practice mode, shaped exactly like the real one.
+
+    Deliberately generic: in simulation nothing should look like it knows the
+    customer's business, or someone will think the AI read their website.
+    """
+    first = " ".join((brief or "").split())[:80] or "what you sell"
+    return {
+        "name": "Draft: cold call",
+        "description": f"Practice-mode draft about {first}.",
+        "steps": [
+            {"title": "Open", "goal": "Say who is calling",
+             "say": "Hi, this is a quick call from our team. Have I caught "
+                    "you at an alright moment?"},
+            {"title": "The offer", "goal": "One sentence, no more",
+             "say": f"We help with {first}, and I wanted to see if it is "
+                    f"worth a longer conversation."},
+            {"title": "Qualify", "goal": "Cheapest disqualifier first",
+             "say": "Would that be your call, or is there someone else I "
+                    "should be speaking to?"},
+            {"title": "Close", "goal": "Book it or leave politely",
+             "say": "That is all I needed. Thanks for your time."},
+        ],
+        "questions": [
+            {"question": "Are you the person who would decide on this?",
+             "collect_as": "is_decision_maker",
+             "disqualify_if": "they have no involvement at all"},
+            {"question": "Who else would need to be in that conversation?",
+             "collect_as": "other_stakeholders", "disqualify_if": ""},
+        ],
+        "objections": [
+            {"trigger_phrases": ["not interested", "no thanks"],
+             "response": "Understood, I will not keep you. Can I ask what "
+                         "you have in place at the moment?"},
+            {"trigger_phrases": ["send me an email", "email me"],
+             "response": "Happy to. So it is not just another email in the "
+                         "pile, what is the one thing worth putting in it?"},
+            {"trigger_phrases": ["how much", "what does it cost", "price"],
+             "response": "It depends on size, and I would rather not guess "
+                         "at you. That is exactly what the next conversation "
+                         "is for."},
+        ],
+        "transfer_criteria": "Transfer as soon as they confirm they are the "
+                             "decision maker, or ask anything about price or "
+                             "timing. Stop selling at that point.",
+        "never_do": "Never claim to be a person. Never promise a price on "
+                    "this call. Never say the word solution.",
+    }

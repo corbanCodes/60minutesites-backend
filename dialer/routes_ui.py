@@ -127,7 +127,15 @@ def _step_data(key, s):
         return {"voices": voices,
                 "numbers": PhoneNumber.query.filter_by(account_id=acct).all()}
     if key == "playbook":
-        return {"playbooks": Playbook.query.filter_by(account_id=acct).all()}
+        from dialer.demo import DEMO_PREFIX
+        rows = Playbook.query.filter_by(account_id=acct).all()
+        # The wizard counts only playbooks the customer wrote, so the page
+        # has to draw the same line or it says "1" beside a step that will
+        # not go green and explains nothing.
+        return {"playbooks": rows,
+                "real_playbooks": [p for p in rows
+                                   if not p.name.startswith(DEMO_PREFIX)],
+                "DEMO_PREFIX": DEMO_PREFIX}
     if key == "voicemail":
         return {"drops": VoicemailDrop.query.filter_by(account_id=acct).all()}
     if key == "compliance":
@@ -860,6 +868,50 @@ def playbook_new():
     db.session.commit()
     flash("Playbook created from the cold-call template. Edit it to match how "
           "you actually talk.")
+    return redirect(url_for("dialer.playbook_edit", playbook_id=pb.id))
+
+
+@bp.route("/playbooks/draft", methods=["POST"])
+@require("playbooks.edit")
+def playbook_draft():
+    """Write a first draft from a sentence about the business.
+
+    It lands in the editor unsaved-feeling and clearly labelled a draft,
+    because a script nobody has read is worse than no script: the rep reads
+    it live for the first time in front of a prospect.
+    """
+    from dialer import playbook_ai
+    s = get_settings(g.account_id)
+    brief = (request.form.get("brief") or "").strip()
+    back = request.form.get("back") or url_for("dialer.setup", step=9)
+
+    if not (s.has_llm or registry.simulating(s)):
+        flash("Add your AI key on step 5 first — that is the key that writes "
+              "this.", "error")
+        return redirect(back)
+
+    r = playbook_ai.draft(s, brief, company=s.ai_disclosure_name or "")
+    if not r.get("ok"):
+        flash(r.get("error") or "Could not write that one.", "error")
+        return redirect(back)
+
+    d = r["playbook"]
+    pb = Playbook(
+        account_id=g.account_id, name=d["name"][:120],
+        description=d["description"][:300],
+        is_default=Playbook.query.filter_by(account_id=g.account_id).count() == 0,
+        steps_json=json.dumps(d["steps"]),
+        questions_json=json.dumps(d["questions"]),
+        objections_json=json.dumps(d["objections"]),
+        transfer_criteria=d["transfer_criteria"],
+        never_do=d["never_do"])
+    db.session.add(pb)
+    log("playbooks.draft", target=pb.name, detail=f"brief={len(brief)} chars",
+        account_id=g.account_id, user=g.member)
+    db.session.commit()
+    flash("Draft written. Read every line out loud before you dial it — it "
+          "guessed at your offer and it will have got something wrong.",
+          "sticky")
     return redirect(url_for("dialer.playbook_edit", playbook_id=pb.id))
 
 

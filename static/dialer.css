@@ -772,3 +772,23 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
 @media (max-width: 860px) {
   .voiceplay, .voiceplay-off { width: 38px; height: 38px; font-size: 16px; }
 }
+
+/* -------------------------------------------- playbook draft form ------ */
+.pb-draft label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 7px; }
+.pb-draft textarea {
+  width: 100%; padding: 11px 13px; border: 1.5px solid var(--line, #E6DFD6);
+  border-radius: 10px; font-family: inherit; font-size: 15px; line-height: 1.55;
+  background: #fff; color: inherit; resize: vertical;
+}
+.pb-draft textarea:focus { outline: none; border-color: var(--orange, #FF6B35);
+  box-shadow: 0 0 0 3px rgba(255,107,53,.14); }
+.pb-draft .field-hint { display: block; margin-top: 6px; font-size: 13px; color: var(--ink-2, #6A6056); }
+.pb-draft-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+/* A sample row is readable but visibly not yours. */
+.cardtable tr.row-muted .rowlink { color: var(--ink-2, #6A6056); }
+.cardtable tr.row-muted { background: #FAF8F5; }
+@media (max-width: 860px) {
+  .pb-draft textarea { font-size: 16px; }   /* 16px or iOS zooms the page */
+  .pb-draft-actions .btn { width: 100%; }
+  .pb-draft-actions .muted { display: none; }
+}
