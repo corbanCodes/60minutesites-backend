@@ -1007,7 +1007,8 @@ def playbook_draft():
               "this.", "error")
         return redirect(back)
 
-    r = playbook_ai.draft(s, brief, company=s.ai_disclosure_name or "")
+    r = playbook_ai.draft(s, brief, company=s.ai_disclosure_name or "",
+                          lane=(request.form.get("lane") or "").strip())
     if not r.get("ok"):
         flash(r.get("error") or "Could not write that one.", "error")
         return redirect(back)

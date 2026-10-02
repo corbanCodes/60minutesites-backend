@@ -821,3 +821,8 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
   .ph-callerid { flex-direction: column; align-items: stretch; gap: 5px; }
   .ph-callerid select { font-size: 16px; padding: 10px 12px; }
 }
+
+.pb-lane { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px;
+  padding: 12px 14px; border: 1px solid var(--line, #E6DFD6); border-radius: 10px;
+  background: #FBF9F6; font-size: 14px; line-height: 1.55; cursor: pointer; }
+.pb-lane input { margin-top: 3px; flex: none; width: 17px; height: 17px; }

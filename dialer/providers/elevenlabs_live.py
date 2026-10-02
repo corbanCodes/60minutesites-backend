@@ -256,7 +256,8 @@ class ElevenLabsAgent(VoiceAgent):
         return ok(webhook_id=webhook_id, secret=secret)
 
     # -------------------------------------------------------------- agents
-    def upsert_agent(self, agent, prompt, tools, webhook_id=None):
+    def upsert_agent(self, agent, prompt, tools, webhook_id=None,
+                     transfer=None):
         """Create (POST) or update (PATCH) the ElevenLabs-side agent."""
         conversation_config = {
             "agent": {
@@ -264,6 +265,11 @@ class ElevenLabsAgent(VoiceAgent):
                     "prompt": prompt,
                     "llm": getattr(agent, "llm_model", "") or "",
                     "tools": tools or [],
+                    # transfer_to_number is a SYSTEM tool and lives in
+                    # built_in_tools, not in the webhook tools list. Putting
+                    # it in the wrong place is the same as not sending it.
+                    **({"built_in_tools": {"transfer_to_number": transfer}}
+                       if transfer else {}),
                 },
                 "first_message": getattr(agent, "first_message", "") or "",
                 "language": getattr(agent, "language", "") or "en",

@@ -143,6 +143,57 @@ def build_prompt(agent, settings):
     return "\n\n".join(out)
 
 
+def transfer_number(settings):
+    """The phone a qualified call should land on, or "".
+
+    Two modes exist. "number" is an explicit phone the owner typed. "browser"
+    means whoever is on shift, which is a softphone in a browser tab and has
+    no phone number of its own -- so for a warm hand-off we fall back to the
+    callback number the AI already reads out, which is required to reach a
+    human during business hours anyway.
+    """
+    if (settings.transfer_mode or "") == "number" and settings.transfer_number:
+        return settings.transfer_number
+    return settings.ai_callback_number or ""
+
+
+def transfer_config(agent, settings):
+    """The transfer_to_number system tool, or None.
+
+    This is the gap that made the whole feature a no-op: the prompt has long
+    told the agent to "use the transfer tool", and no transfer tool was ever
+    given to it. The agent would say "let me put you through to a colleague"
+    and then sit there, which is worse than never offering.
+    """
+    number = transfer_number(settings)
+    if not number:
+        return None
+    condition = (agent.transfer_rules or "").strip()
+    if not condition and agent.playbook_id:
+        pb = db.session.get(Playbook, agent.playbook_id)
+        condition = (pb.transfer_criteria or "").strip() if pb else ""
+    if not condition:
+        condition = ("When the person confirms they are the one who decides "
+                     "on this, or asks about price, timing or next steps.")
+    return {
+        "type": "system",
+        "name": "transfer_to_number",
+        "description": "Hand the live call to a person on the team.",
+        "params": {
+            "system_tool_type": "transfer_to_number",
+            "transfers": [{
+                "transfer_destination": {"type": "phone",
+                                         "phone_number": number},
+                "condition": condition[:900],
+                # Conference, so the caller hears a human arrive rather than
+                # silence and a click. A blind transfer on a cold call that
+                # was just qualified loses people.
+                "transfer_type": "conference",
+            }],
+        },
+    }
+
+
 def voicemail_text(agent, settings):
     """47 CFR 64.1200(b) wants the caller identified at the START of a
     recorded message and a callback number given -- so the template enforces
@@ -184,7 +235,8 @@ def sync_agent(agent, settings):
         agent.voicemail_message = voicemail_text(agent, settings)
 
     r = va.upsert_agent(agent, prompt, tools,
-                        webhook_id=settings.elevenlabs_webhook_id or None)
+                        webhook_id=settings.elevenlabs_webhook_id or None,
+                        transfer=transfer_config(agent, settings))
     if r.get("ok"):
         agent.elevenlabs_agent_id = (r.get("agent_id") or "")[:64]
         agent.synced_at = _now()

@@ -193,7 +193,8 @@ class FakeVoiceAgent(VoiceAgent):
     def ensure_webhook(self, url, name):
         return ok(webhook_id=_sid("wh", url), secret="wsec_simulated_secret")
 
-    def upsert_agent(self, agent, prompt, tools, webhook_id=None):
+    def upsert_agent(self, agent, prompt, tools, webhook_id=None,
+                     transfer=None):
         return ok(agent_id=agent.elevenlabs_agent_id or _sid("ag", agent.name))
 
     def import_number(self, e164, twilio_sid, twilio_token, agent_id=None,

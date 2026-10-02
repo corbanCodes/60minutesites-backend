@@ -74,7 +74,53 @@
       <button class="btn ghost" type="submit" formaction="/dialer/playbooks/new" formnovalidate>
         Start from the blank template</button>
     </div>
+    <label class="pb-lane">
+      <input type="checkbox" name="lane" value="qualify_transfer" checked>
+      <span><b>Qualify, then hand straight to a live person.</b>
+        Writes the script around one qualifying question and an immediate
+        transfer, rather than trying to close on the call. Untick it if you
+        want the AI to run the whole conversation itself.</span>
+    </label>
+    <div style="display:none">
+    </div>
   </form>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>How the hand-off to a person actually works</h3>
+  <ol class="wiz-ol wiz-ol-roomy">
+    <li>
+      <b>The AI dials and asks your qualifying question.</b>
+      <span class="wiz-note">Whatever you put first in the questions list.
+        For napkins that is whether they are the one who decides.</span>
+    </li>
+    <li>
+      <b>The moment the answer is yes, it stops.</b>
+      <span class="wiz-note">It is told, in those words, to stop selling: no
+        further questions, no repeating the offer. One line, then the
+        transfer.</span>
+    </li>
+    <li>
+      <b>It calls your transfer number and puts you both in the same room.</b>
+      <span class="wiz-note">A conference, not a blind hand-off, so the
+        prospect hears a person arrive instead of silence and a click. The AI
+        drops out once you are on.</span>
+    </li>
+    <li>
+      <b>Where it rings is set on step 8.</b>
+      <span class="wiz-note">Either a phone number you type, or whoever is on
+        shift, which falls back to the callback number from step 7 because a
+        browser tab has no number of its own.</span>
+    </li>
+    <li>
+      <b>If nobody picks up</b>, it apologises once, asks for a better time,
+      writes it on the lead and books the callback task.
+    </li>
+  </ol>
+  <p class="muted">The sentence in <b>&ldquo;When to hand the call to a
+    person&rdquo;</b> inside each playbook is the trigger, word for word. It
+    is worth being blunt there: &ldquo;Transfer as soon as they say they are
+    the one who decides on napkins, or ask what it costs.&rdquo;</p>
 </div>
 
 <div class="card wiz-steps-card">

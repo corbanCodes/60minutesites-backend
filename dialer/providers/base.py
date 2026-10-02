@@ -116,7 +116,8 @@ class VoiceAgent:
         """-> {ok, webhook_id, secret}  (secret readable exactly once)"""
         raise NotImplementedError
 
-    def upsert_agent(self, agent, prompt, tools, webhook_id=None):
+    def upsert_agent(self, agent, prompt, tools, webhook_id=None,
+                     transfer=None):
         """-> {ok, agent_id}"""
         raise NotImplementedError
 

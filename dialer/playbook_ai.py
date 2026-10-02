@@ -141,7 +141,24 @@ def _objections(raw):
     return out
 
 
-def draft(settings, brief, company=""):
+QUALIFY_TRANSFER_RULE = """
+THIS CALL EXISTS TO QUALIFY AND HAND OVER, NOT TO CLOSE.
+
+Write it so the agent finds out in one question whether it is speaking to
+the person who decides, and transfers the instant the answer is yes. Do not
+write steps that pitch further, handle price, or arrange anything: a human
+is going to take the call over within seconds.
+
+- The FIRST question must be the decision-maker question.
+- One step for "it is them", whose only job is to say a colleague is coming
+  on and hand over.
+- One step for "it is not them", which gets the right person's name and when
+  they are around, then ends politely.
+- transfer_criteria must be blunt and say to stop selling at that moment.
+"""
+
+
+def draft(settings, brief, company="", lane=""):
     """-> {ok, playbook: {...}} or {ok: False, error}.
 
     `brief` is whatever the customer typed about their business. It is passed
@@ -157,6 +174,8 @@ def draft(settings, brief, company=""):
 
     llm = registry.llm(settings)
     user = f"The business: {company}\n\n" if company else ""
+    if lane == "qualify_transfer":
+        user += QUALIFY_TRANSFER_RULE + "\n"
     user += (f"What they sell and who they call:\n{brief[:2000]}\n\n"
              "Write the playbook.")
 
