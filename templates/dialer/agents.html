@@ -54,6 +54,7 @@
   </div>
   <div class="mg-actions">
     <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Calling</a>
+    <a class="btn ghost sm" href="/dialer/setup/11"><i class="bi bi-gear"></i> Setup guide</a>
     <form method="post" action="/dialer/agents/new" style="display:inline-flex">
       <input type="hidden" name="direction" value="outbound">
       <button class="btn" type="submit"><i class="bi bi-telephone-outbound"></i> New outbound agent</button>
@@ -67,12 +68,20 @@
 
 {% if agents %}
 <table class="mg-cards">
-  <tr class="mg-hrow"><th>Agent</th><th>Direction</th><th>Voice</th><th>Synced</th><th>Live</th><th></th></tr>
+  <tr class="mg-hrow"><th>Agent</th><th>Script it reads</th><th>Direction</th><th>Voice</th><th>Synced</th><th>Live</th><th></th></tr>
   {% for a in agents %}
   <tr class="{{ 'row-off' if a.active is false }}">
     <td class="mg-cardtitle">
       <a class="rowlink" href="/dialer/agents/{{ a.id }}">{{ a.name }}</a>
       <div class="subtext">{{ a.llm_model or 'default model' }}{% if a.max_duration_seconds %} · caps at {{ ((a.max_duration_seconds | int) / 60) | round(0, 'floor') | int }} min{% endif %}</div>
+    </td>
+    <td data-label="Script it reads">
+      {% if a.playbook_id and books.get(a.playbook_id) %}
+        <a class="rowlink" href="/dialer/playbooks/{{ a.playbook_id }}">{{ books.get(a.playbook_id) }}</a>
+      {% else %}
+        <span class="sync-state bad"><i class="bi bi-exclamation-triangle-fill"></i> No script</span>
+        <div class="subtext">It will talk, but not from anything you wrote.</div>
+      {% endif %}
     </td>
     <td data-label="Direction"><span class="pill dir-{{ a.direction or 'outbound' }}">{{ (a.direction or 'outbound') | capitalize }}</span></td>
     <td class="muted" data-label="Voice">{{ a.voice_name or a.voice_id or 'not picked' }}</td>

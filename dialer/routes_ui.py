@@ -980,10 +980,22 @@ def preset_qualify_transfer():
 @bp.route("/playbooks")
 @require("playbooks.edit")
 def playbooks():
+    """The scripts, and -- the part that was missing -- who reads each one.
+
+    Two playbooks with similar names and no visible link to the agents that
+    follow them is a screen you cannot act on. Editing the right-looking row
+    changes nothing audible, because the agent on the phone is reading the
+    other one.
+    """
     s, ready, prog = ctx()
+    rows = Playbook.query.filter_by(account_id=g.account_id).all()
+    readers = {}
+    for a in AiAgent.query.filter_by(account_id=g.account_id).all():
+        if a.playbook_id:
+            readers.setdefault(a.playbook_id, []).append(a)
     return render_template(
         "dialer/playbooks.html", s=s, ready=ready, prog=prog,
-        playbooks=Playbook.query.filter_by(account_id=g.account_id).all())
+        playbooks=rows, readers=readers)
 
 
 @bp.route("/playbooks/new", methods=["POST"])
@@ -1205,7 +1217,8 @@ def playbook_default(playbook_id):
     db.session.commit()
     flash(f"“{pb.name}” is the script reps get when a campaign does not "
           f"name one of its own.")
-    return redirect(url_for("dialer.setup", step=9))
+    return redirect(request.form.get("back")
+                    or url_for("dialer.setup", step=9))
 
 
 @bp.route("/playbooks/<int:playbook_id>/delete", methods=["POST"])
@@ -1224,9 +1237,17 @@ def playbook_delete(playbook_id):
 @bp.route("/agents")
 @require("agents.edit")
 def agents():
+    """Every agent, and the script it actually reads.
+
+    The script is the whole of what an agent says, so leaving it off this
+    table meant two agents with similar names were indistinguishable. You
+    could only find out by opening each one.
+    """
     s, ready, prog = ctx()
+    books = {p.id: p.name for p
+             in Playbook.query.filter_by(account_id=g.account_id).all()}
     return render_template(
-        "dialer/agents.html", s=s, ready=ready, prog=prog,
+        "dialer/agents.html", s=s, ready=ready, prog=prog, books=books,
         agents=AiAgent.query.filter_by(account_id=g.account_id).all())
 
 

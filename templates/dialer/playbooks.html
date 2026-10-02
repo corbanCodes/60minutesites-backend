@@ -12,6 +12,7 @@
   </div>
   <div class="mg-actions">
     <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Calling</a>
+    <a class="btn ghost sm" href="/dialer/setup/9"><i class="bi bi-gear"></i> Setup guide</a>
     <form method="post" action="/dialer/playbooks/new" style="display:inline-flex">
       <button class="btn" type="submit"><i class="bi bi-plus-lg"></i> Create from the cold-call template</button>
     </form>
@@ -20,19 +21,33 @@
 
 {% if playbooks %}
 <table class="mg-cards">
-  <tr class="mg-hrow"><th>Playbook</th><th class="mg-right">Steps</th><th class="mg-right">Questions</th><th class="mg-right">Objections</th><th></th></tr>
+  <tr class="mg-hrow"><th>Playbook</th><th>Who reads it</th><th class="mg-right">Steps</th><th class="mg-right">Questions</th><th class="mg-right">Objections</th><th></th></tr>
   {% for p in playbooks %}
   <tr>
     <td class="mg-cardtitle">
       <a class="rowlink" href="/dialer/playbooks/{{ p.id }}">{{ p.name }}</a>
-      {% if p.is_default %}<span class="pill ok-pill">Default</span>{% endif %}
+      {% if p.is_default %}<span class="pill ok-pill">Reps read this one</span>{% endif %}
       {% if p.description %}<div class="subtext">{{ p.description }}</div>{% endif %}
+    </td>
+    <td data-label="Who reads it">
+      {% for a in readers.get(p.id, []) %}
+        <div><a class="rowlink" href="/dialer/agents/{{ a.id }}">{{ a.name }}</a>
+          {% if not a.active %}<span class="pill st-neutral">Off</span>{% endif %}</div>
+      {% else %}
+        <span class="muted">No agent</span>
+      {% endfor %}
     </td>
     <td class="mg-right mg-num mg-cardstat" data-label="Steps">{{ p.steps | length }}</td>
     <td class="mg-right mg-num mg-cardstat" data-label="Questions">{{ p.questions | length }}</td>
     <td class="mg-right mg-num mg-cardstat" data-label="Objections">{{ p.objections | length }}</td>
     <td class="mg-right mg-nowrap mg-cardactions">
       <a class="chip-btn" href="/dialer/playbooks/{{ p.id }}">Edit</a>
+      {% if not p.is_default %}
+      <form method="post" action="/dialer/playbooks/{{ p.id }}/default" class="inline-form">
+        <input type="hidden" name="back" value="/dialer/playbooks">
+        <button class="chip-btn" type="submit">Make this the one</button>
+      </form>
+      {% endif %}
       <form method="post" action="/dialer/playbooks/{{ p.id }}/delete" class="inline-form"
             onsubmit="return confirm('Delete “{{ p.name }}”? Any campaign or agent pointing at it loses its script.')">
         <button class="chip-btn danger" type="submit">Delete</button>
@@ -41,6 +56,10 @@
   </tr>
   {% endfor %}
 </table>
+<p class="mg-note" style="margin-top:10px">An AI agent reads whichever script its own page points at, so
+  changing the one marked here does not change what an agent says. The mark decides what a human rep sees on
+  the phone screen, and what a campaign uses when it names no script of its own. Editing a script re-syncs
+  every agent reading it.</p>
 {% else %}
 <div class="mg-empty">
   <i class="bi bi-journal-text"></i>
