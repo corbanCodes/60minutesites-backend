@@ -19,6 +19,12 @@
   </div>
 </div>
 
+{% if not agents %}
+<form method="post" action="/dialer/agents/quick" id="agent-quick-form">
+  <input type="hidden" name="back" value="/dialer/setup/11">
+</form>
+{% endif %}
+
 <form class="form wiz-form" method="post" action="/dialer/test-call">
   <div class="row2">
     <div>
@@ -38,11 +44,25 @@
         {% endif %}
       </select>
       {% if not agents %}
-      <p class="muted" style="margin:5px 0 0">You have no AI agents built yet, so there is only the plain ring
-        test. That is the right test at this stage anyway.</p>
+      <p class="muted" style="margin:5px 0 0">No AI agent exists yet, so the only option is a plain ring.
+        Everything one needs is already on this account &mdash; build it below and it appears here.</p>
       {% endif %}
     </div>
   </div>
+
+  {% if not agents %}
+  <div class="card wiz-callout" style="margin-top:14px">
+    <i class="bi bi-robot"></i>
+    <div>
+      <b>Want to hear the AI instead?</b>
+      <p style="margin:4px 0 8px">An agent is a voice, a script and a rule for when to hand over. You already
+        have all three. This builds one from your default playbook and the voice you picked on step 8, sends
+        it to ElevenLabs, and it shows up in the dropdown above.</p>
+      <button class="btn sm" type="submit" form="agent-quick-form">
+        <i class="bi bi-magic"></i> Build an AI agent from my script</button>
+    </div>
+  </div>
+  {% endif %}
 
   <div style="margin-top:14px">
     <label for="from_number_id">Which of your numbers should it call from?</label>

@@ -1137,6 +1137,74 @@ def agent_new():
     return redirect(url_for("dialer.agent_edit", agent_id=a.id))
 
 
+@bp.route("/agents/quick", methods=["POST"])
+@require("agents.edit")
+def agent_quick():
+    """Build a working agent out of what the account already has, and sync it.
+
+    Everything an agent needs was already on this account -- a voice, a
+    playbook, a connected ElevenLabs, a results webhook -- and nothing in the
+    setup ever offered to assemble them. So the test-call dropdown only ever
+    said "Just ring my phone, no AI", on a product whose whole point is the
+    AI. One button, then it is in the dropdown.
+    """
+    from dialer.agents import sync_agent
+    from dialer.demo import DEMO_PREFIX
+    s = get_settings(g.account_id)
+    back = request.form.get("back") or url_for("dialer.setup", step=11)
+
+    if not (s.has_elevenlabs or registry.simulating(s)):
+        flash("Connect ElevenLabs on step 6 first — that is the voice.",
+              "error")
+        return redirect(back)
+
+    rows = Playbook.query.filter_by(account_id=g.account_id).all()
+    mine = [p for p in rows if not p.name.startswith(DEMO_PREFIX)]
+    pb = (next((p for p in mine if p.is_default), None) or (mine[0] if mine
+          else next((p for p in rows if p.is_default), None))
+          or (rows[0] if rows else None))
+    if pb is None:
+        flash("Write a playbook on step 9 first — that is what it says.",
+              "error")
+        return redirect(back)
+
+    agent = AiAgent(
+        account_id=g.account_id,
+        name=(request.form.get("name") or f"{pb.name} agent")[:120],
+        direction="outbound", playbook_id=pb.id,
+        voice_id=s.elevenlabs_default_voice_id or "",
+        company_facts=s.ai_disclosure_name or "",
+        persona=("Brief, warm and unbothered. You are not closing, you are "
+                 "finding out quickly whether this is the right person, and "
+                 "getting a colleague on the line if it is."),
+        max_duration_seconds=s.max_call_seconds or 240, active=True)
+    db.session.add(agent)
+    db.session.flush()
+
+    r = sync_agent(agent, s)
+    log("agents.quick", target=agent.name, account_id=g.account_id,
+        user=g.member)
+    db.session.commit()
+
+    if r.get("ok"):
+        where = transfer_summary(s)
+        flash(f"“{agent.name}” is live, using your {pb.name} script"
+              f"{where}. Pick it in “What should happen when you answer?” "
+              f"and place the test call.", "sticky")
+    else:
+        flash(f"Built it, but ElevenLabs would not take it: "
+              f"{agent.last_sync_error}. Open the agent and press sync to "
+              f"try again.", "error")
+    return redirect(back)
+
+
+def transfer_summary(settings):
+    from dialer.agents import transfer_number
+    num = transfer_number(settings)
+    return f" and transferring to {num}" if num else \
+        " (no transfer number set, so it will qualify but not hand over)"
+
+
 @bp.route("/agents/<int:agent_id>", methods=["GET", "POST"])
 @require("agents.edit")
 def agent_edit(agent_id):

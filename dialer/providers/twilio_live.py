@@ -75,14 +75,49 @@ PENDING_STATUSES = {"draft", "pending-review", "in-review", "pending"}
 
 
 # ------------------------------------------------------------------ helpers
+# Twilio's wording is written for whoever wrote the integration, not for the
+# person holding the phone. These four come up constantly during setup and
+# every one of them sent somebody hunting in the wrong place: 21215 mentions
+# "international permissions" for a Texas number, 21210 reads like the number
+# is broken when it was simply never bought, and 21219 looks identical to
+# both while meaning something a trial account can fix in a minute.
+FRIENDLY_CALL_ERRORS = {
+    "21215": (
+        "Your Twilio account is not allowed to call that number yet. Despite "
+        "the words \"international permissions\", this hits US numbers too "
+        "on a new account. Open Twilio, go to Voice, then Calls, then "
+        "Geo-Permissions, tick the countries you call (United States and "
+        "Canada to start) and save. Takes about a minute and applies "
+        "immediately."),
+    "21210": (
+        "The number you are calling FROM is not one Twilio has sold you. "
+        "Buy it on setup step 4, or pick a different one in the dropdown "
+        "above. Sample numbers can never place a real call."),
+    "21219": (
+        "Your Twilio account is still on trial, and a trial can only call "
+        "numbers you have verified by hand. Either verify the number you are "
+        "dialling in the Twilio console under Phone Numbers, Verified Caller "
+        "IDs, or add about twenty dollars of credit to lift the restriction "
+        "entirely."),
+    "21212": (
+        "Twilio rejected the number you are calling from. It has to be one "
+        "you bought from them, written in full international form."),
+}
+
+
 def _rest_err(e):
-    """A TwilioRestException carries the two things worth showing a human:
-    the numeric error code (searchable in Twilio's docs) and the message."""
-    code = getattr(e, "code", None)
+    """A TwilioRestException carries the numeric code, which is searchable,
+    and a message written for a developer. Where we have better words for a
+    code, lead with those and keep the code on the end so it is still
+    findable."""
+    code = str(getattr(e, "code", "") or "")
     msg = getattr(e, "msg", "") or str(e)
     status = getattr(e, "status", None)
+    friendly = FRIENDLY_CALL_ERRORS.get(code)
+    if friendly:
+        return err(f"{friendly} (Twilio error {code})", code)
     if code:
-        return err(f"Twilio {code}: {msg}", str(code))
+        return err(f"Twilio {code}: {msg}", code)
     return err(msg, str(status or "twilio_error"))
 
 
