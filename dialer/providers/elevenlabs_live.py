@@ -202,14 +202,22 @@ class ElevenLabsAgent(VoiceAgent):
         at the same time or every inbound post-call webhook fails signature
         verification.
         """
+        # The three fields go INSIDE a `settings` object. Sent flat, the API
+        # replies 422 "Field required" naming `settings`, and before the
+        # error carried that name it read like a vague permissions failure.
         r = self._req("POST", "/v1/workspace/webhooks",
-                      json={"name": name, "webhook_url": url,
-                            "auth_type": "hmac"})
+                      json={"settings": {"name": name, "webhook_url": url,
+                                         "auth_type": "hmac"}})
         if not r["ok"]:
             return r
         data = r["data"] or {}
-        secret = _first(data, "webhook_secret", "secret")
-        webhook_id = _first(data, "webhook_id", "id")
+        # Documented flat, but the request wraps in `settings`, so accept
+        # either rather than failing on a shape that is clearly intended.
+        inner = data.get("settings") if isinstance(data.get("settings"), dict) else {}
+        secret = _first(data, "webhook_secret", "secret") or \
+            _first(inner, "webhook_secret", "secret")
+        webhook_id = _first(data, "webhook_id", "id") or \
+            _first(inner, "webhook_id", "id")
         if not webhook_id:
             return err("ElevenLabs created the webhook but returned no id.",
                        "api_error")
@@ -243,8 +251,13 @@ class ElevenLabsAgent(VoiceAgent):
             },
         }
         if webhook_id:
+            # `events` is named explicitly rather than left to default.
+            # ElevenLabs requires at least one and the transcript is the
+            # whole reason this webhook exists, so an inherited default
+            # quietly going the other way would mean silent calls again.
             platform_settings["workspace_overrides"] = {
-                "webhooks": {"post_call_webhook_id": webhook_id}
+                "webhooks": {"post_call_webhook_id": webhook_id,
+                             "events": ["transcript"]}
             }
 
         body = {

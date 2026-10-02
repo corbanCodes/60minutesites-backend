@@ -57,22 +57,41 @@
     <div>
       <label for="api_key">ElevenLabs API key</label>
       <input type="text" id="api_key" name="api_key" autocomplete="off" spellcheck="false" placeholder="sk_...">
-      <p class="muted" style="margin:5px 0 0">Profile menu in ElevenLabs, then <b>API Keys</b>, then
-        <b>Create API key</b>. Copy it straight away &mdash; it is shown once.</p>
+      <p class="muted" style="margin:5px 0 0">In ElevenLabs:
+        <b>Developers</b> at the <b>bottom</b> of the left sidebar, then the <b>API Keys</b> tab, then
+        <b>Create Key</b>. Copy it straight away &mdash; the full key is shown once and never again.</p>
     </div>
     <button class="btn" type="submit"><i class="bi bi-plug"></i> Save and test</button>
   </form>
 </div>
 
 <div class="card wiz-callout">
-  <i class="bi bi-person-badge"></i>
+  <i class="bi bi-toggle-off"></i>
   <div>
-    <b>The key has to be made by the workspace owner or an admin.</b>
-    <p style="margin:4px 0 0">The first thing we do with it is create the webhook that sends call results back
-      here. A key from a member-level user cannot create a webhook, so the connection succeeds and then every
-      AI call finishes with no transcript and no summary. If you are not the owner of the ElevenLabs workspace,
-      ask whoever is to create the key.</p>
+    <b>Turn off &ldquo;Restrict Key&rdquo;, or the key will not be allowed to do much.</b>
+    <p style="margin:4px 0 0">ElevenLabs switches <b>Restrict Key</b> on by default with nothing enabled, so a
+      key made by clicking straight through can read your plan and little else. That is enough for the
+      connection here to go green and not enough to create the webhook that sends call results back, which is
+      how you end up with AI calls that finish with no transcript and no summary.</p>
+    <p style="margin:8px 0 0">Easiest fix is to switch <b>Restrict Key</b> off when you create it. If you would
+      rather keep it restricted, scroll the <b>Endpoints</b> list in the same dialog and enable the webhooks
+      entry along with the user and conversational AI ones.</p>
   </div>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>If the webhook still will not create</h3>
+  <p class="muted" style="margin:0 0 12px">We quote whatever ElevenLabs tells us above. Two answers mean
+    different things and it is worth reading which one you got.</p>
+  <ul class="clean">
+    <li><b>Something about permissions.</b> The key is too narrow. Make a new one with <b>Restrict Key</b>
+      off and use <b>Replace key</b>.</li>
+    <li><b>Something about a missing or invalid field.</b> That one is ours, not yours. It means we are
+      sending ElevenLabs a request shape they have changed. Tell me and I will fix it.</li>
+  </ul>
+  <p class="muted" style="margin:12px 0 0">You can also create it by hand: <b>Developers</b> &rarr;
+    <b>Webhooks</b> &rarr; <b>Create a Webhook</b>, auth method <b>HMAC</b>. Copy the signing secret
+    immediately, because it is shown once and the URL cannot be edited afterwards.</p>
 </div>
 
 <div class="card wiz-steps-card">
