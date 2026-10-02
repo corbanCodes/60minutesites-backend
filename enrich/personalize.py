@@ -809,8 +809,6 @@ def _matches_column(name, headers):
 # extra rules cannot be stored with a template. They are reported back rather
 # than dropped quietly, because a template that silently loses a rule is worse
 # than one that admits it.
-TEMPLATE_FIELDS = ("subject_prompt", "body_prompt", "separate_subject",
-                   "variants", "tone", "max_words")
 UNSAVED_FIELDS = ("sender_name", "sender_company", "extra_rules")
 
 

@@ -908,6 +908,18 @@ def _enforce_tool_visibility():
     return None
 
 
+# A tool whose code is not deployed yet must not appear in the menu. Matching
+# against url_map is no good here: static_url_path is "" so the marketing-site
+# static route matches every path. Ask the blueprint registry instead.
+TOOL_BLUEPRINT = {"dialer": "dialer", "enrich": "enrich", "team": "teams"}
+
+
+def _mounted(key):
+    """True when the blueprint that serves this tool is registered."""
+    bp = TOOL_BLUEPRINT.get(key)
+    return True if bp is None else bp in app.blueprints
+
+
 def visible_tools(role, user):
     """The sidebar, resolved for whoever is looking.
 
@@ -931,6 +943,11 @@ def visible_tools(role, user):
         if flag and not flags.get(flag):
             continue
         if key == "dialer" and dialer_off():
+            continue
+        # Never advertise a tool whose blueprint is not actually mounted. A
+        # menu item that 404s is worse than a missing one, and this makes the
+        # nav self-healing: the item appears the moment the routes exist.
+        if not _mounted(key):
             continue
         if role != "admin" and key in hidden and key not in TOOLS_ALWAYS_ON:
             continue
