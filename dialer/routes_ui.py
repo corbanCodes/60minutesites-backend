@@ -177,6 +177,23 @@ def setup_save(key):
 
 
 # ------------------------------------------------------------ vendor keys
+@bp.route("/setup/reset", methods=["POST"])
+@require("dialer.settings")
+def setup_reset():
+    """Clear the ticks this account has marked by hand.
+
+    Only the hand-marked steps are stored at all -- the rest are derived from
+    what is actually connected, so they cannot be reset, only disconnected.
+    """
+    s = get_settings(g.account_id)
+    s.set_wizard({})
+    log("dialer.setup_reset", account_id=g.account_id, user=g.member)
+    db.session.commit()
+    flash("Setup progress cleared. The steps that depend on a real connection "
+          "still read from that connection.")
+    return redirect(url_for("dialer.setup", step=1))
+
+
 @bp.route("/setup/keys/<vendor>", methods=["POST"])
 @require("dialer.keys")
 def save_keys(vendor):

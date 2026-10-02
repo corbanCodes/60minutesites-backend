@@ -213,3 +213,8 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
 .bulkbar .btn.ghost:hover { background: rgba(255,255,255,.08); }
 .callnow-btn { background: var(--good); }
 .callnow-btn:hover { background: #276B43; }
+
+/* ---------- wizard: reset ---------- */
+.wiz-reset { margin: 22px 0 8px; text-align: right; }
+.wiz-reset .chip-btn { opacity: .7; }
+.wiz-reset .chip-btn:hover { opacity: 1; }

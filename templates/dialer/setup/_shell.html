@@ -88,4 +88,9 @@
   </section>
 
 </div>
+
+<form method="post" action="/dialer/setup/reset" class="wiz-reset"
+      onsubmit="return confirm('Clear the steps you have ticked by hand? Anything that depends on a real connection keeps reading from that connection.')">
+  <button class="chip-btn" type="submit"><i class="bi bi-arrow-counterclockwise"></i> Reset my progress</button>
+</form>
 {% endblock %}
