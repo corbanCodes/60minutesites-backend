@@ -9,6 +9,15 @@ the worker, outside any request context, from exactly the same code.
 Everything here is written to survive an empty account. No division by zero,
 no None arithmetic, and the full key set every time -- a dashboard that
 KeyErrors on a brand-new account is worse than one showing a row of zeroes.
+
+One definition to know before reading further. `summary()` keeps `meetings`
+(disposition `meeting_set`) and `qualified` apart, because a manager reading a
+daily recap wants to know which of the two happened. Everywhere else -- the
+leaderboard, the campaign table, AI vs human -- `meetings` means "a booked
+outcome", `meeting_set` OR `qualified`, which is the definition
+campaigns._update_stats and the dialer home tiles already use. `summary()`
+also returns that combined figure as `booked`, so a template can show one
+number consistently across the page.
 """
 import json
 from datetime import datetime, timedelta, timezone
@@ -105,6 +114,12 @@ def _is_ai(call):
     return (call.mode or "") in _AI_MODES
 
 
+def _booked(call):
+    """A booked outcome. Matches campaigns._update_stats so the reports page
+    and the campaign card never show two different numbers for one campaign."""
+    return call.disposition in ("meeting_set", "qualified")
+
+
 # --------------------------------------------------------------- the window
 def day_range(days=1, tz_name=None):
     """-> (start, end) naive-UTC bounds covering the last `days` local days.
@@ -143,7 +158,7 @@ def summary(account_id, start=None, end=None, user_id=None, campaign_id=None):
     no_answer = sum(1 for c in rows if c.system_outcome == "no_answer")
     busy = sum(1 for c in rows if c.system_outcome == "busy")
     talk = sum(int(c.duration_s or 0) for c in rows if c.answered_live)
-    cost = round(sum(float(c.cost_estimate or 0.0) for c in rows), 2)
+    cost = round(float(sum(float(c.cost_estimate or 0.0) for c in rows)), 2)
     stage_moves = sum(1 for c in rows
                       if c.disposition and stage_map.get(c.disposition))
 
@@ -154,6 +169,7 @@ def summary(account_id, start=None, end=None, user_id=None, campaign_id=None):
         "dm_reached": dm_reached,
         "qualified": qualified,
         "meetings": meetings,
+        "booked": meetings + qualified,
         "voicemails_dropped": voicemails,
         "no_answer": no_answer,
         "busy": busy,
@@ -226,10 +242,12 @@ def by_rep(account_id, start, end):
             "connect_rate": _rate(connects, len(rows)),
             "talk_seconds": sum(int(c.duration_s or 0) for c in rows
                                 if c.answered_live),
-            "meetings": sum(1 for c in rows
-                            if c.disposition in ("meeting_set", "qualified")),
+            "meetings": sum(1 for c in rows if _booked(c)),
+            # 0.0 rather than None: a leaderboard cell is arithmetic in a
+            # template, and None there is a 500 nobody sees until a demo.
             "avg_score": round(sum(scores) / len(scores), 1) if scores else 0.0,
-            "cost": round(sum(float(c.cost_estimate or 0.0) for c in rows), 2),
+            "cost": round(float(sum(float(c.cost_estimate or 0.0)
+                                    for c in rows)), 2),
         })
     out.sort(key=lambda r: r["dials"], reverse=True)
     return out
@@ -252,9 +270,9 @@ def by_campaign(account_id, start, end):
         out.append({
             "campaign_id": c.id, "name": c.name, "mode": c.mode,
             "status": c.status, "dials": len(rows), "connects": connects,
-            "meetings": sum(1 for x in rows
-                            if x.disposition in ("meeting_set", "qualified")),
-            "cost": round(sum(float(x.cost_estimate or 0.0) for x in rows), 2),
+            "meetings": sum(1 for x in rows if _booked(x)),
+            "cost": round(float(sum(float(x.cost_estimate or 0.0)
+                                    for x in rows)), 2),
             "queued_remaining": remaining,
         })
     out.sort(key=lambda r: r["dials"], reverse=True)
@@ -317,9 +335,9 @@ def ai_vs_human(account_id, start, end):
     for key in ("ai", "human"):
         side = [c for c in rows if _is_ai(c) == (key == "ai")]
         connects = sum(1 for c in side if c.answered_live)
-        meetings = sum(1 for c in side
-                       if c.disposition in ("meeting_set", "qualified"))
-        cost = round(sum(float(c.cost_estimate or 0.0) for c in side), 2)
+        meetings = sum(1 for c in side if _booked(c))
+        cost = round(float(sum(float(c.cost_estimate or 0.0)
+                               for c in side)), 2)
         out[key] = {"dials": len(side), "connects": connects,
                     "connect_rate": _rate(connects, len(side)),
                     "meetings": meetings, "cost": cost,
@@ -376,16 +394,19 @@ def abandon_rate(account_id, days=30):
 def cost_breakdown(account_id, start, end):
     """Where the money went, split the way the invoices arrive.
 
-    Mirrors calls.estimate_cost line for line so the buckets add up to the same
-    total the cost meter shows. Whole minutes per leg, because that is how
-    Twilio bills and a per-second model understates a short dial by 2-3x.
+    Mirrors calls.estimate_cost line for line, and rounds per call the way
+    estimate_cost does before totalling, so this total is the same number
+    summary()["cost"] shows. Two different totals on one page is a support
+    ticket. Whole minutes per leg, because that is how Twilio bills and a
+    per-second model understates a short dial by 2-3x.
     """
     rates = calls_mod.RATES
     s = _settings(account_id)
     recording_on = bool(s.recording_enabled) if s is not None else False
 
-    out = {"telephony": 0.0, "ai_voice": 0.0, "transcription": 0.0,
-           "llm": 0.0, "recording": 0.0, "total": 0.0}
+    buckets = {"telephony": 0.0, "ai_voice": 0.0, "transcription": 0.0,
+               "llm": 0.0, "recording": 0.0}
+    total = 0.0
     for c in _calls_q(account_id, start, end).all():
         mins = int(c.billable_minutes or 0)
         mode = c.mode or "manual"
@@ -398,22 +419,23 @@ def cost_breakdown(account_id, start, end):
                                      + rates["client_leg_min"])
             elif mode == "manual":
                 telephony += mins * rates["client_leg_min"]
-        out["telephony"] += telephony
+        one = {"telephony": telephony, "ai_voice": 0.0, "transcription": 0.0,
+               "llm": 0.0, "recording": 0.0}
         if mode in _AI_MODES:
-            out["ai_voice"] += mins * rates["elevenlabs_min"]
-            out["llm"] += mins * rates["elevenlabs_llm_min"]
+            one["ai_voice"] = mins * rates["elevenlabs_min"]
+            one["llm"] = mins * rates["elevenlabs_llm_min"]
         if c.recording_sid or recording_on:
-            out["recording"] += mins * rates["recording_min"]
+            one["recording"] = mins * rates["recording_min"]
         if c.transcript and mode in ("manual", "power"):
-            out["transcription"] += mins * rates["transcribe_min"]
+            one["transcription"] = mins * rates["transcribe_min"]
         if c.summary:
-            out["llm"] += rates["llm_per_call"]
+            one["llm"] += rates["llm_per_call"]
+        for k, v in one.items():
+            buckets[k] += v
+        total += round(sum(one.values()), 4)
 
-    for k in ("telephony", "ai_voice", "transcription", "llm", "recording"):
-        out[k] = round(out[k], 2)
-    out["total"] = round(sum(out[k] for k in
-                             ("telephony", "ai_voice", "transcription",
-                              "llm", "recording")), 2)
+    out = {k: round(v, 2) for k, v in buckets.items()}
+    out["total"] = round(total, 2)
     return out
 
 

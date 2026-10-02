@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Campaigns | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>Campaigns <span class="count-chip">{{ campaigns | length }}</span></h1>
+    <p class="mg-sub">A campaign is a saved slice of your CRM plus a way of calling it: you dialing by hand,
+      an AI voice dialing for you, or voicemails dropped without ringing anyone.</p>
+  </div>
+  <div class="mg-actions">
+    {% if ready and ready.simulating %}<span class="pill" style="background:#9A6B14">Practice mode</span>{% endif %}
+    <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Calling</a>
+    <a class="btn" href="/dialer/campaigns/new"><i class="bi bi-plus-lg"></i> New campaign</a>
+  </div>
+</div>
+
+{% if campaigns %}
+<table>
+  <tr>
+    <th>Campaign</th><th>How it calls</th><th>Status</th><th>Progress</th>
+    <th class="mg-right">Dials</th><th class="mg-right">Connects</th><th class="mg-right">Meetings</th><th></th>
+  </tr>
+  {% for c in campaigns %}
+  {% set st = c.stats or {} %}
+  {% set total = st.get('total', 0) or 0 %}
+  {% set done = (st.get('done', 0) or 0) + (st.get('skipped', 0) or 0) %}
+  {% set pct = ((done / total) * 100) | round(0, 'floor') | int if total else 0 %}
+  <tr>
+    <td>
+      <a class="rowlink" href="/dialer/campaigns/{{ c.id }}">{{ c.name }}</a>
+      <div class="subtext">Built {{ c.created_at | localdate if c.created_at else '—' }}</div>
+    </td>
+    <td>
+      <span class="pill mode-{{ c.mode or 'power' }}">
+        {% if c.mode == 'ai' %}AI dials{% elif c.mode == 'voicemail' %}Voicemail drop{% else %}You dial{% endif %}
+      </span>
+    </td>
+    <td>
+      <span class="pill st-{{ c.status or 'draft' }}">{{ (c.status or 'draft') | capitalize }}</span>
+      {% if c.paused_reason %}<div class="subtext">{{ c.paused_reason }}</div>{% endif %}
+    </td>
+    <td>
+      <div class="mg-progress">
+        <div class="mg-progress-track" role="img"
+             aria-label="{{ done }} of {{ total }} leads worked through">
+          <span class="mg-progress-fill" style="width:{{ pct }}%"></span>
+        </div>
+        <div class="mg-progress-text">{{ done }} of {{ total }} worked{% if st.get('skipped') %} · {{ st.get('skipped') }} skipped{% endif %}</div>
+      </div>
+    </td>
+    <td class="mg-right mg-num">{{ st.get('dials', 0) | default(0) }}</td>
+    <td class="mg-right mg-num">{{ st.get('connects', 0) | default(0) }}</td>
+    <td class="mg-right mg-num">{{ st.get('meetings', 0) | default(0) }}</td>
+    <td class="mg-right"><a class="chip-btn" href="/dialer/campaigns/{{ c.id }}">Open</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="mg-empty">
+  <i class="bi bi-megaphone"></i>
+  <h3>No campaigns yet</h3>
+  <p>A campaign picks leads out of your CRM — by status, source, tag, state or area code — and freezes
+    that list into a call queue. You choose whether you work the queue yourself on the phone screen, hand
+    it to an AI voice, or only drop voicemails. Nothing dials until you press Start.</p>
+  <a class="btn" href="/dialer/campaigns/new"><i class="bi bi-plus-lg"></i> New campaign</a>
+</div>
+{% endif %}
+{% endblock %}

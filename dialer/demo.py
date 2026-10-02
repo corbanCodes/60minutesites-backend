@@ -383,6 +383,7 @@ def _run_campaign(account_id, settings, made_leads, playbook, owner):
         db.session.commit()
 
     _attribute(campaign, owner)
+    _vary_dispositions(campaign, settings, owner)
     db.session.refresh(campaign)
     if campaign.status == "running":
         # Busy and no-answer rows sit in `deferred` waiting on the retry clock,
@@ -405,6 +406,42 @@ def _attribute(campaign, owner):
         if call.answered_live and call.connected_within_2s is None:
             call.connected_within_2s = True
     db.session.commit()
+
+
+# What a real connected hour looks like: one booking, a couple of partials,
+# a no, and one person who wants off the list. The simulated LLM scores every
+# human conversation identically as "qualified", which makes a perfectly
+# honest pipeline and a terrible-looking chart.
+_VARIED = ["meeting_set", "dm_reached", "callback", "not_interested", "dnc"]
+
+
+def _vary_dispositions(campaign, settings, owner):
+    """Spread the connected calls across the dispositions a real block
+    produces, so the outcome chart and the compliance trail both have
+    something in them. Includes one do-not-call on purpose: the suppression it
+    writes is the thing an enterprise buyer asks to see."""
+    from dialer import calls as calls_mod
+    connected = [c for c in Call.query.filter_by(campaign_id=campaign.id)
+                 .order_by(Call.id).all()
+                 if c.answered_live and c.disposition == "qualified"]
+    user_id = getattr(owner, "id", None)
+    for call, disposition in zip(connected, _VARIED):
+        calls_mod.set_disposition(call, disposition, user_id=user_id,
+                                  settings=settings)
+        _restamp_note(call)
+    db.session.commit()
+
+
+def _restamp_note(call):
+    """finalize() wrote the lead's call note before we changed the outcome, so
+    the note would read "Qualified" under a meeting. Rebuild it from the same
+    helper finalize uses rather than leaving a demo that contradicts itself."""
+    from dialer import calls as calls_mod
+    note = (Note.query
+            .filter(Note.lead_id == call.lead_id, Note.kind == "call",
+                    Note.body.like(f"%[call:{call.id}]%")).first())
+    if note is not None:
+        note.body = calls_mod._call_note(call)
 
 
 # -------------------------------------------------------------------- clear
