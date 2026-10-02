@@ -504,6 +504,13 @@
     else body.to = String(value || '').trim();
 
     if (!body.to && !body.lead_id) { say('warn', 'Enter a number first.'); return Promise.resolve(null); }
+
+    /* The caller ID the rep pinned, if any. Remembered on this machine so it
+       does not reset every time the pop-out is reopened mid-session. */
+    if (body.from_number_id === undefined) {
+      var sel = document.getElementById('ph-from');
+      if (sel && sel.value) body.from_number_id = parseInt(sel.value, 10);
+    }
     if (S.status === 'dialing' || S.status === 'live') {
       say('warn', 'Finish the call you are on first.');
       return Promise.resolve(null);
@@ -834,3 +841,25 @@
 
   global.HQPhone = HQPhone;
 }(window));
+
+
+/* Keep the chosen caller ID across reopenings of the pop-out. Per machine on
+   purpose: it is a preference about the desk you are sitting at, not an
+   account-wide setting that should follow you onto someone else's screen. */
+(function () {
+  var KEY = '60ms.callerId';
+  function bind() {
+    var sel = document.getElementById('ph-from');
+    if (!sel) return;
+    try {
+      var saved = localStorage.getItem(KEY);
+      if (saved && sel.querySelector('option[value="' + saved + '"]')) sel.value = saved;
+    } catch (e) { /* private window: the default is fine */ }
+    sel.addEventListener('change', function () {
+      try { localStorage.setItem(KEY, sel.value); } catch (e) {}
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind);
+  } else { bind(); }
+})();

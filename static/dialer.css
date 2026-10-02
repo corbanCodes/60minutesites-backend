@@ -807,3 +807,17 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
   .alert-actions { gap: 18px; }
   .alert-hide { padding: 10px 0; }   /* a thumb, not a pointer */
 }
+
+/* --------------------------------------------- caller id on the phone -- */
+.ph-callerid { display: flex; align-items: center; gap: 9px; margin-top: 12px; }
+.ph-callerid label { font-size: 12px; font-weight: 700; color: var(--ink-3, #8A7F73);
+  text-transform: uppercase; letter-spacing: .08em; flex: none; }
+.ph-callerid select {
+  flex: 1; min-width: 0; padding: 7px 10px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--line, #E6DFD6); border-radius: 8px; background: #fff; color: inherit;
+}
+.ph-callerid-none { font-size: 13px; margin-top: 12px; }
+@media (max-width: 860px) {
+  .ph-callerid { flex-direction: column; align-items: stretch; gap: 5px; }
+  .ph-callerid select { font-size: 16px; padding: 10px 12px; }
+}

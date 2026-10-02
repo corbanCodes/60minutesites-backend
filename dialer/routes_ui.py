@@ -1402,6 +1402,9 @@ def phone():
         presence=_presence(), campaign=None, recent=recent,
         campaigns=Campaign.query.filter_by(account_id=g.account_id,
                                            status="running", mode="power").all(),
+        my_numbers=[n for n in PhoneNumber.query.filter_by(
+            account_id=g.account_id, pool="rep", state="active").all()
+            if not n.is_placeholder],
         playbook=_active_playbook(None))
 
 
@@ -1586,10 +1589,27 @@ def call_manual():
     if not ev["ok"]:
         return jsonify(ok=False, reason=ev["reason"],
                        error=compliance.explain(ev)), 400
-    number = camp_mod.pick_number(g.account_id, "rep", lead,
-                                 simulate_ok=registry.simulating(s))
+    # A rep can pin the caller ID. Without this the only way to change what
+    # shows on the far end was to park numbers until the picker had no
+    # choice left, which is not a setting, it is a workaround.
+    chosen = request.form.get("from_number_id", type=int) or (
+        request.get_json(silent=True) or {}).get("from_number_id")
+    number = None
+    if chosen:
+        number = db.session.get(PhoneNumber, int(chosen))
+        if number is not None and number.account_id != g.account_id:
+            abort(403)
+        if number is not None and number.is_placeholder \
+                and not registry.simulating(s):
+            return jsonify(ok=False, error=f"{number.pretty} is sample data, "
+                           f"not a number you own. Pick another."), 400
+    if number is None:
+        number = camp_mod.pick_number(g.account_id, "rep", lead,
+                                      simulate_ok=registry.simulating(s))
     if number is None and not registry.simulating(s):
-        return jsonify(ok=False, error="No number is free to dial from."), 400
+        return jsonify(ok=False, error="No number on your account can place "
+                       "this call. Buy one on setup step 4, or check none "
+                       "of them are parked."), 400
     call = calls_mod.start_call(g.account_id, lead, "manual", s,
                                 from_number=number.e164 if number else "",
                                 agent_user_id=p.user_id, gate=ev)

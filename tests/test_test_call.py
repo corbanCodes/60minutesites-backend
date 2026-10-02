@@ -142,3 +142,58 @@ def test_no_callable_number_says_so_instead_of_dialling_nothing(account, monkeyp
     r = client.post("/dialer/test-call", follow_redirects=True,
                     data={"to_number": "+14235550147"})
     assert "No number on your account" in r.get_data(as_text=True)
+
+
+# ------------------------------------------- the desk phone's caller ID
+def test_the_phone_offers_a_caller_id_to_pin(account):
+    """There was no control at all, so the only way to change what shows on
+    the far end was to park numbers until the automatic pick ran out of
+    choices."""
+    owner, client = account
+    number(owner.id, "+14406642753")
+    body = client.get("/dialer/phone").get_data(as_text=True)
+    assert 'id="ph-from"' in body
+    assert "664-2753" in body
+
+
+def test_the_phone_never_offers_a_sample_number(account):
+    owner, client = account
+    number(owner.id, "+18655550101", sid="PNdemo0101")
+    body = client.get("/dialer/phone").get_data(as_text=True)
+    picker = body.split('id="ph-from"')[1].split("</select>")[0] \
+        if 'id="ph-from"' in body else ""
+    assert "555-0101" not in picker
+
+
+def test_a_manual_dial_uses_the_number_the_rep_pinned(account):
+    owner, client = account
+    number(owner.id, "+14406642753")
+    pinned = number(owner.id, "+18655551212")
+    r = client.post("/dialer/call/manual", json={"to": "+14235550147",
+                                                 "from_number_id": pinned.id})
+    assert r.status_code == 200, r.get_data(as_text=True)
+    from dialer.models import Call
+    call = Call.query.filter_by(account_id=owner.id).order_by(
+        Call.id.desc()).first()
+    assert call.from_number == "+18655551212"
+
+
+def test_a_manual_dial_cannot_borrow_another_accounts_number(account, ctx):
+    owner, client = account
+    number(owner.id, "+14406642753")
+    other = make_user(name="Else", email="z@n.test", dialer=True)
+    theirs = number(other.id, "+12165551234")
+    r = client.post("/dialer/call/manual", json={"to": "+14235550147",
+                                                 "from_number_id": theirs.id})
+    assert r.status_code == 403
+
+
+def test_with_no_pin_it_still_picks_the_closest_area_code(account):
+    owner, client = account
+    number(owner.id, "+14406642753")
+    local = number(owner.id, "+14235559999")
+    client.post("/dialer/call/manual", json={"to": "+14235550147"})
+    from dialer.models import Call
+    call = Call.query.filter_by(account_id=owner.id).order_by(
+        Call.id.desc()).first()
+    assert call.from_number == local.e164

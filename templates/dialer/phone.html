@@ -88,6 +88,24 @@
       <button class="dl-big-btn call" id="ph-call-btn" type="button"><i class="bi bi-telephone-fill"></i> Call</button>
       <button class="chip-btn" id="ph-number-clear" type="button">Clear</button>
     </div>
+    {# What shows on the other person's phone. There was no way to set this,
+       so the only lever anyone had was parking numbers until the automatic
+       pick had nothing else left. #}
+    {% if my_numbers %}
+    <div class="ph-callerid">
+      <label for="ph-from">They see</label>
+      <select id="ph-from">
+        <option value="">Closest to the area code I'm calling</option>
+        {% for n in my_numbers %}
+        <option value="{{ n.id }}">{{ n.pretty or n.e164 }}{% if n.region %} &middot; {{ n.region }}{% endif %}{%
+          if n.friendly_name and n.friendly_name != n.e164 %} &middot; {{ n.friendly_name }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% else %}
+    <p class="muted ph-callerid-none">No number in the rep pool can place a call.
+      <a href="/dialer/numbers">Fix that here</a>.</p>
+    {% endif %}
     {% if campaigns %}
     <div class="ph-next-row">
       <select id="dl-campaign" class="dl-select sm">
