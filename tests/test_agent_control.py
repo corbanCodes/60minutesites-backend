@@ -166,3 +166,98 @@ def test_a_custom_style_with_no_line_falls_back_rather_than_saying_nothing(agent
     a.transfer_line = ""
     db.session.commit()
     assert "one short line" in build_prompt(a, s).lower()
+
+
+def test_the_opening_choice_is_actually_on_the_page(agent):
+    """It was added to a block that is not rendered, so the control existed
+    in the template and never appeared on screen."""
+    owner, a, s, client = agent
+    body = client.get(f"/dialer/agents/{a.id}").get_data(as_text=True)
+    assert 'name="opening_mode"' in body
+    assert "Wait for them to say hello" in body
+
+
+def test_choosing_to_wait_is_saved(agent):
+    owner, a, s, client = agent
+    client.post(f"/dialer/agents/{a.id}", follow_redirects=True,
+                data={"name": "Q", "opening_mode": "wait"})
+    assert db.session.get(AiAgent, a.id).opening_mode == "wait"
+
+
+def test_a_new_agent_waits_by_default(ctx, client):
+    """The old behaviour talked over the hello, which is the first thing
+    anyone notices and the easiest thing to get right."""
+    owner = make_user(name="N", email="dflt@n.test", dialer=True)
+    s = get_settings(owner.id)
+    s.elevenlabs_default_voice_id = "v1"
+    pb = Playbook(account_id=owner.id, name="P", is_default=True,
+                  steps_json="[]", questions_json="[]", objections_json="[]")
+    db.session.add(pb)
+    db.session.commit()
+    client.post("/login", data={"email": "dflt@n.test", "password": "pw123456"})
+
+    client.post("/dialer/agents/quick", follow_redirects=True)
+
+    assert AiAgent.query.filter_by(account_id=owner.id).first().opening_mode == "wait"
+
+
+def test_a_new_agent_inherits_the_room_from_step_eight(ctx, client):
+    owner = make_user(name="N", email="room@n.test", dialer=True)
+    s = get_settings(owner.id)
+    s.elevenlabs_default_voice_id = "v1"
+    s.background_noise = True
+    s.background_preset = "office2"
+    pb = Playbook(account_id=owner.id, name="P", is_default=True,
+                  steps_json="[]", questions_json="[]", objections_json="[]")
+    db.session.add(pb)
+    db.session.commit()
+    client.post("/login", data={"email": "room@n.test", "password": "pw123456"})
+
+    client.post("/dialer/agents/quick", follow_redirects=True)
+
+    assert AiAgent.query.filter_by(
+        account_id=owner.id).first().background_preset == "office2"
+
+
+def test_background_sound_is_sent_the_way_elevenlabs_reads_it(ctx, monkeypatch):
+    """It was going as conversation_config.background_audio with a "preset"
+    key. ElevenLabs drops unknown keys silently, so every sync succeeded and
+    no ambience ever played."""
+    from dialer.providers import elevenlabs_live
+    sent = {}
+    cls = (getattr(elevenlabs_live, "ElevenLabsLive", None)
+           or elevenlabs_live.ElevenLabsAgent)
+    monkeypatch.setattr(cls, "_req", lambda self, m, p, **kw: (
+        sent.update(body=kw.get("json")) or {"ok": True, "data": {"agent_id": "a"}}))
+
+    owner = make_user(name="N", email="bg@n.test", dialer=True)
+    a = AiAgent(account_id=owner.id, name="Q", background_preset="office1")
+    db.session.add(a)
+    db.session.commit()
+
+    cls.__new__(cls).upsert_agent(a, "prompt", [])
+
+    conv = sent["body"]["conversation_config"]
+    assert "background_audio" not in conv, "the old, ignored field"
+    sound = conv["conversation"]["background_sound"]
+    assert sound["source_type"] == "preset"
+    assert sound["source_id"] == "office1"
+
+
+def test_an_invented_preset_is_not_sent_at_all(ctx, monkeypatch):
+    """ElevenLabs only accepts its own nine. Sending something else would be
+    dropped silently, which is how this went unnoticed for weeks."""
+    from dialer.providers import elevenlabs_live
+    sent = {}
+    cls = (getattr(elevenlabs_live, "ElevenLabsLive", None)
+           or elevenlabs_live.ElevenLabsAgent)
+    monkeypatch.setattr(cls, "_req", lambda self, m, p, **kw: (
+        sent.update(body=kw.get("json")) or {"ok": True, "data": {"agent_id": "a"}}))
+    owner = make_user(name="N", email="bg2@n.test", dialer=True)
+    a = AiAgent(account_id=owner.id, name="Q", background_preset="my-own-file")
+    db.session.add(a)
+    db.session.commit()
+
+    cls.__new__(cls).upsert_agent(a, "prompt", [])
+
+    assert "conversation" not in sent["body"]["conversation_config"]

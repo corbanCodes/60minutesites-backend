@@ -311,12 +311,19 @@ class ElevenLabsAgent(VoiceAgent):
         }
 
         preset = getattr(agent, "background_preset", "") or ""
-        if preset:
-            # Merged in, never assigned over: conversation_config already
-            # carries agent/tts/turn and a plain assignment would drop them.
+        if preset in BACKGROUND_PRESETS:
+            # The field is conversation.background_sound, carrying
+            # source_type and source_id. This used to go as
+            # conversation_config.background_audio with a "preset" key.
+            # ElevenLabs accepts unknown keys on an agent config rather than
+            # rejecting them, so every sync reported success and no ambience
+            # was ever mixed in. Merged, never assigned, because
+            # conversation_config already carries agent/tts/turn.
             _merge(body, {"conversation_config": {
                 "agent": {}, "tts": {},
-                "background_audio": {"preset": preset, "volume": 0.15}}})
+                "conversation": {"background_sound": {
+                    "source_type": "preset", "source_id": preset,
+                    "volume": 0.15, "crossfade_loop": True}}}})
 
         existing = (getattr(agent, "elevenlabs_agent_id", "") or "").strip()
         if existing:

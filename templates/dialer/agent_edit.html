@@ -152,6 +152,17 @@
     <div class="mg-card">
       <h3>What it says</h3>
       <div>
+        <label for="ag-open">When the call connects</label>
+        <select id="ag-open" name="opening_mode">
+          <option value="wait" {{ 'selected' if (a.opening_mode or 'speak') == 'wait' }}>
+            Wait for them to say hello first &mdash; sounds human</option>
+          <option value="speak" {{ 'selected' if (a.opening_mode or 'speak') == 'speak' }}>
+            Start talking the moment they pick up</option>
+        </select>
+        <span class="field-hint" style="display:block; margin-bottom:16px">People answer a phone with
+          &ldquo;hello&rdquo;. Talking over that is the clearest sign of a machine. Waiting costs about a
+          second and is the single biggest change you can make to how this lands.</span>
+
         <label for="ag-first">First thing it says</label>
         <textarea id="ag-first" name="first_message"
                   placeholder="Hi, this is an automated assistant calling on behalf of…">{{ a.first_message or '' }}</textarea>
