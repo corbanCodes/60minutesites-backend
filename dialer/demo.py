@@ -498,6 +498,25 @@ def _restamp_note(call):
 
 
 # -------------------------------------------------------------------- clear
+def demo_present(account_id):
+    """What demo rows this account is carrying, for the banner that offers to
+    remove them. Counts the two things a person actually notices sitting in
+    their real setup: seeded leads and the two fake phone numbers.
+
+    Deliberately cheap. This runs on every load of the Calling page, so it
+    counts rather than fetching, and it asks only the two tables worth asking
+    about rather than all nine that clear_demo touches.
+    """
+    from dialer.models import PhoneNumber
+    leads = Lead.query.filter(
+        Lead.owner_id == account_id,
+        Lead.tags.ilike(f"%{DEMO_TAG}%")).count()
+    numbers = PhoneNumber.query.filter(
+        PhoneNumber.account_id == account_id,
+        PhoneNumber.friendly_name.like(DEMO_PREFIX + "%")).count()
+    return {"leads": leads, "numbers": numbers, "any": bool(leads or numbers)}
+
+
 def clear_demo(account_id):
     """Remove every demo row on this account and nothing else.
 

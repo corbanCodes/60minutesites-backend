@@ -69,9 +69,10 @@ def home():
         "meetings": sum(1 for c in todays
                         if c.disposition in ("meeting_set", "qualified")),
     }
+    from dialer.demo import demo_present
     return render_template("dialer/home.html", s=s, ready=ready, prog=prog,
                            recent=recent, campaigns=campaigns, stats=stats,
-                           steps=wizard.STEPS)
+                           steps=wizard.STEPS, demo=demo_present(g.account_id))
 
 
 # ----------------------------------------------------------------- wizard

@@ -54,6 +54,26 @@
 </div>
 {% endif %}
 
+{# 1b ------------------------------------------------------- demo content #}
+{% if demo and demo.any and can('dialer.settings') %}
+<div class="card dl-practice dl-demo">
+  <i class="bi bi-box-seam"></i>
+  <div class="dl-practice-text">
+    <b>Sample data is mixed in with your own.</b>
+    <p class="muted">
+      {% if demo.numbers %}{{ demo.numbers }} fake phone number{{ '' if demo.numbers == 1 else 's' }}{% endif %}
+      {%- if demo.numbers and demo.leads %} and {% endif %}
+      {%- if demo.leads %}{{ demo.leads }} sample lead{{ '' if demo.leads == 1 else 's' }}{% endif %}
+      came from the demo, not from you. Good for showing someone the product, worth removing before you
+      point this at a real list &mdash; a campaign can otherwise pick a number that cannot dial.
+      Your own data is matched separately and is never touched.</p>
+  </div>
+  <form method="post" action="/dialer/demo/clear" class="inline-form">
+    <button class="btn sm" type="submit">Remove sample data</button>
+  </form>
+</div>
+{% endif %}
+
 {# 2 --------------------------------------------------- blockers / warnings #}
 {% if ready and ready.blockers %}
 <div class="alert-list">

@@ -110,6 +110,11 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
 .wiz-ol code, .wiz-steps-card code { background: #F3EDE6; border-radius: 5px; padding: 1px 6px; font-size: 12.5px; }
 .plain-list { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.8; }
 
+/* Same shape as the practice-mode banner, different colour, because it is the
+   same kind of message: something about this account is not real yet. */
+.dl-demo { border-left: 4px solid #6B5BD2; }
+.dl-demo > i { color: #6B5BD2; }
+
 /* A walkthrough list, where each step is a decision plus the reason for it.
    The note is a block so the bold choice reads on its own line first -- the
    whole point is that someone skimming mid-form can see what to click. */
