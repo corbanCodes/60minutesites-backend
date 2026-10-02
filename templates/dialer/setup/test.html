@@ -43,6 +43,22 @@
       {% endif %}
     </div>
   </div>
+
+  <div style="margin-top:14px">
+    <label for="from_number_id">Which of your numbers should it call from?</label>
+    <select id="from_number_id" name="from_number_id">
+      <option value="">Let the system choose, closest to the area code I'm dialling</option>
+      {% for nr in numbers %}
+      <option value="{{ nr.id }}">{{ nr.pretty or nr.e164 }}{% if nr.region %} &middot; {{ nr.region }}{% endif %}
+        &middot; {{ 'AI pool' if nr.pool == 'ai' else 'rep pool' }}{% if nr.friendly_name
+        and nr.friendly_name != nr.e164 %} &middot; {{ nr.friendly_name }}{% endif %}</option>
+      {% endfor %}
+    </select>
+    {% if not numbers %}
+    <p class="muted" style="margin:5px 0 0">You have no number that can place a real call. Buy one on
+      <a href="/dialer/setup/4">step 4</a>.</p>
+    {% endif %}
+  </div>
   <button class="btn" type="submit"><i class="bi bi-telephone-outbound"></i>
     {{ 'Run the test' if sim else 'Place the test call' }}</button>
   {% if not sim %}
@@ -71,14 +87,22 @@
 {% if numbers %}
 <div class="card wiz-steps-card">
   <h3>It will call from one of these</h3>
-  <p class="muted" style="margin:0 0 10px">The system picks the number closest to the area code you are
-    dialling.</p>
+  <p class="muted" style="margin:0 0 10px">Unless you pick one above, the system takes the number closest to
+    the area code you are dialling.</p>
   <ul class="plain-list">
     {% for nr in numbers %}
     <li><b>{{ nr.pretty or nr.e164 }}</b>
       <span class="muted">&mdash; {{ 'AI pool' if nr.pool == 'ai' else 'rep pool' }}{% if nr.region %}, {{ nr.region }}{% endif %}</span></li>
     {% endfor %}
   </ul>
+  {% if fake_numbers %}
+  <p class="muted" style="margin:12px 0 0"><b>Not usable:</b>
+    {% for nr in fake_numbers %}{{ nr.pretty or nr.e164 }}{{ ", " if not loop.last }}{% endfor %}.
+    {{ 'These are' if fake_numbers | length > 1 else 'This is' }} sample data, with no real number behind
+    {{ 'them' if fake_numbers | length > 1 else 'it' }} at Twilio, so nothing will ever dial from
+    {{ 'them' if fake_numbers | length > 1 else 'it' }}. Remove the sample data from the Calling page to
+    clear {{ 'them' if fake_numbers | length > 1 else 'it' }} out.</p>
+  {% endif %}
 </div>
 {% endif %}
 

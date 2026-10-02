@@ -145,8 +145,14 @@ def _step_data(key, s):
         from dialer.models import StateRule
         return {"states": StateRule.query.order_by(StateRule.state_code).all()}
     if key == "test":
+        rows = PhoneNumber.query.filter_by(account_id=acct,
+                                           state="active").all()
+        # A sample number cannot place a real call, and listing it as one of
+        # the numbers "it will call from" is how a test call went out on
+        # +18655550101 and came back with Twilio error 21210.
         return {"agents": AiAgent.query.filter_by(account_id=acct).all(),
-                "numbers": PhoneNumber.query.filter_by(account_id=acct).all()}
+                "numbers": [n for n in rows if not n.is_placeholder],
+                "fake_numbers": [n for n in rows if n.is_placeholder]}
     return {}
 
 
@@ -521,64 +527,11 @@ def number_action(number_id, action):
 def _is_local_only(number):
     """True when this row has no real number behind it at Twilio.
 
-    A genuine Twilio SID is PN followed by 32 hex characters. The seeder
-    writes "PNdemo0101", and an imported row with no SID at all is equally
-    nothing to release. Checking the shape rather than the "Demo: " prefix
-    means a renamed sample number is still recognised.
+    Thin wrapper over the model property so there is one definition; a
+    renamed sample number is still recognised because the test is the SID's
+    shape, not the name.
     """
-    import re
-    from dialer.demo import DEMO_PREFIX
-    sid = (number.twilio_sid or "").strip()
-    if not sid:
-        return True
-    if not re.fullmatch(r"PN[0-9a-fA-F]{32}", sid):
-        return True
-    return (number.friendly_name or "").startswith(DEMO_PREFIX)
-
-
-def _make_elevenlabs_webhook(s, va=None):
-    """Create the post-call webhook and remember why if it will not.
-
-    Runs on connect, so an under-privileged key fails here rather than three
-    steps later when calls come back silent. The error is STORED, not just
-    flashed: a flash is gone on the next click, and the page was left saying
-    "Missing" beside a guess at the cause, which sent someone off to re-make a
-    key that may have been fine.
-    """
-    from dialer import urls as _u
-    va = va or registry.voice_agent(s)
-    w = va.ensure_webhook(_u.elevenlabs_post_call(), "60MS HQ post-call")
-    if w.get("ok"):
-        s.elevenlabs_webhook_id = w.get("webhook_id", "")[:64]
-        s.set_secret("elevenlabs_webhook_secret", w.get("secret"))
-        s.elevenlabs_webhook_error = ""
-        return True
-    s.elevenlabs_webhook_error = str(w.get("error") or "")[:400]
-    return False
-
-
-@bp.route("/setup/elevenlabs/webhook", methods=["POST"])
-@require("dialer.settings")
-def elevenlabs_webhook_retry():
-    """Try the webhook again without touching the key.
-
-    Worth its own button because the usual fix is on ElevenLabs' side, not
-    ours: widen the key's permissions, then come back. Replacing a working
-    key to re-run one failed call is a strange thing to ask of someone.
-    """
-    s = get_settings(g.account_id)
-    if s.elevenlabs_webhook_id:
-        flash("The results webhook is already set up.")
-    elif not s.has_elevenlabs:
-        flash("Add your ElevenLabs key first.", "error")
-    elif _make_elevenlabs_webhook(s):
-        flash("Results webhook created. AI calls will come back with "
-              "transcripts and summaries.")
-    else:
-        flash(f"ElevenLabs still refused: {s.elevenlabs_webhook_error}",
-              "error")
-    db.session.commit()
-    return redirect(url_for("dialer.setup", step=6))
+    return bool(number.is_placeholder)
 
 
 def _link_number_to_elevenlabs(s, number):
@@ -1503,7 +1456,8 @@ def next_lead():
         db.session.commit()
         return jsonify(ok=False, skipped=True, reason=ev["reason"],
                        message=_explain(ev))
-    number = camp_mod.pick_number(g.account_id, "rep", lead)
+    number = camp_mod.pick_number(g.account_id, "rep", lead,
+                                 simulate_ok=registry.simulating(s))
     if number is None:
         camp_mod.release(cl, "no number", defer_minutes=15)
         return jsonify(ok=False, error="Every number has hit its daily cap.")
@@ -1593,7 +1547,8 @@ def call_manual():
     if not ev["ok"]:
         return jsonify(ok=False, reason=ev["reason"],
                        error=compliance.explain(ev)), 400
-    number = camp_mod.pick_number(g.account_id, "rep", lead)
+    number = camp_mod.pick_number(g.account_id, "rep", lead,
+                                 simulate_ok=registry.simulating(s))
     if number is None and not registry.simulating(s):
         return jsonify(ok=False, error="No number is free to dial from."), 400
     call = calls_mod.start_call(g.account_id, lead, "manual", s,
@@ -1911,7 +1866,25 @@ def test_call():
         flash(compliance.explain(ev), "error")
         return redirect(url_for("dialer.setup", step=11))
 
-    number = camp_mod.pick_number(g.account_id, "ai" if agent else "rep", lead)
+    chosen_id = request.form.get("from_number_id", type=int)
+    number = None
+    if chosen_id:
+        number = db.session.get(PhoneNumber, chosen_id)
+        if number is not None and number.account_id != g.account_id:
+            abort(403)
+        if number is not None and number.is_placeholder \
+                and not registry.simulating(s):
+            flash(f"{number.pretty} is sample data, not a number you own, so "
+                  f"Twilio will not place a call from it. Pick another.",
+                  "error")
+            return redirect(url_for("dialer.setup", step=11))
+    if number is None:
+        number = camp_mod.pick_number(g.account_id, "ai" if agent else "rep",
+                                      lead, simulate_ok=registry.simulating(s))
+    if number is None:
+        flash("No number on your account can place this call. Buy one on "
+              "step 4, or check none of them are parked.", "error")
+        return redirect(url_for("dialer.setup", step=11))
     call = calls_mod.start_call(g.account_id, lead, mode, s,
                                 from_number=number.e164 if number else "",
                                 ai_agent=agent, gate=ev)

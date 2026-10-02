@@ -260,6 +260,20 @@ class PhoneNumber(db.Model):
     purpose = db.Column(db.String(12), default="both")    # outbound|inbound|both
     elevenlabs_phone_id = db.Column(db.String(64), default="")
     state = db.Column(db.String(12), default="active")    # active|parked|released
+
+    @property
+    def is_placeholder(self):
+        """True when no real Twilio number sits behind this row.
+
+        A genuine SID is PN followed by 32 hex characters; the demo seeder
+        writes "PNdemo0101". Dialling from one of these gets Twilio error
+        21210, "the source phone number provided is not yet verified for
+        your account", which is a baffling thing to read when you did not
+        choose the number yourself.
+        """
+        import re
+        sid = (self.twilio_sid or "").strip()
+        return not sid or not re.fullmatch(r"PN[0-9a-fA-F]{32}", sid)
     area_code = db.Column(db.String(5), default="")
     region = db.Column(db.String(60), default="")
     daily_cap = db.Column(db.Integer, default=120)

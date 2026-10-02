@@ -201,14 +201,20 @@ def sweep_expired_leases(account_id=None):
 
 
 # --------------------------------------------------------------- numbers
-def pick_number(account_id, pool="rep", lead=None):
+def pick_number(account_id, pool="rep", lead=None, simulate_ok=False):
     """Lowest-used active number under its cap, preferring the lead's own area
     code so it shows as a local call."""
     today = _now().date()
     rows = PhoneNumber.query.filter_by(account_id=account_id, pool=pool,
                                        state="active").all()
+    # A sample number has no Twilio number behind it, so dialling from one
+    # fails at the carrier with an error about an unverified source. In
+    # practice mode nothing really dials, so there it is fine.
+    allow_fake = simulate_ok
     usable = []
     for n in rows:
+        if n.is_placeholder and not allow_fake:
+            continue
         if n.calls_today_date != today:
             n.calls_today, n.calls_today_date = 0, today
         if (n.calls_today or 0) < (n.daily_cap or 120):
@@ -271,7 +277,8 @@ def tick(campaign, settings, limit=None, worker="web"):
                 cl.state, cl.skip_reason = "skipped", ev["reason"]
                 skipped += 1
             continue
-        number = pick_number(account_id, campaign.number_pool, lead)
+        number = pick_number(account_id, campaign.number_pool, lead,
+                             simulate_ok=registry_simulating(settings))
         if number is None:
             release(cl, "no number available", defer_minutes=30)
             break
@@ -355,6 +362,13 @@ def _variables(lead, call):
         "last_note": (notes[0].body[:300] if notes else ""),
         "lead_status": lead.status or "New",
     }
+
+
+def registry_simulating(settings):
+    """Imported inside the function like its neighbours here, which exist to
+    keep dialer.providers out of this module's import cycle."""
+    from dialer.providers import registry
+    return registry.simulating(settings)
 
 
 def registry_telephony(settings):
