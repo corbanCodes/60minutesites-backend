@@ -348,8 +348,39 @@ class ChatMessage(db.Model):
 
 
 def ensure_schema():
-    """create_all + additive column migration so existing DBs upgrade in place."""
-    db.create_all()
+    """create_all + additive column migration so existing DBs upgrade in place.
+
+    Gunicorn boots several workers at once and every one of them runs this.
+    Two workers can both see a column as missing and both try to add it, and
+    the loser crashes -- which on Railway is a boot loop, not a warning. A
+    Postgres advisory lock makes one worker do the work while the others wait,
+    and each statement is still wrapped individually so an unexpected race
+    degrades to a skipped statement rather than a dead deploy.
+    """
+    locked = False
+    if db.engine.dialect.name == "postgresql":
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text("SELECT pg_advisory_lock(60604060)"))
+            locked = True
+        except Exception:
+            locked = False
+    try:
+        _ensure_schema_inner()
+    finally:
+        if locked:
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(text("SELECT pg_advisory_unlock(60604060)"))
+            except Exception:
+                pass
+
+
+def _ensure_schema_inner():
+    try:
+        db.create_all()
+    except Exception as e:          # another worker won the race to CREATE
+        print(f"[schema] create_all: {type(e).__name__}: {e}")
     insp = inspect(db.engine)
     wanted = {
         "lead": {"owner_id": "INTEGER", "form_id": "INTEGER", "deal_value": "FLOAT"},
@@ -382,29 +413,45 @@ def ensure_schema():
                  "tags": "VARCHAR(500)"},
     }
     added = {}
-    with db.engine.begin() as conn:
-        for table, cols in wanted.items():
-            if table not in insp.get_table_names():
-                continue
+    tables_now = set(insp.get_table_names())
+    for table, cols in wanted.items():
+        if table not in tables_now:
+            continue
+        with db.engine.begin() as conn:
             have = {c["name"] for c in insp.get_columns(table)}
             for col, ddl in cols.items():
-                if col not in have:
-                    conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {col} {ddl}'))
+                if col in have:
+                    continue
+                try:
+                    conn.execute(text(
+                        f'ALTER TABLE "{table}" ADD COLUMN {col} {ddl}'))
                     added.setdefault(table, []).append(col)
-        # Added columns arrive NULL. Give the ones with meaning a value so every
-        # EXISTING row keeps behaving exactly as it did before this deploy:
-        # every current user is an active owner with both new features OFF.
-        backfill = {
-            ("user", "role"): "'owner'", ("user", "active"): "TRUE",
-            ("user", "feature_multi_user"): "FALSE", ("user", "feature_dialer"): "FALSE",
-            ("note", "kind"): "'note'",
-            ("lead", "do_not_call"): "FALSE", ("lead", "call_count"): "0",
-            ("lead", "consent_status"): "'none'", ("lead", "tags"): "''",
-        }
-        for (table, col), value in backfill.items():
-            if col in added.get(table, []):
+                except Exception as e:
+                    # already there (a racing worker), or the DDL is wrong --
+                    # either way, never take the app down over one column
+                    print(f"[schema] {table}.{col}: {type(e).__name__}: {e}")
+    # Added columns arrive NULL. Give the ones with meaning a value so every
+    # EXISTING row keeps behaving exactly as it did before this deploy:
+    # every current user is an active owner with both new features OFF.
+    backfill = {
+        ("user", "role"): "'owner'", ("user", "active"): "TRUE",
+        ("user", "feature_multi_user"): "FALSE",
+        ("user", "feature_dialer"): "FALSE",
+        ("note", "kind"): "'note'",
+        ("lead", "do_not_call"): "FALSE", ("lead", "call_count"): "0",
+        ("lead", "consent_status"): "'none'", ("lead", "tags"): "''",
+    }
+    for (table, col), value in backfill.items():
+        if col not in added.get(table, []):
+            continue
+        try:
+            with db.engine.begin() as conn:
                 conn.execute(text(
                     f'UPDATE "{table}" SET {col} = {value} WHERE {col} IS NULL'))
+        except Exception as e:
+            print(f"[schema] backfill {table}.{col}: {type(e).__name__}: {e}")
+    if added:
+        print(f"[schema] added columns: {added}")
 
 
 with app.app_context():
