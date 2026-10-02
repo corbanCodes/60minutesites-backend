@@ -334,7 +334,10 @@
           'Background sound      : ' + (bg.source_id
                                         ? bg.source_id + ' at volume ' + (bg.volume || '?')
                                         : 'NONE — nothing will play') + '\n' +
-          'Transfer tool         : ' + (d.has_transfer ? 'present' : 'MISSING — it cannot hand over') + '\n' +
+          'Transfer tool         : ' + (d.has_transfer
+                                        ? 'present, under ' + d.transfer_at
+                                        : 'MISSING — it cannot hand over') + '\n' +
+          'Keys they return      : ' + (d.prompt_keys || []).join(', ') + '\n' +
           'Webhook tools         : ' + d.tool_count + '\n' +
           'Instructions          : ' + d.prompt_chars + ' characters';
       })

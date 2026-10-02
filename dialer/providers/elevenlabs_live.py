@@ -323,7 +323,7 @@ class ElevenLabsAgent(VoiceAgent):
                 "agent": {}, "tts": {},
                 "conversation": {"background_sound": {
                     "source_type": "preset", "source_id": preset,
-                    "volume": 0.15, "crossfade_loop": True}}}})
+                    "volume": 0.3, "crossfade_loop": True}}}})
 
         existing = (getattr(agent, "elevenlabs_agent_id", "") or "").strip()
         if existing:
@@ -359,14 +359,40 @@ class ElevenLabsAgent(VoiceAgent):
         prompt_cfg = agent_cfg.get("prompt") or {}
         sound = ((conv.get("conversation") or {}).get("background_sound")
                  or {})
+        # The transfer tool is hunted for rather than read from one path.
+        # We send it exactly as ElevenLabs documents and it is not coming
+        # back where the create shape says it should, so the read model and
+        # the write model evidently differ. Looking in several places and
+        # reporting WHERE it was found is the only way to settle that
+        # without another round of guessing.
+        found_at = ""
+        for label, holder in (("prompt.built_in_tools",
+                               prompt_cfg.get("built_in_tools")),
+                              ("agent.built_in_tools",
+                               agent_cfg.get("built_in_tools")),
+                              ("conversation_config.built_in_tools",
+                               conv.get("built_in_tools")),
+                              ("platform_settings.built_in_tools",
+                               (data.get("platform_settings") or {})
+                               .get("built_in_tools"))):
+            if isinstance(holder, dict) and holder.get("transfer_to_number"):
+                found_at = label
+                break
+        if not found_at:
+            for t in (prompt_cfg.get("tools") or []):
+                if isinstance(t, dict) and t.get("name") == "transfer_to_number":
+                    found_at = "prompt.tools"
+                    break
         return ok(
             name=data.get("name", ""),
             first_message=agent_cfg.get("first_message", ""),
             voice_id=((conv.get("tts") or {}).get("voice_id") or ""),
             llm=prompt_cfg.get("llm", ""),
             background=sound,
-            has_transfer=bool((prompt_cfg.get("built_in_tools") or {})
-                              .get("transfer_to_number")),
+            has_transfer=bool(found_at),
+            transfer_at=found_at,
+            prompt_keys=sorted(prompt_cfg.keys()),
+            agent_keys=sorted(agent_cfg.keys()),
             tool_count=len(prompt_cfg.get("tools") or []),
             prompt_chars=len(prompt_cfg.get("prompt") or ""))
 
