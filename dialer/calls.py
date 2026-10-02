@@ -222,6 +222,24 @@ def finalize(call, settings=None, force=False):
         else:
             event(call, "ai_failed", r.get("error", ""))
 
+    # 2b. richer coaching when the account has a playbook: which questions
+    #     actually got asked, which were missed, one line of advice.
+    if call.transcript and call.mode in ("manual", "power"):
+        try:
+            from dialer import coaching
+            from dialer.models import Campaign, Playbook
+            pb = None
+            if call.campaign_id:
+                camp = db.session.get(Campaign, call.campaign_id)
+                if camp and camp.playbook_id:
+                    pb = db.session.get(Playbook, camp.playbook_id)
+            pb = pb or Playbook.query.filter_by(account_id=call.account_id,
+                                                is_default=True).first()
+            if pb is not None:
+                coaching.score_call(call, settings, pb)
+        except Exception as e:
+            event(call, "coaching_failed", str(e)[:200])
+
     # 3. an opt-out heard on the call beats everything else ---------------
     if call.revocation_detected and lead is not None:
         compliance.suppress(call.account_id, lead.phone_key,
