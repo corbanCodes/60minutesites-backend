@@ -303,7 +303,11 @@ def _make_voicemail(account_id, settings):
     the compliance record all read, and a demo should never ship a binary."""
     drop = VoicemailDrop(
         account_id=account_id, name=DEMO_PREFIX + "20-second napkin drop",
-        mimetype="audio/wav", duration_s=19.4, is_default=True,
+        # No media_id, because there is no recording -- this exists to show
+        # the shape of a good message, not to be played down a phone line.
+        # is_default stays False for exactly that reason: a default drop with
+        # no audio is a rep pressing the button and sending silence.
+        mimetype="audio/wav", duration_s=19.4, is_default=False,
         transcript=_VOICEMAIL_TRANSCRIPT.format(
             company=settings.ai_disclosure_name or "NapkinAds",
             callback=settings.ai_callback_number or "the number on your screen"))

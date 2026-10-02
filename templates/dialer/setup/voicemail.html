@@ -9,14 +9,28 @@
   <tr>
     <td class="ct-title ct-wide">
       <span class="rowlink">{{ d.name }}</span>
-      {% if d.is_default %}<span class="pill" style="background:#2E7D4F">Default</span>{% endif %}
+      {% if d.is_default %}<span class="pill" style="background:#2E7D4F">Reps drop this one</span>{% endif %}
+      {% if not d.media_id %}<span class="pill" style="background:#8A7F73">Script only, no audio</span>{% endif %}
       {% if d.transcript %}<div class="subtext">{{ d.transcript }}</div>{% endif %}
+      {% if not d.media_id %}<div class="subtext"><b>Nothing to play.</b> This is the sample wording to
+        copy, not a recording. Read it into the recorder below in your own voice.</div>{% endif %}
     </td>
     <td class="muted ct-wide" data-label="Length">
-      {% if d.duration_s %}{{ d.duration_s | round(0) | int }} sec{% else %}&mdash;{% endif %}
+      {% if d.media_id and d.duration_s %}{{ d.duration_s | round(0) | int }} sec{% else %}&mdash;{% endif %}
     </td>
-    <td class="ct-wide" data-label="Listen"><audio controls preload="none" src="/dialer/vm/{{ d.id }}" class="vm-audio"></audio></td>
+    <td class="ct-wide" data-label="Listen">
+      {% if d.media_id %}
+      <audio controls preload="none" src="/dialer/vm/{{ d.id }}" class="vm-audio"></audio>
+      {% else %}
+      <span class="muted">&mdash;</span>
+      {% endif %}
+    </td>
     <td class="ct-actions ct-wide" style="text-align:right">
+      {% if d.media_id and not d.is_default %}
+      <form method="post" action="/dialer/voicemail/{{ d.id }}/default" class="inline-form">
+        <button class="chip-btn" type="submit">Use this one</button>
+      </form>
+      {% endif %}
       <form method="post" action="/dialer/voicemail/{{ d.id }}/delete" class="inline-form"
             onsubmit="return confirm('Delete the recording named {{ d.name }}? Any campaign set to drop it will stop dropping anything.')">
         <button class="chip-btn danger" type="submit">Delete</button>
@@ -44,18 +58,20 @@
         <span class="rec-dot" id="rec-dot" hidden></span>
       </div>
       <p class="muted" id="rec-status" style="margin:10px 0 0">Your browser will ask to use the microphone the
-        first time. Nothing is sent anywhere until you press Save.</p>
+        first time. Nothing leaves your machine until you press Save.</p>
       <div id="rec-playback" hidden>
-        <div class="rec-playback-label">What we captured</div>
+        <div class="rec-playback-label">Your take &mdash; listen before you save it</div>
         <audio controls id="rec-audio" class="vm-audio wide"></audio>
       </div>
     </div>
 
     <div class="row2" style="margin-top:16px">
       <div>
-        <label for="vm-name">Name this message</label>
-        <input type="text" id="vm-name" name="name" maxlength="120" required
+        <label for="vm-name">Name this message <span class="muted">(optional)</span></label>
+        <input type="text" id="vm-name" name="name" maxlength="120"
                placeholder="Standard first-call voicemail">
+        <p class="muted" style="margin:5px 0 0">Only so you can tell two apart later. Leave it blank and we
+          will name it for you.</p>
       </div>
       <div>
         <label for="vm-audio">Or upload a file you already have</label>
@@ -65,7 +81,9 @@
       </div>
     </div>
 
-    <button class="btn" type="submit" style="margin-top:14px"><i class="bi bi-cloud-upload"></i> Save this message</button>
+    <button class="btn" type="submit" id="vm-save" style="margin-top:14px" disabled>
+      <i class="bi bi-cloud-upload"></i> Save this message</button>
+    <span class="muted" id="vm-save-hint" style="margin-left:10px">Record something or choose a file first.</span>
   </form>
 </div>
 
@@ -91,136 +109,189 @@
 </div>
 
 <script>
-  (function () {
-    var startBtn = document.getElementById('rec-start');
-    var stopBtn = document.getElementById('rec-stop');
-    var timerEl = document.getElementById('rec-timer');
-    var dotEl = document.getElementById('rec-dot');
-    var statusEl = document.getElementById('rec-status');
-    var playWrap = document.getElementById('rec-playback');
-    var audioEl = document.getElementById('rec-audio');
-    var fileInput = document.getElementById('vm-audio');
-    var form = document.getElementById('vm-form');
-    if (!startBtn || !form) return;
+/* The recorder, as a state machine with three states, because the previous
+   version had none and you could sit in two of them at once.
 
-    var rec = null, chunks = [], ticker = null, started = 0;
-    var recordedBlob = null, recordedName = 'voicemail.wav';
+   idle      nothing captured; Save is off
+   recording mic is live; Record is off, Stop is on
+   ready     a take exists; Save is on and Record says "Record again"
 
-    if (!navigator.mediaDevices || !window.MediaRecorder) {
+   Save stays disabled until there is genuinely something to send. The old
+   version left it enabled and relied on a `required` name field to stop an
+   empty submit, so a blank name silently blocked a save someone had just
+   spent a minute recording and the only clue was a native tooltip.
+*/
+(function () {
+  var startBtn = document.getElementById('rec-start');
+  var stopBtn  = document.getElementById('rec-stop');
+  var timerEl  = document.getElementById('rec-timer');
+  var dotEl    = document.getElementById('rec-dot');
+  var statusEl = document.getElementById('rec-status');
+  var playWrap = document.getElementById('rec-playback');
+  var audioEl  = document.getElementById('rec-audio');
+  var fileInput = document.getElementById('vm-audio');
+  var nameInput = document.getElementById('vm-name');
+  var form     = document.getElementById('vm-form');
+  var saveBtn  = document.getElementById('vm-save');
+  var saveHint = document.getElementById('vm-save-hint');
+  if (!startBtn || !form) return;
+
+  var rec = null, chunks = [], ticker = null, started = 0, busy = false;
+  var recordedBlob = null, recordedName = 'voicemail.wav';
+
+  function setReady(ready, why) {
+    saveBtn.disabled = !ready;
+    saveHint.textContent = ready ? '' : (why || 'Record something or choose a file first.');
+  }
+
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    startBtn.disabled = true;
+    statusEl.textContent = 'This browser cannot record audio. Upload a file below instead. ' +
+      'Recording also needs a secure (https) address.';
+    setReady(false, 'Choose a file to upload.');
+  }
+
+  /* An uploaded file is just as valid a way to arrive at ready. */
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files.length) {
+      recordedBlob = null;
+      playWrap.hidden = true;
+      statusEl.textContent = 'Using the file you chose: ' + fileInput.files[0].name;
+      setReady(true);
+    } else if (!recordedBlob) {
+      setReady(false);
+    }
+  });
+
+  function fmt(ms) {
+    var t = Math.floor(ms / 1000);
+    return Math.floor(t / 60) + ':' + ('0' + (t % 60)).slice(-2);
+  }
+
+  function tick() {
+    var ms = Date.now() - started;
+    timerEl.textContent = fmt(ms);
+    timerEl.classList.toggle('over', ms > 20000);
+    if (ms > 60000 && rec && rec.state === 'recording') rec.stop();
+  }
+
+  /* 16-bit PCM WAV, so the server gets a format every phone network already
+     understands rather than whatever the browser felt like producing. */
+  function toWav(buffer) {
+    var ch = buffer.numberOfChannels, len = buffer.length, rate = buffer.sampleRate;
+    var mono = new Float32Array(len), i, c;
+    for (c = 0; c < ch; c++) {
+      var data = buffer.getChannelData(c);
+      for (i = 0; i < len; i++) mono[i] += data[i] / ch;
+    }
+    var out = new DataView(new ArrayBuffer(44 + len * 2));
+    function str(off, t) { for (var k = 0; k < t.length; k++) out.setUint8(off + k, t.charCodeAt(k)); }
+    str(0, 'RIFF'); out.setUint32(4, 36 + len * 2, true); str(8, 'WAVE');
+    str(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true);
+    out.setUint16(22, 1, true); out.setUint32(24, rate, true);
+    out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
+    str(36, 'data'); out.setUint32(40, len * 2, true);
+    for (i = 0; i < len; i++) {
+      var v = Math.max(-1, Math.min(1, mono[i]));
+      out.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
+    }
+    return new Blob([out.buffer], { type: 'audio/wav' });
+  }
+
+  function present(blob, name) {
+    busy = false;
+    recordedBlob = blob;
+    recordedName = name;
+    audioEl.src = URL.createObjectURL(blob);
+    playWrap.hidden = false;
+    startBtn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Record again';
+    statusEl.textContent = 'Listen back. Record again to replace it, or press Save.';
+    setReady(true);
+  }
+
+  function finish(raw) {
+    /* Converting is async, and Save must not be pressable while it runs or
+       you can submit a take that does not exist yet. */
+    busy = true;
+    setReady(false, 'Preparing the recording…');
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) { present(raw, 'voicemail.webm'); return; }
+    raw.arrayBuffer().then(function (buf) {
+      return new Ctx().decodeAudioData(buf);
+    }).then(function (decoded) {
+      present(toWav(decoded), 'voicemail.wav');
+    }).catch(function () {
+      present(raw, 'voicemail.webm');   // send what we have rather than nothing
+    });
+  }
+
+  startBtn.addEventListener('click', function () {
+    if (rec && rec.state === 'recording') return;      // no double-start
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      chunks = [];
+      recordedBlob = null;
+      playWrap.hidden = true;
+      setReady(false, 'Recording…');
+      rec = new MediaRecorder(stream);
+      rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        clearInterval(ticker);
+        dotEl.hidden = true;
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        if (chunks.length) {
+          finish(new Blob(chunks, { type: chunks[0].type || 'audio/webm' }));
+        } else {
+          statusEl.textContent = 'Nothing was captured. Check the microphone and try again.';
+          setReady(false);
+        }
+      };
+      rec.start();
+      started = Date.now();
+      timerEl.textContent = '0:00';
+      timerEl.classList.remove('over');
+      ticker = setInterval(tick, 200);
+      dotEl.hidden = false;
       startBtn.disabled = true;
-      statusEl.textContent = 'This browser cannot record audio. Upload a file below instead. ' +
-        'Recording also needs a secure (https) address.';
-      return;
-    }
+      stopBtn.disabled = false;
+      statusEl.textContent = 'Recording. Aim to finish inside twenty seconds.';
+    }).catch(function () {
+      statusEl.textContent = 'The microphone was blocked. Allow it in your browser settings, ' +
+        'or upload a file below.';
+      setReady(false, 'Choose a file to upload instead.');
+    });
+  });
 
-    function fmt(ms) {
-      var t = Math.floor(ms / 1000);
-      return Math.floor(t / 60) + ':' + ('0' + (t % 60)).slice(-2);
-    }
+  stopBtn.addEventListener('click', function () {
+    if (rec && rec.state === 'recording') rec.stop();
+  });
 
-    function tick() {
-      var ms = Date.now() - started;
-      timerEl.textContent = fmt(ms);
-      timerEl.classList.toggle('over', ms > 20000);
-      if (ms > 60000 && rec && rec.state === 'recording') rec.stop();
-    }
+  form.addEventListener('submit', function (ev) {
+    if (busy) { ev.preventDefault(); return; }
+    var hasFile = fileInput.files && fileInput.files.length;
+    if (!hasFile && !recordedBlob) { ev.preventDefault(); setReady(false); return; }
+    if (hasFile) return;                      // let the browser post it normally
 
-    // ---- minimal 16-bit PCM WAV encoder, so the server gets a format
-    // every phone network already understands.
-    function toWav(buffer) {
-      var ch = buffer.numberOfChannels, len = buffer.length, rate = buffer.sampleRate;
-      var mono = new Float32Array(len), i, c;
-      for (c = 0; c < ch; c++) {
-        var data = buffer.getChannelData(c);
-        for (i = 0; i < len; i++) mono[i] += data[i] / ch;
-      }
-      var out = new DataView(new ArrayBuffer(44 + len * 2));
-      function str(off, s) { for (var k = 0; k < s.length; k++) out.setUint8(off + k, s.charCodeAt(k)); }
-      str(0, 'RIFF'); out.setUint32(4, 36 + len * 2, true); str(8, 'WAVE');
-      str(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true);
-      out.setUint16(22, 1, true); out.setUint32(24, rate, true);
-      out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
-      str(36, 'data'); out.setUint32(40, len * 2, true);
-      for (i = 0; i < len; i++) {
-        var v = Math.max(-1, Math.min(1, mono[i]));
-        out.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
-      }
-      return new Blob([out.buffer], { type: 'audio/wav' });
-    }
-
-    function present(blob, name) {
-      recordedBlob = blob;
-      recordedName = name;
-      audioEl.src = URL.createObjectURL(blob);
-      playWrap.hidden = false;
-      try {
-        var dt = new DataTransfer();
-        dt.items.add(new File([blob], name, { type: blob.type }));
-        fileInput.files = dt.files;
-      } catch (e) { /* older browser: the submit handler posts the blob instead */ }
-      statusEl.textContent = 'Listen back. Record again to replace it, or name it and press Save.';
-    }
-
-    function finish(raw) {
-      var ctx = window.AudioContext || window.webkitAudioContext;
-      if (!ctx) { present(raw, 'voicemail.webm'); return; }
-      raw.arrayBuffer().then(function (buf) {
-        return new (ctx)().decodeAudioData(buf);
-      }).then(function (decoded) {
-        present(toWav(decoded), 'voicemail.wav');
-      }).catch(function () {
-        present(raw, 'voicemail.webm');
+    ev.preventDefault();
+    saveBtn.disabled = true;
+    saveHint.textContent = 'Saving…';
+    var fd = new FormData(form);
+    fd.set('audio', recordedBlob, recordedName);
+    if (!(nameInput.value || '').trim()) fd.set('name', '');   // the server names it
+    fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.status);
+        window.location = r.url || '/dialer/setup/10';
+      })
+      .catch(function () {
+        saveBtn.disabled = false;
+        saveHint.textContent = '';
+        statusEl.textContent = 'That did not upload. Your recording is still here — ' +
+          'press Save to try again, or use the file upload.';
       });
-    }
-
-    startBtn.addEventListener('click', function () {
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-        chunks = [];
-        rec = new MediaRecorder(stream);
-        rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
-        rec.onstop = function () {
-          stream.getTracks().forEach(function (t) { t.stop(); });
-          clearInterval(ticker);
-          dotEl.hidden = true;
-          startBtn.disabled = false;
-          stopBtn.disabled = true;
-          if (chunks.length) finish(new Blob(chunks, { type: chunks[0].type || 'audio/webm' }));
-        };
-        rec.start();
-        started = Date.now();
-        timerEl.textContent = '0:00';
-        timerEl.classList.remove('over');
-        ticker = setInterval(tick, 200);
-        dotEl.hidden = false;
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        playWrap.hidden = true;
-        statusEl.textContent = 'Recording. Aim to finish inside twenty seconds.';
-      }).catch(function () {
-        statusEl.textContent = 'The microphone was blocked. Allow it in your browser settings, ' +
-          'or upload a file below.';
-      });
-    });
-
-    stopBtn.addEventListener('click', function () {
-      if (rec && rec.state === 'recording') rec.stop();
-    });
-
-    form.addEventListener('submit', function (ev) {
-      if (fileInput.files && fileInput.files.length) return;
-      if (!recordedBlob) {
-        ev.preventDefault();
-        statusEl.textContent = 'Record something first, or choose a file to upload.';
-        return;
-      }
-      ev.preventDefault();
-      var fd = new FormData(form);
-      fd.set('audio', recordedBlob, recordedName);
-      fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' })
-        .then(function (r) { window.location = r.url || '/dialer/setup/10'; })
-        .catch(function () { statusEl.textContent = 'That did not upload. Try again, or use the file upload.'; });
-    });
-  })();
+  });
+})();
 </script>
 
 {% endblock %}

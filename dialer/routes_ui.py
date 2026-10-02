@@ -612,7 +612,12 @@ def voicemail_media(drop_id):
 @bp.route("/voicemail/new", methods=["POST"])
 @require("playbooks.edit")
 def voicemail_new():
-    name = (request.form.get("name") or "Voicemail").strip()[:120]
+    # The name is optional now, so an unnamed one still has to be tellable
+    # apart from the next unnamed one.
+    name = (request.form.get("name") or "").strip()[:120]
+    if not name:
+        n = VoicemailDrop.query.filter_by(account_id=g.account_id).count() + 1
+        name = "Voicemail" if n == 1 else f"Voicemail {n}"
     f = request.files.get("audio")
     if f is None or not f.filename:
         flash("No recording came through — try again.", "error")
@@ -621,17 +626,49 @@ def voicemail_new():
     if len(data) > 8 * 1024 * 1024:
         flash("That recording is too big. Keep it under 20 seconds.", "error")
         return redirect(url_for("dialer.setup", step=10))
+    # Browsers hand back "video/webm" for a microphone recording, and an
+    # <audio> element will not play a video type, so the drop looked saved
+    # and silently refused to play back.
+    mimetype = (f.mimetype or "").strip() or "audio/wav"
+    if mimetype.startswith("video/"):
+        mimetype = "audio/" + mimetype.split("/", 1)[1]
     media = Media(owner_id=g.account_id, filename=f.filename,
-                  mimetype=f.mimetype or "audio/wav", data=data)
+                  mimetype=mimetype, data=data)
     db.session.add(media)
     db.session.flush()
-    first = VoicemailDrop.query.filter_by(account_id=g.account_id).count() == 0
+    # First one that can actually PLAY becomes the default. Counting rows
+    # would hand the default to the sample, which has no audio.
+    first = VoicemailDrop.query.filter_by(
+        account_id=g.account_id).filter(
+        VoicemailDrop.media_id.isnot(None)).count() == 0
     db.session.add(VoicemailDrop(
         account_id=g.account_id, name=name, media_id=media.id,
         mimetype=media.mimetype, is_default=first,
         transcript=(request.form.get("transcript") or "")[:2000]))
     db.session.commit()
     flash(f"“{name}” saved. Your reps can drop it with one click.")
+    return redirect(url_for("dialer.setup", step=10))
+
+
+@bp.route("/voicemail/<int:drop_id>/default", methods=["POST"])
+@require("playbooks.edit")
+def voicemail_default(drop_id):
+    """Choose which message a rep's one click actually sends.
+
+    There was no way to pick, so whichever row happened to be created first
+    was the one every campaign used, for ever.
+    """
+    drop = VoicemailDrop.query.get_or_404(drop_id)
+    if drop.account_id != g.account_id:
+        abort(403)
+    if not drop.media_id:
+        flash("That one has no audio behind it, so it cannot be the default "
+              "— a rep would press the button and send silence.", "error")
+        return redirect(url_for("dialer.setup", step=10))
+    for other in VoicemailDrop.query.filter_by(account_id=g.account_id):
+        other.is_default = (other.id == drop.id)
+    db.session.commit()
+    flash(f"“{drop.name}” is the one your reps will drop.")
     return redirect(url_for("dialer.setup", step=10))
 
 

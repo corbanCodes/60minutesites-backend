@@ -165,6 +165,15 @@ def _drop_twiml(call):
     drop = db.session.get(VoicemailDrop, drop_id) if drop_id else None
     if drop is None:
         return "<Response><Hangup/></Response>"
+    if not drop.media_id:
+        # A drop row with no audio behind it plays silence. Marking the call
+        # "voicemail dropped" anyway is the worst possible outcome: the rep
+        # moves on believing they left a message, the lead never hears one,
+        # and the follow-up is scheduled against a conversation that did not
+        # happen. Say nothing and leave the flag alone.
+        call.error = (call.error or "") or "voicemail drop has no audio"
+        db.session.commit()
+        return "<Response><Hangup/></Response>"
     from dialer import urls
     url = urls.voicemail_media(drop.id)
     call.voicemail_dropped = True
