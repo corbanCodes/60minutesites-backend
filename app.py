@@ -414,23 +414,34 @@ def ensure_schema():
     and each statement is still wrapped individually so an unexpected race
     degrades to a skipped statement rather than a dead deploy.
     """
-    locked = False
-    if db.engine.dialect.name == "postgresql":
-        try:
-            with db.engine.begin() as conn:
-                conn.execute(text("SELECT pg_advisory_lock(60604060)"))
-            locked = True
-        except Exception:
-            locked = False
-    try:
+    if db.engine.dialect.name != "postgresql":
         _ensure_schema_inner()
+        return
+    # A Postgres advisory lock belongs to a CONNECTION, not a transaction, so
+    # lock, work and unlock all have to happen on the SAME connection -- and
+    # it has to be one we hold open ourselves, because engine.begin() returns
+    # its connection to the pool on commit. pg_try_advisory_lock rather than
+    # the blocking form: if another worker is already migrating, this one
+    # waits a moment and carries on reading rather than hanging at boot.
+    import time
+    conn = db.engine.connect()
+    try:
+        got = False
+        for _ in range(30):
+            got = bool(conn.exec_driver_sql(
+                "SELECT pg_try_advisory_lock(60604060)").scalar())
+            if got:
+                break
+            time.sleep(1)
+        if not got:
+            print("[schema] another worker is migrating; continuing")
+            return
+        try:
+            _ensure_schema_inner()
+        finally:
+            conn.exec_driver_sql("SELECT pg_advisory_unlock(60604060)")
     finally:
-        if locked:
-            try:
-                with db.engine.begin() as conn:
-                    conn.execute(text("SELECT pg_advisory_unlock(60604060)"))
-            except Exception:
-                pass
+        conn.close()
 
 
 def _ensure_schema_inner():
@@ -440,7 +451,6 @@ def _ensure_schema_inner():
         print(f"[schema] create_all: {type(e).__name__}: {e}")
     insp = inspect(db.engine)
     wanted = {
-        "lead": {"owner_id": "INTEGER", "form_id": "INTEGER", "deal_value": "FLOAT"},
         "site": {"owner_id": "INTEGER", "template": "VARCHAR(80)", "html": "TEXT",
                  "github_repo": "VARCHAR(200)", "live_url": "VARCHAR(300)",
                  "last_push_at": "TIMESTAMP",
@@ -452,13 +462,19 @@ def _ensure_schema_inner():
                  "account_id": "INTEGER", "role": "VARCHAR(20)",
                  "active": "BOOLEAN", "seat_limit": "INTEGER",
                  "feature_multi_user": "BOOLEAN", "feature_dialer": "BOOLEAN",
+                 "feature_enrichment": "BOOLEAN", "hidden_tools": "VARCHAR(600)",
                  "last_login_at": "TIMESTAMP", "job_title": "VARCHAR(80)"},
         "flipbook": {"toc": "TEXT"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---
         "task": {"assignee_id": "INTEGER"},
         "note": {"author_id": "INTEGER", "kind": "VARCHAR(20)"},
-        "lead": {"assignee_id": "INTEGER", "phone_e164": "VARCHAR(20)",
+        # NOTE: one entry per table. A duplicate key here is silently
+        # discarded by Python, which is how owner_id/form_id/deal_value went
+        # missing from this list for months.
+        "lead": {"owner_id": "INTEGER", "form_id": "INTEGER",
+                 "deal_value": "FLOAT",
+                 "assignee_id": "INTEGER", "phone_e164": "VARCHAR(20)",
                  "phone_key": "VARCHAR(20)", "line_type": "VARCHAR(16)",
                  "line_type_checked_at": "TIMESTAMP", "line_type_raw": "TEXT",
                  "carrier": "VARCHAR(120)", "timezone": "VARCHAR(40)",
