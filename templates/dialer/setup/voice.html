@@ -1,0 +1,176 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+<form class="form wiz-form" method="post" action="/dialer/setup/voice/save">
+
+  <!-- ----------------------------------------------------------- voice -->
+  <div>
+    <label>The AI's voice</label>
+    {% if voices %}
+    <div class="voicegrid">
+      {% for v in voices %}
+      <label class="voicecard">
+        <input type="radio" name="voice_id" value="{{ v.voice_id }}"
+               {{ 'checked' if s.elevenlabs_default_voice_id == v.voice_id or (not s.elevenlabs_default_voice_id and loop.first) }}>
+        <span class="voicecard-body">
+          <span class="voicecard-name"><i class="bi bi-soundwave"></i> {{ v.name or v.voice_id }}</span>
+          {% if v.labels %}<span class="voicecard-labels">{{ v.labels }}</span>{% endif %}
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="muted" style="margin:8px 0 0">Pick the one that sounds like someone who works for you. A voice
+      that is too polished reads as a robot; a plain one gets further into the call.</p>
+    {% else %}
+    <div class="card empty">
+      <i class="bi bi-soundwave"></i>
+      <p><b>No voices to choose from yet.</b></p>
+      <p class="muted">Connect ElevenLabs on <a href="/dialer/setup/6">step 6</a> and the voices on your account
+        appear here. The settings below still apply to calls your reps make, so it is worth finishing this
+        page.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ------------------------------------------------------ call limits -->
+  <fieldset class="addons">
+    <legend>How long a call may run</legend>
+    <div class="row2">
+      <div>
+        <label for="max_call_seconds">Hang up after</label>
+        <div class="inline-num">
+          <input type="number" id="max_call_seconds" name="max_call_seconds" min="30" max="3600"
+                 value="{{ s.max_call_seconds or 600 }}"> <span class="muted">seconds</span>
+        </div>
+        <p class="muted" style="margin:5px 0 0">This protects your credits. A call that gets stuck on hold
+          music, or parked in a phone tree, bills every minute until something ends it. Ten minutes is a
+          sensible cap for a sales call.</p>
+      </div>
+      <div>
+        <label for="idle_hangup_seconds">Hang up after silence of</label>
+        <div class="inline-num">
+          <input type="number" id="idle_hangup_seconds" name="idle_hangup_seconds" min="0" max="300"
+                 value="{{ s.idle_hangup_seconds or '' }}" placeholder="off"> <span class="muted">seconds</span>
+        </div>
+        <p class="muted" style="margin:5px 0 0">For AI calls. If nobody speaks for this long, the call ends.
+          Leave it blank to let the call run to the cap above. Twenty seconds is a reasonable value.</p>
+      </div>
+    </div>
+    <div>
+      <label for="rep_idle_teardown_seconds">Close a rep's line after they go quiet for</label>
+      <div class="inline-num">
+        <input type="number" id="rep_idle_teardown_seconds" name="rep_idle_teardown_seconds" min="30" max="3600"
+               value="{{ s.rep_idle_teardown_seconds or 300 }}"> <span class="muted">seconds</span>
+      </div>
+      <p class="muted" style="margin:5px 0 0">A rep who walks away with the dialer open holds a live phone line
+        open and you pay for it. Five minutes is the default.</p>
+    </div>
+  </fieldset>
+
+  <!-- ------------------------------------------------------ background -->
+  <fieldset class="addons">
+    <legend>Background sound</legend>
+    <label class="addon">
+      <input type="checkbox" name="background_noise" {{ 'checked' if s.background_noise }}>
+      <span>Play quiet room noise behind the AI
+        <em>Dead silence behind a voice is the clearest sign a call is automated. A faint room makes the call
+          easier to listen to. Use it alongside the disclosure, never instead of it.</em></span>
+    </label>
+    <div>
+      <label for="background_preset">Which room</label>
+      <select id="background_preset" name="background_preset">
+        <option value="office1" {{ 'selected' if s.background_preset == 'office1' or not s.background_preset }}>Small office, quiet</option>
+        <option value="office2" {{ 'selected' if s.background_preset == 'office2' }}>Busier office, some voices</option>
+        <option value="restaurant" {{ 'selected' if s.background_preset == 'restaurant' }}>Restaurant</option>
+        <option value="city" {{ 'selected' if s.background_preset == 'city' }}>Street, outdoors</option>
+        <option value="typing" {{ 'selected' if s.background_preset == 'typing' }}>Someone typing</option>
+      </select>
+    </div>
+  </fieldset>
+
+  <!-- -------------------------------------------------------- transfer -->
+  <fieldset class="addons">
+    <legend>Where a hot lead goes</legend>
+    <div>
+      <label for="transfer_mode">When the AI decides to hand the call over</label>
+      <select id="transfer_mode" name="transfer_mode">
+        <option value="browser" {{ 'selected' if s.transfer_mode != 'number' }}>
+          Ring whoever is on shift in this app</option>
+        <option value="number" {{ 'selected' if s.transfer_mode == 'number' }}>
+          Ring one phone number</option>
+      </select>
+      <p class="muted" style="margin:5px 0 0">Ringing whoever is on shift is better when you have more than one
+        rep: the call goes to someone who is actually free, and the notes stay attached to the lead.</p>
+    </div>
+    <div id="transfer-number-wrap" {{ 'hidden' if s.transfer_mode != 'number' }}>
+      <label for="transfer_number">Transfer to this number</label>
+      <input type="text" id="transfer_number" name="transfer_number" maxlength="32"
+             value="{{ s.transfer_number or '' }}" placeholder="+14235550147">
+      <p class="muted" style="margin:5px 0 0">If nobody picks up here, the caller hears the AI apologise and
+        the lead is marked for a callback.</p>
+    </div>
+  </fieldset>
+
+  <!-- ------------------------------------------------------- extra cost -->
+  <fieldset class="addons">
+    <legend>Two things that cost extra</legend>
+    <label class="addon">
+      <input type="checkbox" name="amd_default" {{ 'checked' if s.amd_default }}>
+      <span>Detect answering machines
+        <em>$0.0075 per call, charged by Twilio whether or not a machine answers. It listens to the first
+          couple of seconds and decides whether a person or a voicemail picked up. Worth it for a voicemail
+          drop campaign; wasted on calls a rep is already listening to.</em></span>
+    </label>
+    <label class="addon">
+      <input type="checkbox" name="live_transcription" {{ 'checked' if s.live_transcription }}>
+      <span>Transcribe while the call is happening
+        <em>$0.027 per minute, charged by Twilio. This is what puts live words on the rep's screen and lets the
+          coaching prompts appear mid-call. A four-minute call costs about 11 cents. The after-the-call
+          transcript on step 5 costs a fraction of this and is enough for most teams.</em></span>
+    </label>
+  </fieldset>
+
+  <button class="btn" type="submit"><i class="bi bi-check-lg"></i> Save and continue</button>
+</form>
+
+<script>
+  (function () {
+    var mode = document.getElementById('transfer_mode');
+    var wrap = document.getElementById('transfer-number-wrap');
+    if (!mode || !wrap) return;
+    function sync() { wrap.hidden = mode.value !== 'number'; }
+    mode.addEventListener('change', sync);
+    sync();
+  })();
+</script>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> Why the time limits matter more than the voice</summary>
+  <div class="guide-body">
+    <h4>The maximum call length is a spending cap</h4>
+    <p>An AI call bills by the minute, at about 9.4 cents all in. Nothing in a phone network guarantees a call
+      ends. Hold music, a phone tree, a voicemail that never beeps, a line left off the hook &mdash; all of
+      these keep a call alive and billing.</p>
+    <p>One stuck call overnight is roughly $56. Ten of them is a bad week. The cap is the only thing standing
+      between you and that, so set it to a length a real conversation would never exceed. Ten minutes is
+      generous for a cold call; twenty is generous for a booked demo.</p>
+
+    <h4>Silence cut-off</h4>
+    <p>Separate from the cap. If the line goes quiet for twenty seconds the other person has almost certainly
+      put the phone down without hanging up. Ending there saves the rest of the call.</p>
+
+    <h4>What a transfer actually does</h4>
+    <p>The AI stays on the line, dials your rep, tells them in one sentence who is waiting and why, then joins
+      the two of you and leaves. The lead, the notes and the recording stay on one record.</p>
+    <p>If you send transfers to a single number, pick one that is answered. A transfer into voicemail wastes
+      the best call of the day.</p>
+
+    <h4>Background noise, honestly</h4>
+    <p>Faint room noise makes a synthetic voice easier to listen to, in the same way a quiet office behind a
+      real person does. It is not a disguise and it should never be used as one. Keep the disclosure on.</p>
+  </div>
+</details>
+{% endblock %}

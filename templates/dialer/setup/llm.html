@@ -1,0 +1,145 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% if s.llm_verify_error %}
+<div class="card vendor-error">
+  <div class="vendor-error-head"><i class="bi bi-exclamation-triangle-fill"></i> That key did not work</div>
+  <p class="vendor-error-body">{{ s.llm_verify_error }}</p>
+  <p class="muted" style="margin:0">The two common causes: the key was copied before the whole string was
+    selected, or the account behind it has no payment method and no free credit left.</p>
+</div>
+{% endif %}
+
+{% if s.has_llm %}
+<div class="card vendor-connected">
+  <div class="vendor-row">
+    <span class="vendor-badge"><i class="bi bi-check-circle-fill"></i> Connected</span>
+    <span class="vendor-meta">Key &bull;&bull;&bull;&bull;{{ s.llm_last4 or '????' }}</span>
+  </div>
+  <table class="vendor-facts">
+    <tr><td>Provider</td><td>{{ 'Anthropic' if s.llm_provider == 'anthropic' else 'OpenAI' }}</td></tr>
+    <tr><td>Model</td><td><code>{{ s.llm_model or 'gpt-4o-mini' }}</code></td></tr>
+    <tr><td>Transcripts</td>
+        <td>{% if s.llm_provider == 'anthropic' %}<span class="pill" style="background:#B98A2B">Off</span>
+              Anthropic cannot turn audio into text. You get summaries and scores, but no written transcript.
+            {% else %}<span class="pill" style="background:#2E7D4F">On</span> Audio is turned into text after
+              every call.{% endif %}</td></tr>
+    <tr><td>Last checked</td>
+        <td>{% if s.llm_verified_at %}{{ s.llm_verified_at | local }}{% else %}<span class="muted">never</span>{% endif %}</td></tr>
+  </table>
+  <div class="vendor-actions">
+    <form method="post" action="/dialer/setup/test/llm" class="inline-form">
+      <button class="btn ghost sm" type="submit"><i class="bi bi-arrow-repeat"></i> Test connection</button>
+    </form>
+    <button class="btn ghost sm" type="button" id="replace-toggle">Replace key</button>
+  </div>
+</div>
+{% endif %}
+
+<div id="llm-form-wrap" {{ 'hidden' if s.has_llm }}>
+  <form class="form wiz-form" method="post" action="/dialer/setup/keys/llm">
+    <div class="row2">
+      <div>
+        <label for="provider">Who provides the AI?</label>
+        <select id="provider" name="provider">
+          <option value="openai" {{ 'selected' if s.llm_provider != 'anthropic' }}>OpenAI &mdash; recommended</option>
+          <option value="anthropic" {{ 'selected' if s.llm_provider == 'anthropic' }}>Anthropic</option>
+        </select>
+      </div>
+      <div>
+        <label for="model">Model</label>
+        <input type="text" id="model" name="model" value="{{ s.llm_model or 'gpt-4o-mini' }}"
+               autocomplete="off" spellcheck="false">
+        <p class="muted" style="margin:5px 0 0">Leave this alone unless you know you want something else.
+          <code>gpt-4o-mini</code> is the cheap, fast one and it is good enough for call notes.</p>
+      </div>
+    </div>
+    <div>
+      <label for="api_key">API key</label>
+      <input type="text" id="api_key" name="api_key" autocomplete="off" spellcheck="false"
+             placeholder="sk-...">
+      <p class="muted" style="margin:5px 0 0">Encrypted before it is stored. After this page only the last four
+        characters are ever shown.</p>
+    </div>
+    <button class="btn" type="submit"><i class="bi bi-plug"></i> Save and test</button>
+  </form>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>Getting an OpenAI key</h3>
+  <ol class="wiz-ol">
+    <li>Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>
+      and sign in. This is the developer side of OpenAI, not the ChatGPT app. A ChatGPT Plus subscription does
+      not cover it and does not give you a key.</li>
+    <li>Add a payment method under <b>Billing</b> and put $10 of credit on it. Without credit the key is created
+      but every call fails.</li>
+    <li>Press <b>Create new secret key</b>. Name it <code>60MS HQ Dialer</code>.</li>
+    <li>Copy the key the moment it appears. OpenAI shows it once and never again. If you lose it, delete it and
+      make another.</li>
+    <li>Paste it above and press <b>Save and test</b>. We send one tiny request to check it works.</li>
+  </ol>
+</div>
+
+<div class="card wiz-callout">
+  <i class="bi bi-currency-dollar"></i>
+  <div>
+    <b>This costs well under a cent per call.</b>
+    <p style="margin:4px 0 0">A four-minute call costs about a third of a cent to transcribe and summarise.
+      A thousand calls a month runs around $3 to $5. Put $10 of credit on the account and it will last you
+      months.</p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('replace-toggle');
+    var wrap = document.getElementById('llm-form-wrap');
+    if (!btn || !wrap) return;
+    btn.addEventListener('click', function () {
+      wrap.hidden = !wrap.hidden;
+      btn.textContent = wrap.hidden ? 'Replace key' : 'Keep the key I have';
+    });
+  })();
+</script>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> What this key does, and why OpenAI is the better single choice</summary>
+  <div class="guide-body">
+    <h4>What it powers</h4>
+    <p>Every call ends with a recording. This key turns that recording into things you can use:</p>
+    <ul>
+      <li><b>A written transcript</b> of who said what.</li>
+      <li><b>A summary</b>, three or four lines, written into the lead's notes.</li>
+      <li><b>The answers</b> to the qualification questions in your playbook, pulled out and filed against the
+        lead so you do not have to retype them.</li>
+      <li><b>A score out of ten</b> for the rep, with three specific reasons. This is the coaching tool.</li>
+      <li><b>A follow-up task</b> with a due date, created automatically when the call implies one.</li>
+      <li><b>A flag</b> when someone asked not to be called again, which adds them to your do-not-call list
+        without anyone needing to remember.</li>
+    </ul>
+    <h4>Calls still work without it</h4>
+    <p>Skip this step and everything still dials, connects and records. You get audio you have to listen to
+      instead of text you can read. For one rep that is survivable. For three it is not.</p>
+    <h4>Why OpenAI rather than Anthropic</h4>
+    <p>Two different jobs are happening here. One is turning audio into text. The other is reading that text and
+      writing the summary.</p>
+    <p><b>Anthropic cannot do the first one.</b> It has no speech-to-text, so if you pick Anthropic you get
+      summaries and scores built from whatever text the AI voice produced, and nothing at all from a human
+      rep's call. OpenAI does both, with one key and one bill. That is the whole reason it is the
+      recommendation.</p>
+    <p class="muted">If you already have an Anthropic account and want to use it for the writing, you can &mdash;
+      but you will need an OpenAI key as well for the transcripts, and this page only holds one key.</p>
+    <h4>Keeping the key safe</h4>
+    <ul>
+      <li>The key is encrypted in our database. It is never shown back to you and never sent to the browser.</li>
+      <li>Set a monthly spend limit in the OpenAI console under Billing. $20 is plenty and it caps your
+        downside.</li>
+      <li>If a key is ever pasted into a public place, delete it in the console immediately and make a new one.
+        Deleting is instant.</li>
+    </ul>
+  </div>
+</details>
+{% endblock %}

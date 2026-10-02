@@ -1,0 +1,146 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% if s.twilio_verify_error %}
+<div class="card vendor-error">
+  <div class="vendor-error-head"><i class="bi bi-exclamation-triangle-fill"></i> Twilio refused the last attempt</div>
+  <p class="vendor-error-body">{{ s.twilio_verify_error }}</p>
+  <p class="muted" style="margin:0">Almost always one of three things: the Auth Token was copied with a space on
+    the end, the Account SID belongs to a subaccount, or the token was rotated in the Twilio console after you
+    pasted it. Paste both values again below.</p>
+</div>
+{% endif %}
+
+{% if s.has_twilio %}
+<div class="card vendor-connected">
+  <div class="vendor-row">
+    <span class="vendor-badge"><i class="bi bi-check-circle-fill"></i> Connected</span>
+    <span class="vendor-meta">Account SID &bull;&bull;&bull;&bull;{{ s.twilio_sid_last4 or '????' }}</span>
+  </div>
+  <table class="vendor-facts">
+    <tr><td>Balance</td>
+        <td>{% if s.twilio_balance %}${{ s.twilio_balance }}{% else %}<span class="muted">not reported</span>{% endif %}</td></tr>
+    <tr><td>Account type</td>
+        <td>{% if s.twilio_is_trial %}<span class="pill" style="background:#B98A2B">Trial</span>
+              A trial account can only call numbers you have verified by hand. Add $20 of credit in the Twilio
+              console to remove that.
+            {% else %}<span class="pill" style="background:#2E7D4F">Paid</span> Can call any number.{% endif %}</td></tr>
+    <tr><td>Last checked</td>
+        <td>{% if s.twilio_verified_at %}{{ s.twilio_verified_at | local }}{% else %}<span class="muted">never</span>{% endif %}</td></tr>
+  </table>
+  <div class="vendor-actions">
+    <form method="post" action="/dialer/setup/test/twilio" class="inline-form">
+      <button class="btn ghost sm" type="submit"><i class="bi bi-arrow-repeat"></i> Test connection</button>
+    </form>
+    <button class="btn ghost sm" type="button" id="replace-toggle">Replace keys</button>
+  </div>
+</div>
+{% endif %}
+
+<div id="twilio-form-wrap" {{ 'hidden' if s.has_twilio }}>
+  <form class="form wiz-form" method="post" action="/dialer/setup/keys/twilio">
+    <div class="row2">
+      <div>
+        <label for="account_sid">Account SID</label>
+        <input type="text" id="account_sid" name="account_sid" autocomplete="off" spellcheck="false"
+               placeholder="AC00000000000000000000000000000000">
+        <p class="muted" style="margin:5px 0 0">Starts with <code>AC</code> and is 34 characters long.</p>
+      </div>
+      <div>
+        <label for="auth_token">Auth Token</label>
+        <input type="text" id="auth_token" name="auth_token" autocomplete="off" spellcheck="false"
+               placeholder="your 32-character token">
+        <p class="muted" style="margin:5px 0 0">32 characters, letters and numbers, no dashes.</p>
+      </div>
+    </div>
+    <button class="btn" type="submit"><i class="bi bi-plug"></i> Connect and test</button>
+    <p class="muted" style="margin:0">Both values are encrypted before they are stored. After this page they are
+      never shown again, only the last four characters of the SID.</p>
+  </form>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>Where to find those two values</h3>
+  <ol class="wiz-ol">
+    <li>Open <a href="https://console.twilio.com/" target="_blank" rel="noopener">console.twilio.com</a> and sign
+      in. If you do not have an account yet, create one first. It is free to open and you pay only for what you
+      use.</li>
+    <li>You land on the Account Dashboard. Look for the panel headed <b>Account Info</b>, near the bottom of the
+      page.</li>
+    <li><b>Account SID</b> is the first line. Click the copy icon next to it, then paste it above.</li>
+    <li><b>Auth Token</b> is below it, hidden behind a <b>Show</b> link. Click Show, copy the value, paste it
+      above.</li>
+    <li>Press <b>Connect and test</b>. We call Twilio right away. If the call works, this step turns green and
+      shows your balance. If it does not, the exact message Twilio sent back appears at the top of this page.</li>
+  </ol>
+  <p class="muted" style="margin:10px 0 0">Make sure you are on the main account, not a subaccount. If there is a
+    dropdown at the top of the console with more than one account in it, pick the top one.</p>
+</div>
+
+<div class="card wiz-callout">
+  <i class="bi bi-exclamation-circle"></i>
+  <div>
+    <b>A brand-new Twilio account is a trial account.</b>
+    <p style="margin:4px 0 0">A trial can only call phone numbers you have verified one at a time in the Twilio
+      console, and every call starts with a Twilio recording. That makes it useless for real dialing. Add $20 of
+      credit in the console (Billing, then Add funds) and the restriction lifts immediately.</p>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('replace-toggle');
+    var wrap = document.getElementById('twilio-form-wrap');
+    if (!btn || !wrap) return;
+    btn.addEventListener('click', function () {
+      wrap.hidden = !wrap.hidden;
+      btn.textContent = wrap.hidden ? 'Replace keys' : 'Keep the keys I have';
+      if (!wrap.hidden) {
+        var f = wrap.querySelector('input');
+        if (f) f.focus();
+      }
+    });
+  })();
+</script>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> What Twilio is, what it costs, and why the account is yours</summary>
+  <div class="guide-body">
+    <p>Twilio is the phone company underneath this app. It owns the actual phone lines. When a rep clicks Call,
+      this app asks Twilio to place the call.</p>
+    <p><b>The account is in your name and the card on it is yours.</b> That means your phone numbers stay yours
+      if you ever leave, your call recordings are in your own account, and we cannot mark up a minute even if we
+      wanted to.</p>
+    <h4>What you will pay Twilio</h4>
+    <table>
+      <tr><th>Item</th><th>Price</th></tr>
+      <tr><td>Outbound call, US landline or mobile</td><td>about 1.4&cent; a minute</td></tr>
+      <tr><td>Inbound call to one of your numbers</td><td>about 0.85&cent; a minute</td></tr>
+      <tr><td>Each phone number you hold</td><td>$1.15 a month</td></tr>
+      <tr><td>Call recording storage</td><td>about 0.05&cent; a minute, a month</td></tr>
+    </table>
+    <p>A rep making 100 dials a day, with 12 minutes of real talk time, costs roughly 20 cents a day in Twilio
+      minutes.</p>
+    <h4>What we create inside your Twilio account</h4>
+    <p>As soon as the test passes, we create two things for you so the browser phone works:</p>
+    <ul>
+      <li>An <b>API Key</b> named <code>60MS HQ Dialer</code>. We use this instead of your Auth Token for
+        day-to-day calling, so you can revoke our access without changing the password to your whole account.</li>
+      <li>A <b>TwiML App</b> named <code>60MS HQ Dialer</code>. This is the address Twilio sends a call to when
+        a rep picks up in the browser.</li>
+    </ul>
+    <p>Both appear in your console. Deleting them breaks calling until you reconnect here.</p>
+    <h4>If the test keeps failing</h4>
+    <ul>
+      <li><b>Authenticate</b> or <b>20003</b> means the token is wrong. Click Show in the console and copy it
+        again, with no leading or trailing space.</li>
+      <li><b>Account not found</b> or <b>20404</b> usually means the SID is from a different account than the
+        token.</li>
+      <li>If you recently clicked <b>Rotate</b> on the Auth Token page, only the newest token works.</li>
+    </ul>
+  </div>
+</details>
+{% endblock %}

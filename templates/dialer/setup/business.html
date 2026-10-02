@@ -1,0 +1,138 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% set pcp = s.twilio_pcp_status or 'none' %}
+
+<div class="card vendor-connected">
+  <div class="vendor-row">
+    {% if pcp == 'business' %}
+      <span class="pill" style="background:#2E7D4F">Approved as a business</span>
+      <span class="vendor-meta">You are on full throughput. Nothing else to do here.</span>
+    {% elif pcp == 'pending' %}
+      <span class="pill" style="background:#B98A2B">In review with Twilio</span>
+      <span class="vendor-meta">Twilio has your paperwork. This usually clears inside 48 hours.</span>
+    {% elif pcp == 'individual' %}
+      <span class="pill" style="background:#B3362B">Approved as an individual</span>
+      <span class="vendor-meta">This is the wrong kind of profile for a dialer. Read the warning below.</span>
+    {% else %}
+      <span class="pill" style="background:#888">Not started</span>
+      <span class="vendor-meta">Twilio has no business profile for this account yet.</span>
+    {% endif %}
+  </div>
+  <table class="vendor-facts">
+    <tr><td>Last checked</td>
+        <td>{% if s.twilio_pcp_checked_at %}{{ s.twilio_pcp_checked_at | local }}{% else %}<span class="muted">never</span>{% endif %}</td></tr>
+  </table>
+  <div class="vendor-actions">
+    <a class="btn" href="https://console.twilio.com/us1/account/trust-hub/customer-profiles"
+       target="_blank" rel="noopener">
+      <i class="bi bi-box-arrow-up-right"></i> Open Twilio business verification</a>
+    <form method="post" action="/dialer/setup/business/recheck" class="inline-form">
+      <button class="btn ghost sm" type="submit"><i class="bi bi-arrow-repeat"></i> Check again</button>
+    </form>
+  </div>
+  <p class="muted" style="margin:10px 0 0">The link opens Twilio's own site in a new tab. We cannot fill this in
+    for you. Come back here and press <b>Check again</b> once Twilio emails you.</p>
+</div>
+
+{% if pcp == 'individual' %}
+<div class="card wiz-callout danger">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <div>
+    <b>An Individual profile is a dead end for a dialer.</b>
+    <p style="margin:4px 0 0">Twilio caps an Individual profile at 3 calls at once and 1 call a second, and there
+      is no way to raise it. You cannot upgrade an Individual profile either. Go back to the Twilio console and
+      register a <b>Business</b> profile instead.</p>
+  </div>
+</div>
+{% else %}
+<div class="card wiz-callout">
+  <i class="bi bi-exclamation-circle"></i>
+  <div>
+    <b>Choose Business, not Individual.</b>
+    <p style="margin:4px 0 0">Twilio offers both. An Individual profile is capped at 3 calls at once and 1 call a
+      second forever, and it cannot be upgraded. Pick Business even if you are a one-person company with no
+      employees. A sole proprietorship counts as a business.</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="card wiz-steps-card">
+  <h3>What approval changes</h3>
+  <table class="plan-table">
+    <tr><th>What</th><th>Before approval</th><th>After approval</th></tr>
+    <tr>
+      <td><b>Calls at the same time</b></td>
+      <td>About 2</td>
+      <td>No set limit</td>
+    </tr>
+    <tr>
+      <td><b>New calls per second</b></td>
+      <td>1</td>
+      <td>Higher, and you can ask for more</td>
+    </tr>
+    <tr>
+      <td><b>Caller attestation</b></td>
+      <td>B or C &mdash; the carrier is not sure the call is really from you</td>
+      <td>A &mdash; the highest level, which carriers trust</td>
+    </tr>
+    <tr>
+      <td><b>Voice Integrity</b></td>
+      <td>Not available</td>
+      <td>Free, and it is the tool that gets a number cleared when it starts
+        showing as &ldquo;Spam Likely&rdquo;</td>
+    </tr>
+  </table>
+  <p class="muted" style="margin:12px 0 0">Two calls at once sounds survivable until you watch it. One rep in a
+    power dialer will use both lines, and a second rep waits. The spam labelling matters more: once a number is
+    flagged, answer rates fall by half and the only fix runs through Voice Integrity.</p>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>What Twilio will ask you for</h3>
+  <ol class="wiz-ol">
+    <li>Your legal business name, address and business type, exactly as they appear on your registration.</li>
+    <li>Your EIN, or your business registration number.</li>
+    <li>A website or a business email at your own domain.</li>
+    <li>An <b>authorized representative</b>: a real person's name, job title, email and phone number.</li>
+    <li>That person's <b>government photo ID</b> and a <b>selfie</b> taken on the spot. Twilio verifies the face
+      against the ID. Have your driver's licence or passport in hand before you start.</li>
+  </ol>
+  <p><b>Start this now, not later.</b> Twilio quotes up to 48 hours for review, and a rejected submission
+    restarts the clock. Everything else in this setup can go on while you wait &mdash; you can connect numbers,
+    write your script and make test calls with the profile still pending.</p>
+</div>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> Why phone companies ask for this at all</summary>
+  <div class="guide-body">
+    <p>Every US carrier now scores incoming calls and decides whether to label them. The score is built from who
+      the carrier believes placed the call. If nobody has proved who you are, your calls are unsigned, and
+      unsigned calls get labelled.</p>
+    <p>A business profile is how Twilio proves it to the carriers on your behalf. Once it is approved, Twilio
+      signs every call you place at the highest level, which is what the carriers call <b>attestation A</b>.</p>
+    <h4>Timeline</h4>
+    <ul>
+      <li><b>Submitting:</b> 10 to 15 minutes if you have the ID and the EIN ready.</li>
+      <li><b>Review:</b> Twilio says up to 48 hours. In practice most clear the same business day.</li>
+      <li><b>If it is rejected:</b> Twilio emails the reason. The usual cause is a business name that does not
+        match the registration character for character, or an address that is a mailbox rather than a street
+        address.</li>
+    </ul>
+    <h4>After approval</h4>
+    <p>Two more things become available, both free, both worth doing on the numbers step:</p>
+    <ul>
+      <li><b>Voice Integrity</b> &mdash; registers your numbers with the analytics companies the carriers use.
+        This is what you use to get a &ldquo;Spam Likely&rdquo; label removed. It takes another 24 to 48 hours.</li>
+      <li><b>CNAM</b> &mdash; the caller name, up to 15 characters, that shows under your number on phones that
+        display it.</li>
+    </ul>
+    <p class="muted">If Twilio support asks what you are using the numbers for, answer plainly: outbound sales
+      calls to business contacts, from a script, during business hours, with a do-not-call list. Vague answers
+      are what get applications held.</p>
+  </div>
+</details>
+{% endblock %}

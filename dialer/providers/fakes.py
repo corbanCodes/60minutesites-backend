@@ -102,6 +102,7 @@ class FakeTelephony(Telephony):
         if f:
             return f
         sid = _sid("CA", f"{conference}{to}{time.time()}")
+        kw["record"] = bool(kw.get("record"))
         _SIM.schedule(sid, to, conference=conference, **kw)
         return ok(sid=sid, outcome=outcome_for(to))
 
@@ -110,6 +111,7 @@ class FakeTelephony(Telephony):
         if f:
             return f
         sid = _sid("CA", f"{to}{time.time()}")
+        kw["record"] = bool(kw.get("record"))
         _SIM.schedule(sid, to, **kw)
         return ok(sid=sid, outcome=outcome_for(to))
 
@@ -248,10 +250,19 @@ class FakeLLM(LLM):
         if not json_mode:
             return ok(text="Simulated summary: spoke with the manager, interested, "
                            "asked for a callback with pricing.")
-        text = (user or "").lower()
-        machine = "voicemail" in text or "answering machine" in text
+        # Look only at the transcript, never at the instructions wrapped
+        # around it -- the schema itself mentions "voicemail_left".
+        body = (user or "")
+        marker = "TRANSCRIPT:"
+        text = (body.split(marker, 1)[1] if marker in body else body).lower()
+        machine = ("answering machine" in text
+                   or "leave a message after" in text
+                   or "you have reached" in text
+                   or "reached an answering machine" in body.lower()
+                      and marker not in body)
         revoked = any(p in text for p in ("take me off", "stop calling",
-                                          "do not call", "remove me"))
+                                          "do not call", "remove me",
+                                          "don't call"))
         if machine:
             data = {
                 "summary": "Reached voicemail. Left the standard message with a callback number.",
@@ -324,6 +335,7 @@ class _Simulator:
 
     def schedule(self, sid, to, **kw):
         outcome = outcome_for(to)
+        kw.setdefault("record", False)
         self.calls[sid] = {
             "sid": sid, "to": to, "outcome": outcome, "status": "queued",
             "created": time.time(), "duration": 0,
@@ -361,8 +373,13 @@ class _Simulator:
                    "wrong_number": 11}[outcome]
             c["duration"] = dur
             c["price"] = round(0.014 * max(1, (dur + 59) // 60), 4)
-            seq.append(dict(base, CallStatus="completed", CallDuration=str(dur),
-                            AnsweredBy=c["answered_by"]))
+            done = dict(base, CallStatus="completed", CallDuration=str(dur),
+                        AnsweredBy=c["answered_by"])
+            if c.get("record"):
+                done["RecordingSid"] = _sid("RE", sid)
+                done["RecordingUrl"] = f"https://sim.local/Recordings/{_sid('RE', sid)}"
+                done["RecordingDuration"] = str(dur)
+            seq.append(done)
         elif outcome == "busy":
             seq.append(dict(base, CallStatus="busy"))
         else:

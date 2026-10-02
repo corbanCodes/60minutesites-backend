@@ -51,8 +51,8 @@ HTTP_TIMEOUT = 30
 # `_profile_kind`), and ties break toward "individual" -- the weaker status --
 # so we never over-claim a trust level the account hasn't actually earned.
 BUSINESS_POLICY_SIDS = {
-    "RNdfbf3fae0e1107f8aded0e7cead80bf5",   # Primary Customer Profile of type Business
-    "RN806dd6cd175f314e1f96a9727ee271f4",   # Secondary Customer Profile of type Business
+    "RNdfbf3fae0e1107f8aded0e7cead80bf5",   # Primary profile, type Business
+    "RN806dd6cd175f314e1f96a9727ee271f4",   # Secondary profile, type Business
 }
 INDIVIDUAL_POLICY_SIDS = {
     "RNb0d4771c2c98518d916a3d4cd70a8f8b",   # Starter / Individual Customer Profile

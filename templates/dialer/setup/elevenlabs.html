@@ -1,0 +1,155 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% if s.elevenlabs_verify_error %}
+<div class="card vendor-error">
+  <div class="vendor-error-head"><i class="bi bi-exclamation-triangle-fill"></i> ElevenLabs did not accept that key</div>
+  <p class="vendor-error-body">{{ s.elevenlabs_verify_error }}</p>
+</div>
+{% endif %}
+
+{% if s.has_elevenlabs %}
+<div class="card vendor-connected">
+  <div class="vendor-row">
+    <span class="vendor-badge"><i class="bi bi-check-circle-fill"></i> Connected</span>
+    <span class="vendor-meta">Key &bull;&bull;&bull;&bull;{{ s.elevenlabs_last4 or '????' }}</span>
+  </div>
+  <table class="vendor-facts">
+    <tr><td>Plan</td>
+        <td>{% if s.elevenlabs_tier %}<b>{{ s.elevenlabs_tier | title }}</b>{% else %}<span class="muted">not reported</span>{% endif %}</td></tr>
+    <tr><td>Calls at once</td>
+        <td>{% if s.elevenlabs_concurrency %}<b>{{ s.elevenlabs_concurrency }}</b> &mdash; a batch campaign will
+              use about {{ (s.elevenlabs_concurrency / 2) | round(0, 'floor') | int }} of those lines
+            {% else %}<span class="muted">not reported</span>{% endif %}</td></tr>
+    <tr><td>Results webhook</td>
+        <td>{% if s.elevenlabs_webhook_id %}<span class="pill" style="background:#2E7D4F">Created</span>
+              Call results come back to this app automatically.
+            {% else %}<span class="pill" style="background:#B3362B">Missing</span>
+              Without it you get no transcripts from AI calls. Replace the key with one made by the workspace
+              owner or an admin.{% endif %}</td></tr>
+    <tr><td>Burst pricing</td>
+        <td>{% if s.elevenlabs_bursting %}<span class="pill" style="background:#B98A2B">On</span>
+              Going past your concurrency limit silently bills at double, 16 cents a minute.
+            {% else %}<span class="pill" style="background:#2E7D4F">Off</span>
+              Calls queue instead of billing double.{% endif %}</td></tr>
+    <tr><td>Last checked</td>
+        <td>{% if s.elevenlabs_verified_at %}{{ s.elevenlabs_verified_at | local }}{% else %}<span class="muted">never</span>{% endif %}</td></tr>
+  </table>
+  <div class="vendor-actions">
+    <form method="post" action="/dialer/setup/test/elevenlabs" class="inline-form">
+      <button class="btn ghost sm" type="submit"><i class="bi bi-arrow-repeat"></i> Test connection</button>
+    </form>
+    <button class="btn ghost sm" type="button" id="replace-toggle">Replace key</button>
+  </div>
+</div>
+{% endif %}
+
+<div id="el-form-wrap" {{ 'hidden' if s.has_elevenlabs }}>
+  <form class="form wiz-form" method="post" action="/dialer/setup/keys/elevenlabs">
+    <div>
+      <label for="api_key">ElevenLabs API key</label>
+      <input type="text" id="api_key" name="api_key" autocomplete="off" spellcheck="false" placeholder="sk_...">
+      <p class="muted" style="margin:5px 0 0">Profile menu in ElevenLabs, then <b>API Keys</b>, then
+        <b>Create API key</b>. Copy it straight away &mdash; it is shown once.</p>
+    </div>
+    <button class="btn" type="submit"><i class="bi bi-plug"></i> Save and test</button>
+  </form>
+</div>
+
+<div class="card wiz-callout">
+  <i class="bi bi-person-badge"></i>
+  <div>
+    <b>The key has to be made by the workspace owner or an admin.</b>
+    <p style="margin:4px 0 0">The first thing we do with it is create the webhook that sends call results back
+      here. A key from a member-level user cannot create a webhook, so the connection succeeds and then every
+      AI call finishes with no transcript and no summary. If you are not the owner of the ElevenLabs workspace,
+      ask whoever is to create the key.</p>
+  </div>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>What each plan buys you</h3>
+  <table class="plan-table">
+    <tr><th>Plan</th><th>Calls at once</th><th>Realistic batch size</th><th>Price per minute</th></tr>
+    <tr><td>Free</td><td>4</td><td>2 at a time</td><td>$0.08</td></tr>
+    <tr><td>Starter</td><td>6</td><td>3 at a time</td><td>$0.08</td></tr>
+    <tr><td>Creator</td><td>10</td><td>5 at a time</td><td>$0.08</td></tr>
+    <tr class="plan-pick"><td>Pro</td><td>20</td><td>10 at a time</td><td>$0.08</td></tr>
+    <tr><td>Scale</td><td>30</td><td>15 at a time</td><td>$0.08</td></tr>
+    <tr><td>Business</td><td>40</td><td>20 at a time</td><td>$0.08</td></tr>
+  </table>
+  <p style="margin:12px 0 0"><b>The plan buys how many calls can run at once, not a cheaper rate.</b> Every tier
+    is eight cents a minute. If you only ever run two or three AI calls at a time, the cheap plan costs you
+    exactly the same per minute as the expensive one.</p>
+  <p style="margin:8px 0 0"><b>A batch campaign only uses about half your concurrency, so Pro is the realistic
+    floor for a team.</b> The other half is held back for inbound calls and for retries, so a plan that says 20
+    gives you roughly 10 working lines.</p>
+  <p class="muted" style="margin:8px 0 0">Ten lines, each on a four-minute call, is about 150 conversations an
+    hour and about $48 an hour in voice cost. Price the campaign before you start it.</p>
+</div>
+
+{% if voices %}
+<div class="card wiz-steps-card">
+  <h3>Voices on this account <span class="count-chip">{{ voices | length }}</span></h3>
+  <p class="muted" style="margin:0 0 12px">You pick the default voice on the next step. This is here so you can
+    see the connection is real.</p>
+  <div class="voicegrid">
+    {% for v in voices %}
+    <div class="voicecard static">
+      <span class="voicecard-body">
+        <span class="voicecard-name"><i class="bi bi-soundwave"></i> {{ v.name or v.voice_id }}</span>
+        {% if v.labels %}<span class="voicecard-labels">{{ v.labels }}</span>{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+  (function () {
+    var btn = document.getElementById('replace-toggle');
+    var wrap = document.getElementById('el-form-wrap');
+    if (!btn || !wrap) return;
+    btn.addEventListener('click', function () {
+      wrap.hidden = !wrap.hidden;
+      btn.textContent = wrap.hidden ? 'Replace key' : 'Keep the key I have';
+    });
+  })();
+</script>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> Skip this step unless you want the AI to talk to people</summary>
+  <div class="guide-body">
+    <p>ElevenLabs is the voice. It is only needed for the two AI lanes: the AI answering your incoming calls,
+      and the AI dialing out. If your reps are making the calls themselves, skip this step entirely and nothing
+      is lost.</p>
+    <h4>What you pay, and to whom</h4>
+    <ul>
+      <li><b>ElevenLabs</b>: 8 cents a minute of AI conversation, plus the monthly plan fee.</li>
+      <li><b>Twilio</b>: about 1.4 cents a minute for the phone line underneath, as always.</li>
+    </ul>
+    <p>So an AI call costs roughly 9.4 cents a minute all in. A four-minute conversation is about 38 cents.</p>
+    <h4>Turn burst pricing off</h4>
+    <p>ElevenLabs offers to let you exceed your concurrency limit rather than queueing the call. It does not
+      warn you when it happens and it bills those minutes at double, 16 cents. We keep it off. Leave it off
+      until you have watched a month of real usage.</p>
+    <h4>Two things that will break the key</h4>
+    <ul>
+      <li><b>Pasting it into a public repository.</b> GitHub scans for ElevenLabs keys and ElevenLabs disables
+        them automatically within minutes. The key is encrypted here and never leaves this server.</li>
+      <li><b>IP allowlisting.</b> ElevenLabs lets you restrict a key to certain addresses. Do not. This app
+        calls out from whichever server address the host happens to give it that day, and an allowlist will
+        break calling at an unpredictable moment.</li>
+    </ul>
+    <h4>Picking a plan</h4>
+    <p>Start on Creator at $22 a month while you test. Move to Pro before you run your first real batch, because
+      a 10-line plan gives you about 5 working lines and that is slower than one rep. If you are only using the
+      AI to answer incoming calls, Creator is often enough forever &mdash; incoming calls rarely arrive five at
+      a time.</p>
+  </div>
+</details>
+{% endblock %}
