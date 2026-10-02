@@ -20,4 +20,7 @@ PyMuPDF==1.28.2
 twilio==9.4.1
 cryptography==44.0.0
 phonenumbers==8.13.52
+openpyxl==3.1.5
+beautifulsoup4==4.12.3
+soupsieve==2.6
 pytest==8.3.4

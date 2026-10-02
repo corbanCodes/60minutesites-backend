@@ -18,23 +18,11 @@
       <a class="logo" href="/admin"><span>60</span>MS&nbsp;HQ</a>
       <button class="nav-toggle" id="navtoggle" aria-label="Menu" aria-expanded="false" aria-controls="sidebar"><i class="bi bi-list"></i></button>
     </div>
-    <div class="nav-sec">Work</div>
-    <a class="nav-item {{ 'active' if active == 'dashboard' }}" href="/admin"><i class="bi bi-grid-1x2"></i>Dashboard</a>
-    <a class="nav-item {{ 'active' if active == 'crm' }}" href="/admin/crm"><i class="bi bi-kanban"></i>CRM</a>
-    <a class="nav-item {{ 'active' if active == 'tasks' }}" href="/admin/tasks"><i class="bi bi-check2-square"></i>Tasks</a>
-    {% if show_dialer %}<a class="nav-item {{ 'active' if active == 'dialer' }}" href="/dialer"><i class="bi bi-telephone-outbound"></i>Calling</a>{% endif %}
-    <div class="nav-sec">Build</div>
-    <a class="nav-item {{ 'active' if active == 'sites' }}" href="/admin/sites"><i class="bi bi-window-sidebar"></i>Sites</a>
-    <a class="nav-item {{ 'active' if active == 'forms' }}" href="/admin/forms"><i class="bi bi-envelope-paper"></i>Forms</a>
-    <a class="nav-item {{ 'active' if active == 'chat' }}" href="/admin/chat"><i class="bi bi-chat-dots"></i>Chat</a>
-    <a class="nav-item {{ 'active' if active == 'funnels' }}" href="/admin/funnels"><i class="bi bi-lightning-charge"></i>Funnels</a>
-    <a class="nav-item {{ 'active' if active == 'invoices' }}" href="/admin/invoices"><i class="bi bi-receipt"></i>Invoices</a>
-    <a class="nav-item {{ 'active' if active == 'ai_studio' }}" href="/admin/ai-studio"><i class="bi bi-stars"></i>AI Studio</a>
-    <a class="nav-item {{ 'active' if active == 'email' }}" href="/admin/email"><i class="bi bi-envelope-at"></i>Email</a>
-    {% if show_team %}
-    <div class="nav-sec">Account</div>
-    <a class="nav-item {{ 'active' if active == 'team' }}" href="/admin/team"><i class="bi bi-people-fill"></i>Team</a>
-    {% endif %}
+    {% set ns = namespace(last="") %}
+    {% for t in nav_tools %}
+      {% if t.section != ns.last %}<div class="nav-sec">{{ t.section }}</div>{% set ns.last = t.section %}{% endif %}
+      <a class="nav-item {{ 'active' if active == t.key }}" href="{{ t.url }}"><i class="bi {{ t.icon }}"></i>{{ t.label }}</a>
+    {% endfor %}
     {% if role == 'admin' %}
     <div class="nav-sec">Business</div>
     <a class="nav-item {{ 'active' if active == 'revenue' }}" href="/admin/revenue"><i class="bi bi-graph-up-arrow"></i>Revenue</a>

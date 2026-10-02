@@ -36,6 +36,20 @@
         </span>
       </label>
 
+      <label class="rolecard rolecard-feature">
+        <input type="radio" name="intent" value="ai_qualify" {{ 'checked' if s.intent == 'ai_qualify' }}>
+        <span class="rolecard-body">
+          <span class="rolecard-name"><i class="bi bi-person-check"></i> AI qualifies, then hands to a live person</span>
+          <span class="rolecard-blurb">The AI dials, makes the offer in one line and asks one question: are you
+            the person who would decide this? If yes, it says a colleague is coming on and transfers the live
+            call to a real rep. If no, it finds out who the right person is and books the callback. Your rep
+            only ever picks up a phone with a decision maker already on it.
+            <b class="rolecard-eg">For example:</b> "We give bars free napkins with a QR code on them, two
+            hundred dollars and free drinks on us. Would that be your call, or is there someone else I should
+            be speaking to?"</span>
+        </span>
+      </label>
+
       <label class="rolecard">
         <input type="radio" name="intent" value="both" {{ 'checked' if s.intent == 'both' }}>
         <span class="rolecard-body">

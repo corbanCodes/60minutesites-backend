@@ -113,6 +113,45 @@ CSV_FIELDS = [("name", "Name"), ("first_name", "First name"), ("last_name", "Las
 CSV_EXTRA_FIELDS = {"phone_2": "Phone 2", "title": "Title", "website": "Website",
                     "address": "Address", "city": "City", "state": "State",
                     "zip": "ZIP"}
+# Everything a customer can be given or denied, in nav order. One list drives
+# the sidebar AND the per-client control panel, so they can never disagree.
+# `flag` names a feature that must also be switched on; None means the tool is
+# on by default and can only be taken away.
+TOOLS = [
+    # key          label             section     url                icon                        flag
+    ("dashboard",  "Dashboard",      "Work",     "/admin",          "bi-grid-1x2",              None),
+    ("crm",        "CRM",            "Work",     "/admin/crm",      "bi-kanban",                None),
+    ("tasks",      "Tasks",          "Work",     "/admin/tasks",    "bi-check2-square",         None),
+    ("dialer",     "Calling",        "Work",     "/dialer",         "bi-telephone-outbound",    "dialer"),
+    ("enrich",     "Enrichment",     "Work",     "/enrich",         "bi-binoculars",            "enrichment"),
+    ("sites",      "Sites",          "Build",    "/admin/sites",    "bi-window-sidebar",        None),
+    ("forms",      "Forms",          "Build",    "/admin/forms",    "bi-envelope-paper",        None),
+    ("chat",       "Chat",           "Build",    "/admin/chat",     "bi-chat-dots",             None),
+    ("funnels",    "Funnels",        "Build",    "/admin/funnels",  "bi-lightning-charge",      None),
+    ("invoices",   "Invoices",       "Build",    "/admin/invoices", "bi-receipt",               None),
+    ("ai_studio",  "AI Studio",      "Build",    "/admin/ai-studio", "bi-stars",                None),
+    ("email",      "Email",          "Build",    "/admin/email",    "bi-envelope-at",           None),
+    ("team",       "Team",           "Account",  "/admin/team",     "bi-people-fill",           "multi_user"),
+]
+TOOL_LABELS = {k: lbl for k, lbl, _, _, _, _ in TOOLS}
+# Tools a customer always keeps -- taking these away leaves them with nothing.
+TOOLS_ALWAYS_ON = {"dashboard"}
+TOOL_BLURBS = {
+    "dashboard": "Their landing page. Cannot be switched off.",
+    "crm": "Leads, pipeline, notes and the kanban board.",
+    "tasks": "Their own follow-up list.",
+    "dialer": "The phone system. Needs the AI calling add-on.",
+    "enrich": "Website research and email writing. Needs the enrichment add-on.",
+    "sites": "The website editor and publishing.",
+    "forms": "Lead capture forms they can embed.",
+    "chat": "The AI chat widget for their site.",
+    "funnels": "Ad landing pages.",
+    "invoices": "The invoice builder.",
+    "ai_studio": "Blog and marketing copy.",
+    "email": "Their mailbox details.",
+    "team": "Seats and roles. Needs the multi-user add-on.",
+}
+
 TASK_KINDS = ["Call", "Text", "Email", "Meeting", "Follow-up", "To-do"]
 TASK_ICONS = {"Call": "bi-telephone", "Text": "bi-chat-left-dots",
               "Email": "bi-envelope", "Meeting": "bi-people",
@@ -137,6 +176,11 @@ class User(db.Model):
     seat_limit = db.Column(db.Integer, nullable=True)   # owners only; NULL = 1
     feature_multi_user = db.Column(db.Boolean, default=False)
     feature_dialer = db.Column(db.Boolean, default=False)
+    feature_enrichment = db.Column(db.Boolean, default=False)
+    # Comma-separated tool keys this account should NOT see. Empty means show
+    # everything, which is what every account did before this existed -- so
+    # adding the column changed nothing for anyone.
+    hidden_tools = db.Column(db.String(600), default="")
     last_login_at = db.Column(db.DateTime, nullable=True)
     job_title = db.Column(db.String(80), default="")
 
@@ -151,6 +195,13 @@ class User(db.Model):
     @property
     def seats(self):
         return self.seat_limit or 1
+
+    @property
+    def hidden(self):
+        return {t.strip() for t in (self.hidden_tools or "").split(",") if t.strip()}
+
+    def can_see(self, tool_key):
+        return tool_key not in self.hidden
 
 
 class Lead(db.Model):
@@ -443,6 +494,10 @@ def _ensure_schema_inner():
         ("user", "role"): "'owner'", ("user", "active"): "TRUE",
         ("user", "feature_multi_user"): "FALSE",
         ("user", "feature_dialer"): "FALSE",
+        ("user", "feature_enrichment"): "FALSE",
+        # empty means "hide nothing", which is exactly how every existing
+        # account already behaves
+        ("user", "hidden_tools"): "''",
         ("note", "kind"): "'note'",
         ("lead", "do_not_call"): "FALSE", ("lead", "call_count"): "0",
         ("lead", "consent_status"): "'none'", ("lead", "tags"): "''",
@@ -799,6 +854,79 @@ def setup_alerts():
     return alerts
 
 
+# url prefix -> tool key, for enforcing visibility at the route, not just in
+# the sidebar. Hiding a menu item is decoration; this is the actual gate.
+TOOL_PREFIXES = [
+    ("/admin/crm", "crm"), ("/admin/leads", "crm"),
+    ("/admin/tasks", "tasks"),
+    ("/admin/sites", "sites"), ("/edit/", "sites"), ("/edit-page/", "sites"),
+    ("/admin/forms", "forms"),
+    ("/admin/chat", "chat"),
+    ("/admin/funnels", "funnels"),
+    ("/admin/invoices", "invoices"),
+    ("/admin/ai-studio", "ai_studio"),
+    ("/admin/email", "email"),
+]
+
+
+@app.before_request
+def _enforce_tool_visibility():
+    """A tool the account owner switched off is gone, not merely hidden.
+
+    Admin is never gated. Accounts that have hidden nothing -- which is every
+    account that existed before this feature -- take the fast path out.
+    """
+    path = request.path
+    if not path.startswith(("/admin", "/edit/", "/edit-page/")):
+        return None
+    role, user = current_user()
+    if role != "user" or user is None:
+        return None
+    owner = db.session.get(User, user.account_id or user.id)
+    if owner is None or not owner.hidden_tools:
+        return None
+    hidden = owner.hidden
+    for prefix, key in TOOL_PREFIXES:
+        if path.startswith(prefix) and key in hidden and key not in TOOLS_ALWAYS_ON:
+            abort(404)
+    return None
+
+
+def visible_tools(role, user):
+    """The sidebar, resolved for whoever is looking.
+
+    Admin sees everything. A customer sees a tool when its add-on flag is on
+    (if it needs one) AND the account owner has not hidden it. An account that
+    has never been touched hides nothing, so this returns exactly what the
+    sidebar showed before any of this existed.
+    """
+    from dialer import disabled as dialer_off
+    owner = None
+    if user is not None:
+        owner = db.session.get(User, user.account_id or user.id)
+    hidden = owner.hidden if owner is not None else set()
+    flags = {
+        "dialer": (role == "admin") or bool(owner and owner.feature_dialer),
+        "multi_user": (role == "admin") or bool(owner and owner.feature_multi_user),
+        "enrichment": (role == "admin") or bool(owner and owner.feature_enrichment),
+    }
+    out = []
+    for key, label, section, url, icon, flag in TOOLS:
+        if flag and not flags.get(flag):
+            continue
+        if key == "dialer" and dialer_off():
+            continue
+        if role != "admin" and key in hidden and key not in TOOLS_ALWAYS_ON:
+            continue
+        if key == "team" and role != "admin":
+            from teams import perms as _p
+            if not _p.can(user, "team.manage"):
+                continue
+        out.append({"key": key, "label": label, "section": section,
+                    "url": url, "icon": icon})
+    return out
+
+
 @app.context_processor
 def inject_globals():
     role, user = current_user()
@@ -819,8 +947,9 @@ def inject_globals():
             ctx["can"] = lambda p, _u=user: _perms.can(_u, p)
             from dialer.models import DISPOSITION_LABELS
             ctx["DISPOSITION_LABELS"] = DISPOSITION_LABELS
+            ctx["nav_tools"] = visible_tools(role, user)
         except Exception:
-            pass
+            ctx["nav_tools"] = []
     # alert badge only for admin pages (skip public pages -> no extra queries)
     if role == "admin" and request.path.startswith("/admin"):
         alerts = setup_alerts()
@@ -1168,12 +1297,14 @@ def signup():
             # has already been checked above, so only 60MS can set these.
             want_team = bool(request.form.get("feature_multi_user"))
             want_dialer = bool(request.form.get("feature_dialer"))
+            want_enrich = bool(request.form.get("feature_enrichment"))
             seats = request.form.get("seat_limit", type=int) or 5
             user = User(name=name, email=email,
                         password_hash=generate_password_hash(password),
                         role="owner", active=True,
                         feature_multi_user=want_team,
                         feature_dialer=want_dialer,
+                        feature_enrichment=want_enrich,
                         seat_limit=(max(1, min(seats, 200)) if want_team else 1))
             db.session.add(user)
             db.session.commit()
@@ -2158,6 +2289,7 @@ def customers():
         else:
             want_team = bool(request.form.get("feature_multi_user"))
             want_dialer = bool(request.form.get("feature_dialer"))
+            want_enrich = bool(request.form.get("feature_enrichment"))
             seats = request.form.get("seat_limit", type=int) or 5
             db.session.add(User(name=name, email=email, phone=phone,
                                 monthly_price=parse_money(request.form.get("monthly_price")),
@@ -2166,16 +2298,20 @@ def customers():
                                 role="owner", active=True,
                                 feature_multi_user=want_team,
                                 feature_dialer=want_dialer,
+                                feature_enrichment=want_enrich,
                                 seat_limit=(max(1, min(seats, 200)) if want_team else 1)))
             db.session.commit()
             flash(f"Customer “{name}” created — password: {password}", "sticky")
         return redirect(url_for("customers"))
-    rows = User.query.order_by(User.created_at.desc()).all()
+    rows = User.query.filter(User.account_id.is_(None)) \
+        .order_by(User.created_at.desc()).all()
     stats = {u.id: {"sites": Site.query.filter_by(owner_id=u.id).count(),
                     "leads": Lead.query.filter_by(owner_id=u.id).count()}
              for u in rows}
     mrr = sum(u.monthly_price or 0 for u in rows)
-    return render_template("customers.html", rows=rows, stats=stats, mrr=mrr)
+    return render_template("customers.html", rows=rows, stats=stats, mrr=mrr,
+                           TOOLS=TOOLS, TOOL_BLURBS=TOOL_BLURBS,
+                           TOOLS_ALWAYS_ON=TOOLS_ALWAYS_ON)
 
 
 @app.route("/admin/customers/<int:user_id>/<action>", methods=["POST"])
@@ -2189,9 +2325,29 @@ def customer_action(user_id, action):
         new_pw = secrets.token_urlsafe(8)
         user.password_hash = generate_password_hash(new_pw)
         flash(f"New password for {user.name}: {new_pw}", "sticky")
+    elif action == "tools":
+        # Which tools this client sees. Storing what to HIDE means an account
+        # nobody has configured keeps seeing everything, which is how they all
+        # behaved before this existed.
+        keep = set(request.form.getlist("tool"))
+        hide = [k for k, _, _, _, _, _ in TOOLS
+                if k not in keep and k not in TOOLS_ALWAYS_ON]
+        user.hidden_tools = ",".join(hide)
+        shown = len(TOOLS) - len(hide)
+        flash(f"{user.name} now sees {shown} of {len(TOOLS)} tools."
+              + (f" Hidden: {', '.join(TOOL_LABELS[h] for h in hide)}."
+                 if hide else " Nothing is hidden."))
+        try:
+            from teams.models import log as _audit
+            _audit("account.tools", target=user.email,
+                   detail="hidden=" + (",".join(hide) or "none"),
+                   account_id=user.id)
+        except Exception:
+            pass
     elif action == "features":
         user.feature_multi_user = bool(request.form.get("feature_multi_user"))
         user.feature_dialer = bool(request.form.get("feature_dialer"))
+        user.feature_enrichment = bool(request.form.get("feature_enrichment"))
         seats = request.form.get("seat_limit", type=int)
         if seats:
             user.seat_limit = max(1, min(seats, 200))
@@ -2202,6 +2358,8 @@ def customer_action(user_id, action):
             bits.append(f"multi-user ({user.seat_limit} seats)")
         if user.feature_dialer:
             bits.append("AI calling")
+        if user.feature_enrichment:
+            bits.append("enrichment")
         flash(f"{user.name}: " + (", ".join(bits) + " switched on."
                                   if bits else "both add-ons switched off."))
         try:

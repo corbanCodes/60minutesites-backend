@@ -651,3 +651,57 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
   }
   .rec-widget input[type=file]::file-selector-button:hover { background: #EDE4D9; }
 }
+
+/* The qualify-and-transfer lane is the one most people actually want, so it
+   reads as the recommendation rather than one of four equal choices. */
+.rolecard-feature .rolecard-body { border-color: #E8C9B6; background: #FFFBF8; }
+.rolecard-feature input:checked + .rolecard-body { border-color: var(--orange); }
+.rolecard-eg { display: block; margin-top: 7px; color: var(--ink-2); font-size: 11.5px;
+               text-transform: uppercase; letter-spacing: .05em; }
+.rolecard-eg + * { margin-top: 2px; }
+
+/* ---------- the qualify-and-transfer preset card ---------- */
+.preset-card { display: grid; gap: 14px; margin-bottom: 22px; max-width: none;
+  border-left: 4px solid var(--orange); }
+.preset-head { display: flex; gap: 14px; align-items: flex-start; }
+.preset-head > i { font-size: 26px; color: var(--orange); margin-top: 2px; }
+.preset-head h2 { margin: 0 0 4px; font-size: 17px; }
+.preset-head p { margin: 0; line-height: 1.6; }
+.preset-card label { font-size: 13px; font-weight: 700; display: block; margin-bottom: 5px; }
+.preset-card input[type=text], .preset-card input[type=tel],
+.preset-card select, .preset-card textarea {
+  width: 100%; padding: 10px 12px; border: 1.5px solid var(--line);
+  border-radius: 8px; font-family: var(--font); font-size: 14px; background: #fff; }
+.preset-card textarea { resize: vertical; min-height: 58px; }
+.preset-card input:focus, .preset-card select:focus, .preset-card textarea:focus {
+  outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,.15); }
+@media (max-width: 760px) {
+  .preset-head > i { display: none; }
+  .preset-card input, .preset-card select, .preset-card textarea { font-size: 16px; min-height: 44px; }
+}
+
+/* ---------- per-client tool visibility ---------- */
+.toolsbox { display: inline-block; vertical-align: middle; }
+.toolsbox > summary { cursor: pointer; font-size: 12.5px; font-weight: 800; color: var(--ink-2);
+  background: #F3EDE6; border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 12px; list-style: none; white-space: nowrap; display: inline-flex;
+  gap: 5px; align-items: center; }
+.toolsbox > summary::-webkit-details-marker { display: none; }
+.toolsbox > summary:hover { background: #EDE4D9; color: var(--ink); }
+.toolsform { position: absolute; z-index: 40; margin-top: 8px; width: 340px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 16px; box-shadow: 0 14px 40px rgba(28,24,20,.18);
+  display: grid; gap: 8px; white-space: normal; text-align: left; }
+.toolsform .muted { font-size: 12px; line-height: 1.5; margin: 0 0 4px; }
+.toolrow { display: flex; gap: 9px; align-items: flex-start; cursor: pointer;
+  padding: 5px 0; border-top: 1px solid #F3EDE6; }
+.toolrow:first-of-type { border-top: none; }
+.toolrow input { margin-top: 3px; accent-color: var(--orange); flex-shrink: 0; }
+.toolrow-main { font-size: 13px; font-weight: 700; display: block; }
+.toolrow-main i { color: var(--ink-2); width: 16px; }
+.toolrow-main em { display: block; font-style: normal; font-weight: 500;
+  color: var(--ink-2); font-size: 11.5px; margin-top: 1px; line-height: 1.45; }
+.toolrow.locked { opacity: .55; cursor: default; }
+@media (max-width: 760px) {
+  .toolsform { position: static; width: auto; box-shadow: none; }
+}

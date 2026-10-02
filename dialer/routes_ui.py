@@ -584,6 +584,141 @@ DEFAULT_PLAYBOOK = {
 }
 
 
+# The lane most people actually want: the AI establishes whether it has the
+# decision maker, then puts a live person on the phone. Everything below is
+# written as something a rep would really say.
+QUALIFY_PLAYBOOK = {
+    "steps": [
+        {"title": "Open", "say": "Hi, this is an automated assistant calling "
+         "on behalf of {company}. I'll be quick.",
+         "goal": "Say who is calling, and that it is a machine"},
+        {"title": "The offer in one line", "say": "{offer}",
+         "goal": "Give them a reason to keep listening"},
+        {"title": "The qualifying question", "say": "Would that be your call, "
+         "or is there someone else I should be speaking to?",
+         "goal": "Find out in one question whether this is the decision maker"},
+        {"title": "If it is them", "say": "Perfect. Let me put you straight "
+         "through to a colleague who can set it up — one moment.",
+         "goal": "Transfer immediately, while they are interested"},
+        {"title": "If it is not them", "say": "No problem at all. Who would I "
+         "need to speak to, and when are they usually around?",
+         "goal": "Get the name and a time, then end politely"},
+        {"title": "Close", "say": "That's all I needed. Thanks for your time.",
+         "goal": "Leave them in a good mood either way"},
+    ],
+    "questions": [
+        {"question": "Are you the person who would decide on something like this?",
+         "collect_as": "is_decision_maker",
+         "disqualify_if": "they are clearly not interested at all"},
+        {"question": "If not you, who is, and when are they usually in?",
+         "collect_as": "right_person", "disqualify_if": ""},
+        {"question": "What is the best direct number or email for them?",
+         "collect_as": "right_person_contact", "disqualify_if": ""},
+    ],
+    "objections": [
+        {"trigger_phrases": ["what's the catch", "nothing is free", "too good"],
+         "response": "Fair question. The napkins carry a small ad, and the "
+                     "advertiser pays for all of it. That's the whole catch."},
+        {"trigger_phrases": ["not interested", "no thanks", "we're all set"],
+         "response": "Understood. Before I let you go — is that a no to the "
+                     "napkins, or a no to talking today?"},
+        {"trigger_phrases": ["send me an email", "send information"],
+         "response": "Happy to. What's the best address? And while I have you, "
+                     "are you the one who'd decide on it?"},
+        {"trigger_phrases": ["who is this", "what is this about", "are you a robot"],
+         "response": "I'm an automated assistant calling for {company}. A real "
+                     "person takes over the moment this looks like a fit."},
+        {"trigger_phrases": ["busy", "bad time", "in the middle of"],
+         "response": "Of course. Is there a better time this week, and are you "
+                     "the right person for me to call back?"},
+    ],
+    "transfer_criteria": (
+        "Transfer as soon as the person confirms they are the one who would "
+        "decide, or says they are interested and wants details. Do not keep "
+        "selling once they say yes — say a colleague is coming on and "
+        "transfer. If nobody is available to take it, say a person will call "
+        "back today, book the follow-up and end the call."),
+    "never_do": (
+        "Never quote a contract, a term length or anything beyond the stated "
+        "offer. Never claim to be a person. Never argue with a no. If they "
+        "ask to be removed from the list, confirm it, record it and end the "
+        "call."),
+}
+
+
+@bp.route("/presets/qualify-transfer", methods=["POST"])
+@require("agents.edit")
+def preset_qualify_transfer():
+    """Build the whole qualify-and-transfer setup in one go: the script, the
+    agent, and the hand-off target. Someone should not have to assemble this
+    from four screens to get the thing they came for."""
+    s = get_settings(g.account_id)
+    company = (request.form.get("company") or s.ai_disclosure_name
+               or "our company").strip()[:160]
+    offer = (request.form.get("offer") or "").strip() or (
+        "We supply bars and restaurants with free napkins that carry a QR "
+        "code, and we pay you two hundred dollars plus drinks on us.")
+    target = request.form.get("transfer_to", "available")   # available|number
+    number = (request.form.get("transfer_number") or "").strip()
+
+    pb = Playbook(
+        account_id=g.account_id, name="Qualify and transfer",
+        description="The AI checks it has the decision maker, then puts a "
+                    "live person on the call.",
+        is_default=Playbook.query.filter_by(account_id=g.account_id).count() == 0,
+        steps_json=json.dumps([
+            dict(x, say=x["say"].replace("{company}", company)
+                 .replace("{offer}", offer))
+            for x in QUALIFY_PLAYBOOK["steps"]]),
+        questions_json=json.dumps(QUALIFY_PLAYBOOK["questions"]),
+        objections_json=json.dumps([
+            dict(o, response=o["response"].replace("{company}", company))
+            for o in QUALIFY_PLAYBOOK["objections"]]),
+        transfer_criteria=QUALIFY_PLAYBOOK["transfer_criteria"],
+        never_do=QUALIFY_PLAYBOOK["never_do"])
+    db.session.add(pb)
+    db.session.flush()
+
+    agent = AiAgent(
+        account_id=g.account_id, name="Qualifier", direction="outbound",
+        playbook_id=pb.id, voice_id=s.elevenlabs_default_voice_id or "",
+        company_facts=f"{company}. {offer}",
+        persona="Brief, warm and unbothered. You are not selling, you are "
+                "finding out in under a minute whether this is the right "
+                "person. If it is, you get a colleague on the line fast.",
+        first_message=(f"Hi, this is an automated assistant calling on behalf "
+                       f"of {company}. I'll be quick — {offer}"),
+        transfer_rules=(
+            "The moment they confirm they are the decision maker, or ask for "
+            "details, use the transfer tool. Say: 'Perfect, let me put you "
+            "straight through to a colleague.' Then transfer. If the transfer "
+            "does not connect, apologise, take the best time to call back, "
+            "and book it."),
+        max_duration_seconds=240, active=True)
+    db.session.add(agent)
+
+    s.transfer_mode = "browser" if target == "available" else "number"
+    if target == "number" and number:
+        s.transfer_number = number[:32]
+    if not s.ai_disclosure_name:
+        s.ai_disclosure_name = company
+    db.session.flush()
+
+    from dialer.agents import sync_agent
+    res = sync_agent(agent, s)
+    log("dialer.preset_qualify", target=agent.name,
+        detail=f"transfer={target}", account_id=g.account_id, user=g.member)
+    db.session.commit()
+    flash("Built it: a “Qualify and transfer” script and a “Qualifier” agent "
+          + ("that hands the live call to whoever is on shift."
+             if target == "available"
+             else f"that hands the live call to {number}.")
+          + (" Open it to change the wording." if res.get("ok")
+             else f" ElevenLabs hasn't accepted it yet: {res.get('error')}"),
+          None if res.get("ok") else "error")
+    return redirect(url_for("dialer.agent_edit", agent_id=agent.id))
+
+
 @bp.route("/playbooks")
 @require("playbooks.edit")
 def playbooks():

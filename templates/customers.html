@@ -30,6 +30,8 @@
     </div>
     <label class="addon"><input type="checkbox" name="feature_dialer">
       <span><b>AI calling system</b><em>Power dialer, AI voice agent, recordings, call scoring.</em></span></label>
+    <label class="addon"><input type="checkbox" name="feature_enrichment">
+      <span><b>Data enrichment &amp; email personalisation</b><em>Research a list of websites with AI, then write a personal email for every row. They use their own OpenAI key.</em></span></label>
   </fieldset>
   <button class="btn" type="submit">Create customer</button>
   <script>(function(){var m=document.getElementById('mu-new'),r=document.getElementById('seatrow-new');
@@ -56,6 +58,7 @@
         <label title="Multi-user support"><input type="checkbox" name="feature_multi_user" {{ 'checked' if u.feature_multi_user }}> <i class="bi bi-people"></i></label>
         <input type="number" name="seat_limit" value="{{ u.seat_limit or 5 }}" min="1" max="200" title="Seats" class="seatnum">
         <label title="AI calling system"><input type="checkbox" name="feature_dialer" {{ 'checked' if u.feature_dialer }}> <i class="bi bi-telephone-outbound"></i></label>
+        <label title="Data enrichment &amp; email personalisation"><input type="checkbox" name="feature_enrichment" {{ 'checked' if u.feature_enrichment }}> <i class="bi bi-binoculars"></i></label>
         <button class="chip-btn" type="submit" title="Save add-ons"><i class="bi bi-check-lg"></i></button>
       </form>
     </td>
@@ -63,6 +66,23 @@
     <td>{{ stats[u.id].leads }}</td>
     <td class="muted">{{ u.created_at | localdate('%b %-d, %Y') }}</td>
     <td style="white-space:nowrap">
+      <details class="toolsbox">
+        <summary title="Choose what this client can see"><i class="bi bi-sliders"></i> Tools{% if u.hidden %} <span class="count-chip">{{ u.hidden | length }} off</span>{% endif %}</summary>
+        <form method="post" action="/admin/customers/{{ u.id }}/tools" class="toolsform">
+          <p class="muted">Untick anything {{ u.name }} should not see. Unticking a tool removes it from their
+            menu <b>and</b> blocks the page, so this is real access control, not just tidying.</p>
+          {% for key, label, section, url, icon, flag in TOOLS %}
+          <label class="toolrow {{ 'locked' if key in TOOLS_ALWAYS_ON }}">
+            <input type="checkbox" name="tool" value="{{ key }}"
+                   {{ 'checked' if u.can_see(key) }}
+                   {{ 'checked disabled' if key in TOOLS_ALWAYS_ON }}>
+            <span class="toolrow-main"><i class="bi {{ icon }}"></i> {{ label }}
+              <em>{{ TOOL_BLURBS.get(key, '') }}</em></span>
+          </label>
+          {% endfor %}
+          <button class="btn sm" type="submit">Save what they can see</button>
+        </form>
+      </details>
       <form method="post" action="/admin/customers/{{ u.id }}/reset" style="display:inline"><button class="btn ghost sm" type="submit">Reset PW</button></form>
       <form method="post" action="/admin/customers/{{ u.id }}/delete" style="display:inline" onsubmit="return confirm('Delete this customer? Their sites and leads are kept, unowned.')"><button class="btn danger sm" type="submit">Delete</button></form>
     </td>

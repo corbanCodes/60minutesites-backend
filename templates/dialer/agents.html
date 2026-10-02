@@ -4,6 +4,48 @@
 {% block content %}
 <link rel="stylesheet" href="/static-admin/manage.css">
 
+<form class="card preset-card" method="post" action="/dialer/presets/qualify-transfer">
+  <div class="preset-head">
+    <i class="bi bi-person-check"></i>
+    <div>
+      <h2>Qualify, then hand to a live person</h2>
+      <p class="muted">The AI makes the offer in one line and asks one question: are you the person who
+        decides this? If yes, it tells them a colleague is coming on and transfers the live call to a real
+        rep. If no, it gets the right name and a time, and books the callback. Your rep only ever picks up
+        a phone with a decision maker already on it.</p>
+    </div>
+  </div>
+  <div class="row2">
+    <div>
+      <label for="pf-company">Who is calling</label>
+      <input type="text" id="pf-company" name="company" value="{{ s.ai_disclosure_name or '' }}"
+             placeholder="NapkinAds">
+    </div>
+    <div>
+      <label for="pf-target">Who picks up when it is a yes</label>
+      <select id="pf-target" name="transfer_to">
+        <option value="available">Whoever is on shift in the app</option>
+        <option value="number">One phone number</option>
+      </select>
+    </div>
+  </div>
+  <div id="pf-numwrap" hidden>
+    <label for="pf-number">Transfer to this number</label>
+    <input type="tel" id="pf-number" name="transfer_number" placeholder="(865) 555-0100"
+           value="{{ s.transfer_number or '' }}">
+    <p class="muted" style="margin:4px 0 0">A mobile is fine. It rings like any other call.</p>
+  </div>
+  <div>
+    <label for="pf-offer">The offer, in one sentence</label>
+    <textarea id="pf-offer" name="offer" rows="2" placeholder="We supply bars and restaurants with free napkins that carry a QR code, and we pay you two hundred dollars plus drinks on us.">We supply bars and restaurants with free napkins that carry a QR code, and we pay you two hundred dollars plus drinks on us.</textarea>
+    <p class="muted" style="margin:4px 0 0">This is the first thing they hear after the AI says who it is.
+      Short beats clever.</p>
+  </div>
+  <button class="btn" type="submit"><i class="bi bi-magic"></i> Build this setup for me</button>
+  <p class="muted" style="margin:0">Creates the script and the agent, wires the hand-off, and opens it so you
+    can change any of the wording.</p>
+</form>
+
 <div class="mg-head">
   <div class="mg-head-text">
     <h1>AI agents <span class="count-chip">{{ agents | length }}</span></h1>
@@ -73,3 +115,13 @@
 </div>
 {% endif %}
 {% endblock %}
+<script>
+  // Only ask for a phone number when the hand-off actually goes to one.
+  (function () {
+    var sel = document.getElementById('pf-target'),
+        wrap = document.getElementById('pf-numwrap');
+    if (!sel || !wrap) return;
+    function sync() { wrap.hidden = sel.value !== 'number'; }
+    sel.addEventListener('change', sync); sync();
+  })();
+</script>
