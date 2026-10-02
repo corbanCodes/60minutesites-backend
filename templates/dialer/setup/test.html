@@ -1,0 +1,134 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% set sim = ready.simulating if ready else False %}
+
+<div class="card practice-banner {{ 'on' if sim else 'off' }}">
+  <i class="bi {{ 'bi-shield-fill-check' if sim else 'bi-broadcast-pin' }}"></i>
+  <div>
+    <b>Practice mode is {{ 'ON' if sim else 'OFF' }}.</b>
+    {% if sim %}
+    <p style="margin:4px 0 0">No real call is placed and nothing is charged. The system runs the whole sequence
+      against itself &mdash; it picks a number, applies your calling rules, plays out an answer, writes a
+      transcript, scores it and files the follow-up task &mdash; so you see exactly what a real call produces
+      before you spend a cent.</p>
+    {% else %}
+    <p style="margin:4px 0 0">This places a real phone call on your Twilio account and you will be charged for
+      it, about 1.4 cents a minute. Your own phone will ring.</p>
+    {% endif %}
+  </div>
+</div>
+
+<form class="form wiz-form" method="post" action="/dialer/test-call">
+  <div class="row2">
+    <div>
+      <label for="to_number">Which number should we call?</label>
+      <input type="tel" id="to_number" name="to_number" required placeholder="(423) 555-0147"
+             autocomplete="tel">
+      <p class="muted" style="margin:5px 0 0">Use your own mobile. Have it next to you.</p>
+    </div>
+    <div>
+      <label for="agent_id">What should happen when you answer?</label>
+      <select id="agent_id" name="agent_id">
+        <option value="">Just ring my phone, no AI</option>
+        {% if agents %}
+          {% for a in agents %}
+          <option value="{{ a.id }}">{{ a.name }}{% if a.direction %} &mdash; {{ a.direction }}{% endif %}</option>
+          {% endfor %}
+        {% endif %}
+      </select>
+      {% if not agents %}
+      <p class="muted" style="margin:5px 0 0">You have no AI agents built yet, so there is only the plain ring
+        test. That is the right test at this stage anyway.</p>
+      {% endif %}
+    </div>
+  </div>
+  <button class="btn" type="submit"><i class="bi bi-telephone-outbound"></i>
+    {{ 'Run the test' if sim else 'Place the test call' }}</button>
+  {% if not sim %}
+  <p class="muted" style="margin:0">If your Twilio account is still on trial, this only works on a number you
+    have verified in the Twilio console, and the call starts with a Twilio recording.</p>
+  {% endif %}
+</form>
+
+<div class="card wiz-steps-card">
+  <h3>What the test proves</h3>
+  <table class="plan-table">
+    <tr><th>Link in the chain</th><th>What a pass means</th></tr>
+    <tr><td>Twilio keys</td><td>Your account accepted the request and put a call out.</td></tr>
+    <tr><td>Your phone number</td><td>The number is live, pointed at this app, and shows on the screen you
+      are calling.</td></tr>
+    <tr><td>Calling rules</td><td>The hours, the state rules and your do-not-call list were all checked before
+      anything dialled.</td></tr>
+    <tr><td>Recording</td><td>Audio came back and is attached to the call record.</td></tr>
+    <tr><td>Transcript and summary</td><td>Your AI key turned that audio into text, a summary and a score.</td></tr>
+    <tr><td>The CRM write</td><td>A call record, a note and any follow-up task landed on the lead.</td></tr>
+  </table>
+  <p class="muted" style="margin:12px 0 0">When it finishes you land on the call record. Everything above is on
+    that one page, which is the same page you will read after every real call.</p>
+</div>
+
+{% if numbers %}
+<div class="card wiz-steps-card">
+  <h3>It will call from one of these</h3>
+  <p class="muted" style="margin:0 0 10px">The system picks the number closest to the area code you are
+    dialling.</p>
+  <ul class="plain-list">
+    {% for nr in numbers %}
+    <li><b>{{ nr.pretty or nr.e164 }}</b>
+      <span class="muted">&mdash; {{ 'AI pool' if nr.pool == 'ai' else 'rep pool' }}{% if nr.region %}, {{ nr.region }}{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if ready and ready.blockers %}
+<div class="card wiz-callout danger">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <div>
+    <b>Some things will not work yet.</b>
+    <ul style="margin:6px 0 0;padding-left:18px">
+      {% for b in ready.blockers %}
+      <li>{{ b.fix }} <a href="/dialer/setup/{{ b.step }}">Go to step {{ b.step }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> Practice mode, and how to read the result</summary>
+  <div class="guide-body">
+    <h4>What practice mode is</h4>
+    <p>A switch that makes the system talk to a stand-in instead of to Twilio, ElevenLabs and OpenAI. Every
+      other line of code runs exactly as it does in production: the same rules are checked, the same records
+      are written, the same screens are drawn. The only difference is that no phone rings and no vendor
+      charges you.</p>
+    <p>It exists so you can click through the whole product, train a new rep, or show someone what a call
+      record looks like, without spending money or calling a real person by accident.</p>
+    <p class="muted">It is switched on either by the server (while this is still being built) or per account.
+      The banner at the top of this page always tells you which state you are in &mdash; check it before you
+      press the button.</p>
+
+    <h4>If the real call does not arrive</h4>
+    <ul>
+      <li><b>Nothing rings at all.</b> Usually a trial Twilio account calling an unverified number. The call
+        record will say so.</li>
+      <li><b>It rings and then drops.</b> The phone number is not pointed at this app. Re-import it on
+        <a href="/dialer/setup/4">step 4</a>.</li>
+      <li><b>It connects but there is silence.</b> Check the voice settings on
+        <a href="/dialer/setup/8">step 8</a>, and that ElevenLabs is connected if you picked an AI agent.</li>
+      <li><b>The call worked but there is no transcript.</b> The AI key on
+        <a href="/dialer/setup/5">step 5</a> is missing or out of credit. The recording is still there.</li>
+    </ul>
+
+    <h4>Reading the call record</h4>
+    <p>Every call gets one page: who was called, what the system observed, the recording, the transcript, the
+      summary, the score out of ten with three reasons, and a timeline of every event the phone network sent.
+      When something goes wrong on a real call later, that timeline is where the answer is.</p>
+  </div>
+</details>
+{% endblock %}

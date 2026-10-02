@@ -212,6 +212,24 @@ class DialerSettings(db.Model):
     def has_llm(self):
         return bool(self.llm_key_enc and self.llm_verified_at)
 
+    # Booleans whose column default only applies on INSERT. Reading them off
+    # an unsaved row gives None, and "None" must mean the SAFE answer, not off.
+    @property
+    def disclose_ai(self):
+        return self.ai_disclosure_enabled is not False
+
+    @property
+    def announce_recording(self):
+        return self.recording_announce is not False
+
+    @property
+    def records_calls(self):
+        return self.recording_enabled is not False
+
+    @property
+    def gate_on(self):
+        return self.gate_ai_line_type is not False
+
     @property
     def effective_disclosure(self):
         if self.ai_disclosure_text:

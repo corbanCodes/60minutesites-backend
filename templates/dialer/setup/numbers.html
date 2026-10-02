@@ -58,12 +58,12 @@
   <p class="muted" style="margin:0">Use the area code your leads are in, not the one you live in. A number that
     looks local to the person being called is answered noticeably more often.</p>
 
-  {% if found %}
+  {% if results %}
   <table style="margin-top:14px">
     <tr><th>Number</th><th>Area</th><th></th></tr>
-    {% for f in found %}
+    {% for f in results %}
     <tr>
-      <td><span class="rowlink">{{ f.pretty or f.e164 or f }}</span></td>
+      <td><span class="rowlink">{{ f.friendly_name or f.e164 or f }}</span></td>
       <td class="muted">{{ f.region or '' }}</td>
       <td style="text-align:right">
         <form method="post" action="/dialer/numbers/buy" class="inline-form">

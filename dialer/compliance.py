@@ -111,7 +111,7 @@ def line_type_ok_for_ai(lead, settings):
     owner has deliberately switched the gate off."""
     if has_consent(lead):
         return True, ""
-    if not settings.gate_ai_line_type:
+    if not settings.gate_on:
         return True, "gate_off"
     lt = (lead.line_type or "").strip()
     if not lt:
@@ -182,8 +182,8 @@ def can_dial(lead, mode, settings, account_id, now=None, campaign=None):
         return dict(ev, ok=True, reason="ok", line_type=lead.line_type or "unchecked")
 
     # 6. AI modes: disclosure must be configured
-    if settings.ai_disclosure_enabled and not (settings.ai_disclosure_name
-                                               or settings.ai_disclosure_text):
+    if settings.disclose_ai and not (settings.ai_disclosure_name
+                                     or settings.ai_disclosure_text):
         return dict(ev, ok=False, reason="no_disclosure")
 
     # 7. AI modes: state overlay
@@ -200,7 +200,7 @@ def can_dial(lead, mode, settings, account_id, now=None, campaign=None):
         ev["attestation"] = (settings.gate_attestation or "")[:300]
     if not allowed:
         return dict(ev, ok=False, reason=why)
-    if (settings.gate_ai_line_type and not has_consent(lead)
+    if (settings.gate_on and not has_consent(lead)
             and lead.line_type_checked_at and settings.line_type_max_age_days):
         age = (now - lead.line_type_checked_at).days
         ev["line_type_age_days"] = age

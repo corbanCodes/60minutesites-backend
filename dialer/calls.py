@@ -45,7 +45,7 @@ def start_call(account_id, lead, mode, settings, from_number=None,
         gate_decision=json.dumps(gate),
         disclosure_text=(settings.effective_disclosure
                          if mode in ("ai_outbound", "voicemail")
-                         and settings.ai_disclosure_enabled else ""),
+                         and settings.disclose_ai else ""),
         status="queued", started_at=_now())
     db.session.add(call)
     db.session.flush()
