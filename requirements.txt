@@ -1,11 +1,23 @@
+# Pinned deliberately. On 2026-10-02 an unpinned SQLAlchemy resolved to 2.1.1
+# on a fresh Railway build; 2.1 changed the default driver for postgresql://
+# from psycopg2 to psycopg (v3), which is not installed, and the app died at
+# import. Nothing in the app had changed. Pin the whole runtime stack so a
+# rebuild deploys the versions the tests actually ran against.
 flask==3.0.3
+Werkzeug==3.1.8
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+click==8.4.2
+blinker==1.9.0
+itsdangerous==2.2.0
 flask-sqlalchemy==3.1.1
+SQLAlchemy==2.0.51
+greenlet==3.2.4
 gunicorn==22.0.0
-PyMuPDF==1.28.2
 psycopg2-binary==2.9.12
 requests==2.32.3
+PyMuPDF==1.28.2
 twilio==9.4.1
 cryptography==44.0.0
 phonenumbers==8.13.52
-itsdangerous==2.2.0
 pytest==8.3.4

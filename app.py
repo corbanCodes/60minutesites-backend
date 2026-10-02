@@ -43,6 +43,12 @@ db_url = os.environ.get(
     "sqlite:///" + os.path.join(_here, "instance", "data.db"))
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+# Name the driver explicitly. SQLAlchemy 2.1 changed what a bare
+# "postgresql://" means -- it now defaults to psycopg v3 rather than psycopg2 --
+# so a plain URL silently picks a different driver depending on which
+# SQLAlchemy a build happens to resolve. This app ships psycopg2-binary.
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 os.makedirs(os.path.join(_here, "instance"), exist_ok=True)
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
