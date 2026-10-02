@@ -198,3 +198,62 @@ def test_a_brand_new_account_reports_zero_of_eleven(ctx):
     assert p["done"] == 0
     assert p["pct"] == 0
     assert p["complete"] is False
+
+
+def test_a_practice_mode_probe_does_not_tick_a_vendor_step(ctx):
+    """The regression behind "it says 8 of 11 and I did none of it".
+
+    In practice mode the fake providers answer every probe with "ok", and
+    _test_vendor writes that answer into the same columns a live connection
+    writes to. Reading them back turned a practice session into a green
+    checklist for an account with no Twilio, no AI key and no ElevenLabs.
+    """
+    from datetime import datetime
+
+    owner = make_user(name="Sim2", email="s2@x.test", dialer=True)
+    s = get_settings(owner.id)
+
+    # exactly what pressing "Test connection" in practice mode leaves behind
+    s.set_secret("twilio_account_sid", "ACfake", "twilio_sid_last4")
+    s.twilio_verified_at = datetime.utcnow()
+    s.twilio_pcp_status = "business"
+    s.set_secret("llm_key", "sk-fake", "llm_last4")
+    s.llm_verified_at = datetime.utcnow()
+    s.set_secret("elevenlabs_key", "el-fake", "elevenlabs_last4")
+    s.elevenlabs_verified_at = datetime.utcnow()
+    db.session.commit()
+
+    st = wizard.status(s, owner.id)          # DIALER_SIMULATION=1 in conftest
+    assert st["twilio"] == "todo"
+    assert st["business"] == "todo"
+    assert st["llm"] == "todo"
+    assert st["elevenlabs"] == "todo"
+    assert wizard.progress(s, owner.id)["done"] == 0
+
+
+def test_the_same_probes_do_count_once_practice_mode_is_off(ctx, monkeypatch):
+    """The keys are not thrown away -- they are just not evidence yet."""
+    from datetime import datetime
+
+    owner = make_user(name="Live", email="live@x.test", dialer=True)
+    s = get_settings(owner.id)
+    s.set_secret("twilio_account_sid", "ACreal", "twilio_sid_last4")
+    s.twilio_verified_at = datetime.utcnow()
+    s.twilio_pcp_status = "business"
+    db.session.commit()
+
+    monkeypatch.delenv("DIALER_SIMULATION", raising=False)
+    st = wizard.status(s, owner.id)
+    assert st["twilio"] == "done"
+    assert st["business"] == "done"
+
+
+def test_a_profile_status_alone_is_not_a_verified_business(bare):
+    """twilio_pcp_status is written by the probe that connects Twilio and is
+    never cleared, so on its own it would keep step 3 green after the account
+    is disconnected."""
+    owner, s = bare
+    s.twilio_pcp_status = "business"          # left over, no account behind it
+    db.session.commit()
+    assert wizard.status(s, owner.id)["business"] == "todo"
+    assert wizard.progress(s, owner.id)["done"] == 0

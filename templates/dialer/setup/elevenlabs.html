@@ -69,14 +69,17 @@
 
 <div class="card wiz-steps-card">
   <h3>What each plan buys you</h3>
-  <table class="plan-table">
+  <table class="plan-table cardtable">
     <tr><th>Plan</th><th>Calls at once</th><th>Realistic batch size</th><th>Price per minute</th></tr>
-    <tr><td>Free</td><td>4</td><td>2 at a time</td><td>$0.08</td></tr>
-    <tr><td>Starter</td><td>6</td><td>3 at a time</td><td>$0.08</td></tr>
-    <tr><td>Creator</td><td>10</td><td>5 at a time</td><td>$0.08</td></tr>
-    <tr class="plan-pick"><td>Pro</td><td>20</td><td>10 at a time</td><td>$0.08</td></tr>
-    <tr><td>Scale</td><td>30</td><td>15 at a time</td><td>$0.08</td></tr>
-    <tr><td>Business</td><td>40</td><td>20 at a time</td><td>$0.08</td></tr>
+    {% for pl in [('Free', 4, 2), ('Starter', 6, 3), ('Creator', 10, 5),
+                  ('Pro', 20, 10), ('Scale', 30, 15), ('Business', 40, 20)] %}
+    <tr {{ 'class=plan-pick' if pl[0] == 'Pro' }}>
+      <td class="ct-title ct-wide">{{ pl[0] }}</td>
+      <td data-label="Calls at once">{{ pl[1] }}</td>
+      <td data-label="Realistic batch">{{ pl[2] }} at a time</td>
+      <td class="ct-wide" data-label="Price per minute">$0.08</td>
+    </tr>
+    {% endfor %}
   </table>
   <p style="margin:12px 0 0"><b>The plan buys how many calls can run at once, not a cheaper rate.</b> Every tier
     is eight cents a minute. If you only ever run two or three AI calls at a time, the cheap plan costs you

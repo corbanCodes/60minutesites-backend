@@ -8,14 +8,14 @@
 </div>
 <p class="muted" style="margin-top:-10px">Team changes, key changes and compliance overrides. Append-only.</p>
 {% if rows %}
-<table>
+<table class="cardtable">
   <tr><th>When</th><th>Who</th><th>What</th><th>Detail</th></tr>
   {% for r in rows %}
   <tr>
-    <td class="muted" style="white-space:nowrap">{{ r.created_at | local }}</td>
-    <td>{{ r.actor }}</td>
-    <td><code>{{ r.action }}</code> {{ r.target }}</td>
-    <td class="muted">{{ r.detail | truncate(140) }}</td>
+    <td class="muted ct-title ct-wide" style="white-space:nowrap">{{ r.created_at | local }}</td>
+    <td data-label="Who">{{ r.actor }}</td>
+    <td class="ct-wide" data-label="What"><code>{{ r.action }}</code> {{ r.target }}</td>
+    <td class="muted ct-wide" data-label="Detail">{{ r.detail | truncate(140) }}</td>
   </tr>
   {% endfor %}
 </table>

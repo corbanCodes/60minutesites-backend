@@ -3,30 +3,30 @@
 
 {% if numbers %}
 <h3 class="wiz-h3">Your numbers <span class="count-chip">{{ numbers | length }}</span></h3>
-<table>
+<table class="cardtable">
   <tr><th>Number</th><th>Pool</th><th>Used for</th><th>Calls a day</th><th>Status</th><th></th></tr>
   {% for nr in numbers %}
   <tr>
-    <td>
+    <td class="ct-title ct-wide">
       <span class="rowlink">{{ nr.pretty or nr.e164 }}</span>
       {% if nr.friendly_name %}<div class="subtext">{{ nr.friendly_name }}</div>{% endif %}
     </td>
-    <td>
+    <td data-label="Pool">
       {% if nr.pool == 'ai' %}<span class="pill" style="background:#5B4B9E">AI</span>
       {% else %}<span class="pill" style="background:#2E7D4F">Rep</span>{% endif %}
     </td>
-    <td class="muted">
+    <td class="muted" data-label="Used for">
       {% if nr.purpose == 'outbound' %}Outbound only
       {% elif nr.purpose == 'inbound' %}Inbound only
       {% else %}Outbound and inbound{% endif %}
     </td>
-    <td>{{ nr.daily_cap or 120 }}</td>
-    <td>
+    <td data-label="Calls a day">{{ nr.daily_cap or 120 }}</td>
+    <td data-label="Status">
       {% if nr.state == 'active' %}<span class="pill" style="background:#2E7D4F">Active</span>
       {% elif nr.state == 'parked' %}<span class="pill" style="background:#B98A2B">Resting</span>
       {% else %}<span class="pill" style="background:#888">Released</span>{% endif %}
     </td>
-    <td style="white-space:nowrap;text-align:right">
+    <td class="ct-actions ct-wide" style="white-space:nowrap;text-align:right">
       {% if nr.state != 'released' %}
       <form method="post" action="/dialer/numbers/{{ nr.id }}/release" class="inline-form"
             onsubmit="return confirm('Release {{ nr.pretty or nr.e164 }}? Twilio gives the number to someone else and you can never get it back. Anyone who calls it later reaches a stranger. Stop paying the $1.15 a month only if this number has never been used to call out.')">
@@ -59,13 +59,13 @@
     looks local to the person being called is answered noticeably more often.</p>
 
   {% if results %}
-  <table style="margin-top:14px">
+  <table class="cardtable" style="margin-top:14px">
     <tr><th>Number</th><th>Area</th><th></th></tr>
     {% for f in results %}
     <tr>
-      <td><span class="rowlink">{{ f.friendly_name or f.e164 or f }}</span></td>
-      <td class="muted">{{ f.region or '' }}</td>
-      <td style="text-align:right">
+      <td class="ct-title ct-wide"><span class="rowlink">{{ f.friendly_name or f.e164 or f }}</span></td>
+      <td class="muted ct-wide" data-label="Area">{{ f.region or '' }}</td>
+      <td class="ct-actions ct-wide" style="text-align:right">
         <form method="post" action="/dialer/numbers/buy" class="inline-form">
           <input type="hidden" name="e164" value="{{ f.e164 or f }}">
           <select name="pool" class="scope-select">
@@ -130,7 +130,7 @@
     <p>Plan on <b>one number for every 100 to 150 outbound calls a day</b>. Carriers watch call volume per
       number. Push 400 dials a day through a single number and it gets labelled inside a week, no matter how
       polite your reps are.</p>
-    <table>
+    <table class="tscroll">
       <tr><th>Dials a day</th><th>Numbers to hold</th><th>Cost a month</th></tr>
       <tr><td>100</td><td>1</td><td>$1.15</td></tr>
       <tr><td>300</td><td>2 or 3</td><td>$2.30 to $3.45</td></tr>

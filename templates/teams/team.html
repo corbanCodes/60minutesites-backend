@@ -55,15 +55,15 @@
 
 {% if invites %}
 <h2>Waiting to accept <span class="count-chip">{{ invites | length }}</span></h2>
-<table>
+<table class="cardtable">
   <tr><th>Email</th><th>Role</th><th>Invited</th><th>Expires</th><th></th></tr>
   {% for i in invites %}
   <tr>
-    <td><span class="rowlink">{{ i.email }}</span>{% if i.name %}<div class="subtext">{{ i.name }}</div>{% endif %}</td>
-    <td><span class="pill" style="background:#9A6B14">{{ role_labels[i.role] }}</span></td>
-    <td class="muted">{{ i.created_at | localdate }}</td>
-    <td class="muted">{{ i.expires_at | localdate }}</td>
-    <td style="white-space:nowrap;text-align:right">
+    <td class="ct-title ct-wide"><span class="rowlink">{{ i.email }}</span>{% if i.name %}<div class="subtext">{{ i.name }}</div>{% endif %}</td>
+    <td class="ct-wide" data-label="Role"><span class="pill" style="background:#9A6B14">{{ role_labels[i.role] }}</span></td>
+    <td class="muted" data-label="Invited">{{ i.created_at | localdate }}</td>
+    <td class="muted" data-label="Expires">{{ i.expires_at | localdate }}</td>
+    <td class="ct-actions ct-wide" style="white-space:nowrap;text-align:right">
       <form method="post" action="/admin/team/invite/{{ i.id }}/resend" class="inline-form"><button class="chip-btn">Resend</button></form>
       <form method="post" action="/admin/team/invite/{{ i.id }}/cancel" class="inline-form"><button class="chip-btn danger">Cancel</button></form>
     </td>
@@ -73,17 +73,17 @@
 {% endif %}
 
 <h2 style="margin-top:26px">People <span class="count-chip">{{ members | length }}</span></h2>
-<table>
+<table class="cardtable">
   <tr><th>Name</th><th>Role</th><th>Last login</th><th>Calls this week</th><th></th></tr>
   {% for u in members %}
   <tr class="{{ 'row-off' if u.active is false }}">
-    <td>
+    <td class="ct-title ct-wide">
       <span class="rowlink">{{ u.name }}</span>
       {% if u.account_id is none %}<span class="pill owner-pill">Owner</span>{% endif %}
       {% if u.active is false %}<span class="pill" style="background:#888">Deactivated</span>{% endif %}
       <div class="subtext">{{ u.email }}{% if u.job_title %} · {{ u.job_title }}{% endif %}</div>
     </td>
-    <td>
+    <td class="ct-wide" data-label="Role">
       {% if u.account_id is none %}
         <span class="muted">Account owner</span>
       {% else %}
@@ -94,9 +94,9 @@
       </form>
       {% endif %}
     </td>
-    <td class="muted">{{ u.last_login_at | local if u.last_login_at else 'never' }}</td>
-    <td>{{ call_counts.get(u.id, 0) }}</td>
-    <td style="white-space:nowrap;text-align:right">
+    <td class="muted" data-label="Last login">{{ u.last_login_at | local if u.last_login_at else 'never' }}</td>
+    <td data-label="Calls this week">{{ call_counts.get(u.id, 0) }}</td>
+    <td class="ct-actions ct-wide" style="white-space:nowrap;text-align:right">
       {% if u.account_id is not none %}
       <form method="post" action="/admin/team/member/{{ u.id }}/reset" class="inline-form"><button class="chip-btn">Reset password</button></form>
       {% if u.active is false %}
@@ -116,7 +116,7 @@
     <table class="matrix">
       <tr><th>Permission</th>{% for r in roles %}<th>{{ role_labels[r] }}</th>{% endfor %}</tr>
       {% for group in matrix %}
-      <tr class="matrix-group"><td colspan="{{ roles | length + 1 }}">{{ group.group }}</td></tr>
+      <tr class="matrix-group"><td colspan="{{ roles | length + 1 }}"><span class="mg-label">{{ group.group }}</span></td></tr>
       {% for row in group.rows %}
       <tr>
         <td>{{ row.label }}</td>

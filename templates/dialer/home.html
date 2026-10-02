@@ -25,7 +25,7 @@
 {% block content %}
 <link rel="stylesheet" href="/static-admin/dial.css">
 
-<div class="topbar">
+<div class="topbar dl-topbar">
   <h1>Calling</h1>
   <div class="topbar-actions">
     {% if ready and not ready.simulating and can('dialer.settings') %}
@@ -157,20 +157,20 @@
 <h2 class="dl-h2">Campaigns running now
   <span class="count-chip">{{ campaigns | length if campaigns else 0 }}</span></h2>
 {% if campaigns %}
-<table>
+<table class="dl-table">
   <tr><th>Campaign</th><th>Mode</th><th>Left in queue</th><th>Dials</th><th>Connects</th><th></th></tr>
   {% for c in campaigns %}
   {% set cs = c.stats or {} %}
   <tr>
-    <td>
+    <td class="dl-cell-title">
       <a class="rowlink" href="/dialer/campaigns/{{ c.id }}">{{ c.name }}</a>
       {% if c.status == 'paused' %}<div class="subtext">Paused{% if c.paused_reason %} — {{ c.paused_reason }}{% endif %}</div>{% endif %}
     </td>
-    <td><span class="pill" style="background:{{ '#1E6F8E' if c.mode == 'ai' else ('#7A5CA8' if c.mode == 'voicemail' else '#2E7D4F') }}">{{ c.mode | replace('_', ' ') }}</span></td>
-    <td><b>{{ cs.get('queued', 0) }}</b> <span class="muted">of {{ cs.get('total', 0) }}</span></td>
-    <td>{{ cs.get('dials', 0) }}</td>
-    <td>{{ cs.get('connects', 0) }}</td>
-    <td style="white-space:nowrap;text-align:right">
+    <td data-label="Mode"><span class="pill" style="background:{{ '#1E6F8E' if c.mode == 'ai' else ('#7A5CA8' if c.mode == 'voicemail' else '#2E7D4F') }}">{{ c.mode | replace('_', ' ') }}</span></td>
+    <td data-label="Left in queue"><b>{{ cs.get('queued', 0) }}</b> <span class="muted">of {{ cs.get('total', 0) }}</span></td>
+    <td data-label="Dials">{{ cs.get('dials', 0) }}</td>
+    <td data-label="Connects">{{ cs.get('connects', 0) }}</td>
+    <td class="dl-cell-actions">
       {% if c.status == 'running' and can('campaigns.manage') %}
       <form method="post" action="/dialer/campaigns/{{ c.id }}/pause" class="inline-form"><button class="chip-btn">Pause</button></form>
       {% elif c.status == 'paused' and can('campaigns.manage') %}
@@ -192,22 +192,22 @@
 {# 7 ------------------------------------------------------------ recent calls #}
 <h2 class="dl-h2">Recent calls</h2>
 {% if recent %}
-<table>
+<table class="dl-table">
   <tr><th>When</th><th>Number</th><th>Outcome</th><th>Length</th><th>Score</th><th></th></tr>
   {% for c in recent %}
   <tr>
-    <td class="muted">{{ c.started_at | local if c.started_at else '—' }}</td>
-    <td><a class="rowlink" href="/dialer/calls/{{ c.id }}">{{ c.to_number or '—' }}</a></td>
-    <td>
+    <td class="muted" data-label="When">{{ c.started_at | local if c.started_at else '—' }}</td>
+    <td class="dl-cell-title"><a class="rowlink" href="/dialer/calls/{{ c.id }}">{{ c.to_number or '—' }}</a></td>
+    <td data-label="Outcome">
       {% if c.disposition %}
         <span class="pill" style="background:{{ DISP_COLOR.get(c.disposition, '#6B6259') }}">{{ DISP_LABEL.get(c.disposition, c.disposition | replace('_', ' ') | capitalize) }}</span>
       {% else %}
         <span class="muted">No outcome yet</span>
       {% endif %}
     </td>
-    <td class="dl-mono">{{ c.duration_pretty }}</td>
-    <td>{% if c.score is not none %}{{ c.score }}{% else %}<span class="muted">—</span>{% endif %}</td>
-    <td style="text-align:right"><a class="chip-btn" href="/dialer/calls/{{ c.id }}">Open</a></td>
+    <td class="dl-mono" data-label="Length">{{ c.duration_pretty }}</td>
+    <td data-label="Score">{% if c.score is not none %}{{ c.score }}{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td class="dl-cell-actions"><a class="chip-btn" href="/dialer/calls/{{ c.id }}">Open</a></td>
   </tr>
   {% endfor %}
 </table>

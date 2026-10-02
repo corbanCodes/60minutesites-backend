@@ -19,19 +19,19 @@
 </div>
 
 {% if playbooks %}
-<table>
-  <tr><th>Playbook</th><th class="mg-right">Steps</th><th class="mg-right">Questions</th><th class="mg-right">Objections</th><th></th></tr>
+<table class="mg-cards">
+  <tr class="mg-hrow"><th>Playbook</th><th class="mg-right">Steps</th><th class="mg-right">Questions</th><th class="mg-right">Objections</th><th></th></tr>
   {% for p in playbooks %}
   <tr>
-    <td>
+    <td class="mg-cardtitle">
       <a class="rowlink" href="/dialer/playbooks/{{ p.id }}">{{ p.name }}</a>
       {% if p.is_default %}<span class="pill ok-pill">Default</span>{% endif %}
       {% if p.description %}<div class="subtext">{{ p.description }}</div>{% endif %}
     </td>
-    <td class="mg-right mg-num">{{ p.steps | length }}</td>
-    <td class="mg-right mg-num">{{ p.questions | length }}</td>
-    <td class="mg-right mg-num">{{ p.objections | length }}</td>
-    <td class="mg-right mg-nowrap">
+    <td class="mg-right mg-num mg-cardstat" data-label="Steps">{{ p.steps | length }}</td>
+    <td class="mg-right mg-num mg-cardstat" data-label="Questions">{{ p.questions | length }}</td>
+    <td class="mg-right mg-num mg-cardstat" data-label="Objections">{{ p.objections | length }}</td>
+    <td class="mg-right mg-nowrap mg-cardactions">
       <a class="chip-btn" href="/dialer/playbooks/{{ p.id }}">Edit</a>
       <form method="post" action="/dialer/playbooks/{{ p.id }}/delete" class="inline-form"
             onsubmit="return confirm('Delete “{{ p.name }}”? Any campaign or agent pointing at it loses its script.')">

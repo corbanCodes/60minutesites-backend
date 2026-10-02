@@ -101,7 +101,7 @@
 
   {# --------------------------------------------------------- dispositions #}
   <section class="ph-card">
-    <div class="dl-sec-label">Outcome <span class="dl-sec-note">press the number</span></div>
+    <div class="dl-sec-label">Outcome <span class="dl-sec-note dl-kbd-only">press the number</span></div>
     <div class="disp-grid compact" id="disp-grid">
       {% for d in DISPOSITIONS %}
       <button class="disp-btn" type="button" data-disp="{{ d[0] }}" disabled>
@@ -184,8 +184,8 @@
     <p class="muted">While this is on, the AI can hand a hot lead straight to you.</p>
   </section>
 
-  <p class="ph-foot">Keep this window open and the call survives anything you do in HQ.<br>
-    <b>1–9</b> outcome · <b>V</b> voicemail · <b>Space</b> next lead · <b>Esc</b> cancel</p>
+  <p class="ph-foot">Keep this window open and the call survives anything you do in HQ.<span class="dl-kbd-only"><br>
+    <b>1–9</b> outcome · <b>V</b> voicemail · <b>Space</b> next lead · <b>Esc</b> cancel</span></p>
 </main>
 
 <script type="application/json" id="hq-config">{{ CFG | tojson }}</script>

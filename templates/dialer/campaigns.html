@@ -18,8 +18,8 @@
 </div>
 
 {% if campaigns %}
-<table>
-  <tr>
+<table class="mg-cards">
+  <tr class="mg-hrow">
     <th>Campaign</th><th>How it calls</th><th>Status</th><th>Progress</th>
     <th class="mg-right">Dials</th><th class="mg-right">Connects</th><th class="mg-right">Meetings</th><th></th>
   </tr>
@@ -29,20 +29,20 @@
   {% set done = (st.get('done', 0) or 0) + (st.get('skipped', 0) or 0) %}
   {% set pct = ((done / total) * 100) | round(0, 'floor') | int if total else 0 %}
   <tr>
-    <td>
+    <td class="mg-cardtitle">
       <a class="rowlink" href="/dialer/campaigns/{{ c.id }}">{{ c.name }}</a>
       <div class="subtext">Built {{ c.created_at | localdate if c.created_at else '—' }}</div>
     </td>
-    <td>
+    <td data-label="How it calls">
       <span class="pill mode-{{ c.mode or 'power' }}">
         {% if c.mode == 'ai' %}AI dials{% elif c.mode == 'voicemail' %}Voicemail drop{% else %}You dial{% endif %}
       </span>
     </td>
-    <td>
+    <td data-label="Status">
       <span class="pill st-{{ c.status or 'draft' }}">{{ (c.status or 'draft') | capitalize }}</span>
       {% if c.paused_reason %}<div class="subtext">{{ c.paused_reason }}</div>{% endif %}
     </td>
-    <td>
+    <td data-label="Progress">
       <div class="mg-progress">
         <div class="mg-progress-track" role="img"
              aria-label="{{ done }} of {{ total }} leads worked through">
@@ -51,10 +51,10 @@
         <div class="mg-progress-text">{{ done }} of {{ total }} worked{% if st.get('skipped') %} · {{ st.get('skipped') }} skipped{% endif %}</div>
       </div>
     </td>
-    <td class="mg-right mg-num">{{ st.get('dials', 0) | default(0) }}</td>
-    <td class="mg-right mg-num">{{ st.get('connects', 0) | default(0) }}</td>
-    <td class="mg-right mg-num">{{ st.get('meetings', 0) | default(0) }}</td>
-    <td class="mg-right"><a class="chip-btn" href="/dialer/campaigns/{{ c.id }}">Open</a></td>
+    <td class="mg-right mg-num mg-cardstat" data-label="Dials">{{ st.get('dials', 0) | default(0) }}</td>
+    <td class="mg-right mg-num mg-cardstat" data-label="Connects">{{ st.get('connects', 0) | default(0) }}</td>
+    <td class="mg-right mg-num mg-cardstat" data-label="Meetings">{{ st.get('meetings', 0) | default(0) }}</td>
+    <td class="mg-right mg-cardactions"><a class="chip-btn" href="/dialer/campaigns/{{ c.id }}">Open</a></td>
   </tr>
   {% endfor %}
 </table>

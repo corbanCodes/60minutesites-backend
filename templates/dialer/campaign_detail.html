@@ -105,13 +105,13 @@
   {% if rows %}
   <p class="mg-note">The first 500 rows, in dialing order. A skipped row is one the gate would not let this
     campaign call — the reason is spelled out beside it.</p>
-  <table class="queue-table">
-    <tr><th>#</th><th>Lead</th><th>Number</th><th>State</th><th class="mg-right">Attempts</th><th>Next attempt</th></tr>
+  <table class="queue-table mg-cards">
+    <tr class="mg-hrow"><th>#</th><th>Lead</th><th>Number</th><th>State</th><th class="mg-right">Attempts</th><th>Next attempt</th></tr>
     {% for r in rows %}
     {% set lead = leads.get(r.lead_id) if leads else None %}
     <tr class="{{ 'is-skipped' if r.state == 'skipped' }}{{ ' is-done' if r.state == 'done' }}">
-      <td class="mg-num">{{ loop.index }}</td>
-      <td>
+      <td class="mg-num mg-cardnum">{{ loop.index }}</td>
+      <td class="mg-cardtitle">
         {% if lead %}
           <a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a>
           {% if lead.business %}<div class="subtext">{{ lead.business }}</div>{% endif %}
@@ -119,11 +119,11 @@
           <span class="muted">Lead {{ r.lead_id }}</span>
         {% endif %}
       </td>
-      <td class="mg-nowrap">
+      <td class="mg-nowrap" data-label="Number">
         {{ lead.phone_e164 or lead.phone if lead else '—' }}
         {% if r.lead_tz %}<div class="subtext">{{ r.lead_tz }}</div>{% endif %}
       </td>
-      <td>
+      <td data-label="State">
         <span class="pill st-{{ r.state if r.state in ['queued','deferred','skipped'] else 'neutral' }}">{{ (r.state or 'queued') | capitalize }}</span>
         {% if r.state == 'skipped' and r.skip_reason %}
           <div class="skipwhy">{{ reason_copy.get(r.skip_reason, r.skip_reason) }}</div>
@@ -131,8 +131,8 @@
           <div class="subtext">{{ r.outcome | replace('_', ' ') }}</div>
         {% endif %}
       </td>
-      <td class="mg-right attempts">{{ r.attempts | default(0) }}</td>
-      <td class="muted mg-nowrap">{{ r.next_attempt_at | local if r.next_attempt_at else '—' }}</td>
+      <td class="mg-right attempts" data-label="Attempts">{{ r.attempts | default(0) }}</td>
+      <td class="muted mg-nowrap" data-label="Next attempt">{{ r.next_attempt_at | local if r.next_attempt_at else '—' }}</td>
     </tr>
     {% endfor %}
   </table>
@@ -149,19 +149,19 @@
 <div class="mg-section">
   <h2><i class="bi bi-clock-history"></i> Recent calls <span class="count-chip">{{ calls | length }}</span></h2>
   {% if calls %}
-  <table>
-    <tr><th>When</th><th>Number</th><th>Outcome</th><th>Disposition</th><th class="mg-right">Length</th><th></th></tr>
+  <table class="mg-cards">
+    <tr class="mg-hrow"><th>When</th><th>Number</th><th>Outcome</th><th>Disposition</th><th class="mg-right">Length</th><th></th></tr>
     {% for call in calls %}
     <tr>
-      <td class="mg-nowrap">{{ call.started_at | local if call.started_at else '—' }}</td>
-      <td class="mg-nowrap">{{ call.to_number or '—' }}</td>
-      <td class="muted">{{ (call.system_outcome or 'unknown') | replace('_', ' ') }}</td>
-      <td>
+      <td class="mg-nowrap mg-cardtitle">{{ call.started_at | local if call.started_at else '—' }}</td>
+      <td class="mg-nowrap" data-label="Number">{{ call.to_number or '—' }}</td>
+      <td class="muted" data-label="Outcome">{{ (call.system_outcome or 'unknown') | replace('_', ' ') }}</td>
+      <td data-label="Disposition">
         {% if call.disposition %}<span class="pill disp disp-{{ call.disposition }}">{{ call.disposition | replace('_', ' ') | capitalize }}</span>
         {% else %}<span class="muted">not set</span>{% endif %}
       </td>
-      <td class="mg-right mg-num">{{ call.duration_pretty }}</td>
-      <td class="mg-right"><a class="chip-btn" href="/dialer/calls/{{ call.id }}">Open</a></td>
+      <td class="mg-right mg-num" data-label="Length">{{ call.duration_pretty }}</td>
+      <td class="mg-right mg-cardactions"><a class="chip-btn" href="/dialer/calls/{{ call.id }}">Open</a></td>
     </tr>
     {% endfor %}
   </table>

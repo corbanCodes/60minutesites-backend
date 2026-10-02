@@ -102,8 +102,18 @@ def status(settings, account_id):
     """
     from dialer.demo import DEMO_PREFIX, DEMO_TAG
     from dialer.models import AiAgent, PhoneNumber, Playbook, VoicemailDrop
+    from dialer.providers import registry
     saved = settings.wizard if settings else {}
     out = {}
+
+    # In practice mode the fake providers answer every probe with "ok", and
+    # _test_vendor writes that answer into the same columns a real connection
+    # writes to. Reading them back would turn a practice session into a green
+    # checklist for accounts that have no Twilio at all -- the exact lie the
+    # docstring above promises not to tell -- so a probe result does not count
+    # while we are simulating. The keys stay saved; the moment practice mode
+    # goes off and a real probe passes, the step turns green on its own.
+    simulated = registry.simulating(settings)
 
     def mark(key, done, stale=False):
         if done:
@@ -112,6 +122,10 @@ def status(settings, account_id):
             out[key] = "skipped"
         else:
             out[key] = "todo"
+
+    def probe(key, done, stale=False):
+        """A step whose only evidence is a vendor probe."""
+        mark(key, done and not simulated, stale=stale and not simulated)
 
     real_numbers = (PhoneNumber.query
                     .filter_by(account_id=account_id, state="active")
@@ -123,13 +137,19 @@ def status(settings, account_id):
                   .filter(~VoicemailDrop.name.like(DEMO_PREFIX + "%")).count())
 
     mark("intent", bool(settings.intent))
-    mark("twilio", bool(settings.has_twilio),
-         stale=bool(settings.twilio_verified_at)
-         and not _fresh(settings.twilio_verified_at))
-    mark("business", settings.twilio_pcp_status == "business")
+    probe("twilio", bool(settings.has_twilio),
+          stale=bool(settings.twilio_verified_at)
+          and not _fresh(settings.twilio_verified_at))
+    # A profile status with no connected account behind it is not a verified
+    # business: twilio_pcp_status is written by the same probe that connects
+    # Twilio and is never cleared, so on its own it would keep this step green
+    # after a disconnect, and would light it up from a practice-mode probe
+    # against an account that was never entered.
+    probe("business", bool(settings.has_twilio)
+          and settings.twilio_pcp_status == "business")
     mark("numbers", real_numbers > 0)
-    mark("llm", bool(settings.has_llm))
-    mark("elevenlabs", bool(settings.has_elevenlabs))
+    probe("llm", bool(settings.has_llm))
+    probe("elevenlabs", bool(settings.has_elevenlabs))
     mark("compliance", bool(saved.get("compliance", {}).get("done")))
     mark("voice", bool(saved.get("voice", {}).get("done")))
     mark("playbook", real_playbooks > 0)

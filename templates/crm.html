@@ -54,7 +54,7 @@
     <td><a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a>
         {% if lead.source and lead.source != 'manual' %}<div class="subtext">{{ lead.source }}</div>{% endif %}</td>
     <td>{{ lead.business or "—" }}{% if lead.business_type %}<div class="subtext">{{ lead.business_type }}</div>{% endif %}</td>
-    <td>{{ lead.phone or "—" }}
+    <td>{% if lead.phone %}<a class="telnum" href="tel:{{ lead.phone_e164 or lead.phone }}">{{ lead.phone }}</a>{% else %}—{% endif %}
         {% if show_dialer and lead.phone %}<a class="callnow" href="#" data-lead="{{ lead.id }}" title="Call {{ lead.name }} now"><i class="bi bi-telephone-outbound-fill"></i></a>{% endif %}
         {% if lead.do_not_call %}<div class="subtext dnc"><i class="bi bi-slash-circle"></i> do not call</div>{% endif %}</td>
     <td>{{ lead.deal_value | money if lead.deal_value else "—" }}</td>

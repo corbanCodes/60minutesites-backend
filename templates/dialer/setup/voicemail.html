@@ -3,20 +3,20 @@
 
 {% if drops %}
 <h3 class="wiz-h3">Recorded messages <span class="count-chip">{{ drops | length }}</span></h3>
-<table>
+<table class="cardtable">
   <tr><th>Name</th><th>Length</th><th>Listen</th><th></th></tr>
   {% for d in drops %}
   <tr>
-    <td>
+    <td class="ct-title ct-wide">
       <span class="rowlink">{{ d.name }}</span>
       {% if d.is_default %}<span class="pill" style="background:#2E7D4F">Default</span>{% endif %}
       {% if d.transcript %}<div class="subtext">{{ d.transcript }}</div>{% endif %}
     </td>
-    <td class="muted">
+    <td class="muted ct-wide" data-label="Length">
       {% if d.duration_s %}{{ d.duration_s | round(0) | int }} sec{% else %}&mdash;{% endif %}
     </td>
-    <td><audio controls preload="none" src="/dialer/vm/{{ d.id }}" class="vm-audio"></audio></td>
-    <td style="text-align:right">
+    <td class="ct-wide" data-label="Listen"><audio controls preload="none" src="/dialer/vm/{{ d.id }}" class="vm-audio"></audio></td>
+    <td class="ct-actions ct-wide" style="text-align:right">
       <form method="post" action="/dialer/voicemail/{{ d.id }}/delete" class="inline-form"
             onsubmit="return confirm('Delete the recording named {{ d.name }}? Any campaign set to drop it will stop dropping anything.')">
         <button class="chip-btn danger" type="submit">Delete</button>

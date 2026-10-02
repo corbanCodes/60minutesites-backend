@@ -382,3 +382,67 @@ a.rowlink:hover { color: var(--orange); }
 .extras-box { background: #fff; border: 1px solid #EEE7DE; border-radius: 9px; padding: 8px 11px; display: flex; flex-direction: column; gap: 2px; }
 .extras-label { font-size: 11px; font-weight: 700; color: #A79C90; text-transform: uppercase; letter-spacing: .03em; }
 .extras-val { font-size: 14px; font-weight: 600; color: var(--ink); word-break: break-word; }
+
+/* ============ phone chrome (2026-10-02) ============
+   The shell itself was never sized for a thumb: the hamburger was 40x33 and
+   each nav row 36px tall, on every page in HQ. Nothing else can be
+   comfortable on a phone while the way you move between pages is not. */
+@media (max-width: 760px) {
+  .nav-toggle { min-width: 44px; min-height: 44px; display: inline-flex;
+                align-items: center; justify-content: center; font-size: 26px; }
+  .sidebar a.nav-item, .sidebar span.nav-item {
+    min-height: 44px; padding: 11px 12px; font-size: 14.5px; }
+  .sidebar a.nav-item i, .sidebar span.nav-item i { font-size: 17px; width: 20px; }
+  .sidebar .logo { font-size: 18px; }
+  .sidebar.open { padding-bottom: 14px; }
+  /* a tapped nav item should look tapped */
+  .sidebar a.nav-item:active { background: rgba(255,255,255,.14); }
+
+  /* buttons and form controls across HQ */
+  .btn { min-height: 44px; display: inline-flex; align-items: center;
+         justify-content: center; }
+  .btn.sm { min-height: 38px; }
+  .chip-btn { min-height: 38px; display: inline-flex; align-items: center;
+              justify-content: center; }
+  /* 16px or iOS zooms the page the moment you tap into a field */
+  .form input[type=text], .form input[type=email], .form input[type=tel],
+  .form input[type=password], .form input[type=number], .form input[type=search],
+  .form select, .form textarea,
+  .searchbar input, .searchbar select { font-size: 16px; }
+  .task-add-row input, .task-add-row select { font-size: 16px; min-height: 44px; }
+  /* a flash message is often the only feedback; give it room to be read */
+  .flash { font-size: 14px; line-height: 1.5; }
+}
+
+/* A phone number should be tappable on the one device that can dial it. */
+a.telnum { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--line); }
+a.telnum:hover { color: var(--orange-dark); }
+@media (hover: none) and (pointer: coarse) {
+  a.telnum { color: var(--orange-dark); font-weight: 700;
+             border-bottom: 1px solid currentColor; }
+}
+
+/* Copy that only makes sense with a mouse, and copy that only makes sense
+   with a finger. Keyed off the pointer, not the width, because a 1024px
+   tablet is still a finger. */
+.only-touch { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .only-pointer { display: none; }
+  .only-touch { display: inline; }
+}
+
+/* Checkboxes, radios and the task tick are the controls a finger misses most:
+   a 13px box is a 13px target whatever the label around it does. Keyed off a
+   coarse pointer so a mouse keeps the tighter, denser layout. */
+@media (pointer: coarse) {
+  input[type=checkbox], input[type=radio] {
+    width: 22px; height: 22px; accent-color: var(--orange);
+  }
+  /* give the box breathing room without moving the row it sits in */
+  td input[type=checkbox], .chkcol input[type=checkbox] { margin: 4px; }
+  .task-check { min-width: 44px; min-height: 44px; font-size: 24px;
+                display: inline-flex; align-items: center; justify-content: center; }
+  .addon input[type=checkbox] { margin-top: 1px; }
+  /* a label next to a control should also toggle it comfortably */
+  .addon, .rolecard, .wiz-day { min-height: 44px; }
+}

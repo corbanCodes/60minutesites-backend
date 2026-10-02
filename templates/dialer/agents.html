@@ -24,17 +24,17 @@
 </div>
 
 {% if agents %}
-<table>
-  <tr><th>Agent</th><th>Direction</th><th>Voice</th><th>Synced</th><th>Live</th><th></th></tr>
+<table class="mg-cards">
+  <tr class="mg-hrow"><th>Agent</th><th>Direction</th><th>Voice</th><th>Synced</th><th>Live</th><th></th></tr>
   {% for a in agents %}
   <tr class="{{ 'row-off' if a.active is false }}">
-    <td>
+    <td class="mg-cardtitle">
       <a class="rowlink" href="/dialer/agents/{{ a.id }}">{{ a.name }}</a>
       <div class="subtext">{{ a.llm_model or 'default model' }}{% if a.max_duration_seconds %} · caps at {{ ((a.max_duration_seconds | int) / 60) | round(0, 'floor') | int }} min{% endif %}</div>
     </td>
-    <td><span class="pill dir-{{ a.direction or 'outbound' }}">{{ (a.direction or 'outbound') | capitalize }}</span></td>
-    <td class="muted">{{ a.voice_name or a.voice_id or 'not picked' }}</td>
-    <td>
+    <td data-label="Direction"><span class="pill dir-{{ a.direction or 'outbound' }}">{{ (a.direction or 'outbound') | capitalize }}</span></td>
+    <td class="muted" data-label="Voice">{{ a.voice_name or a.voice_id or 'not picked' }}</td>
+    <td data-label="Synced">
       {% if a.last_sync_error %}
         <span class="sync-state bad"><i class="bi bi-exclamation-triangle-fill"></i> Rejected</span>
         <div class="subtext">{{ a.last_sync_error[:120] }}</div>
@@ -44,10 +44,10 @@
         <span class="sync-state never"><i class="bi bi-dash-circle"></i> Not sent yet</span>
       {% endif %}
     </td>
-    <td>
+    <td data-label="Live">
       {% if a.active %}<span class="pill ok-pill">On</span>{% else %}<span class="pill st-neutral">Off</span>{% endif %}
     </td>
-    <td class="mg-right mg-nowrap">
+    <td class="mg-right mg-nowrap mg-cardactions">
       <a class="chip-btn" href="/dialer/agents/{{ a.id }}">Edit</a>
       <form method="post" action="/dialer/agents/{{ a.id }}/delete" class="inline-form"
             onsubmit="return confirm('Delete “{{ a.name }}”? Any campaign using it stops being able to start.')">

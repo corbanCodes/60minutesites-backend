@@ -355,3 +355,354 @@ details.ph-card > summary i { color: var(--orange); }
   .dl-strip { gap: 18px; }
   .lead-facts { grid-template-columns: 1fr; }
 }
+
+/* ============================================================================
+   PHONE LAYOUT (2026-10-01)
+   /dialer, /dialer/dial and the pop-out, down to 375px.
+
+   Append-only and scoped: every selector hangs off a dialer class
+   (.dl-topbar, .dl-grid, .dl-table, .ph-body) so none of admin.css's globals
+   are redefined -- the hamburger shell and the table-scroll rule in
+   admin.css still do their job underneath. All colour comes from the
+   existing tokens. Bootstrap Icons only, no emoji.
+   ========================================================================= */
+
+/* The action cell keeps its desktop alignment without an inline style. */
+.dl-table td.dl-cell-actions { text-align: right; white-space: nowrap; }
+
+/* Rail panels that fold on a phone. On a desktop the summary is inert, so
+   the panel reads and behaves exactly like the plain card it replaced. */
+details.dl-fold > summary { list-style: none; }
+details.dl-fold > summary::-webkit-details-marker { display: none; }
+@media (min-width: 761px) {
+  details.dl-fold > summary { pointer-events: none; }
+}
+
+@media (max-width: 760px) {
+
+  /* ---------------------------------------------------- the page header */
+  /* A wrapped flex row sizes itself to its widest button and stacks the
+     rest, so the header actions become an even grid instead: the title on
+     one line, equal-width buttons on the next. */
+  .dl-topbar { align-items: center; gap: 10px; margin-bottom: 16px; }
+  .dl-topbar h1 { font-size: 21px; line-height: 1.25; }
+  .dl-topbar .topbar-actions {
+    width: 100%; display: grid; gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dl-topbar .topbar-actions > .pill {
+    grid-column: 1 / -1; justify-self: start; align-self: center; font-size: 13px;
+  }
+  .dl-topbar .topbar-actions .btn.sm,
+  .dl-topbar .topbar-actions .inline-form,
+  .dl-topbar .topbar-actions .inline-form .btn {
+    width: 100%; min-width: 0; min-height: 44px; padding: 10px 9px;
+    font-size: 13px; line-height: 1.25;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .dl-topbar .topbar-actions .btn.sm i { flex-shrink: 0; }
+
+  /* =================================================== /dialer (the home) */
+
+  /* Four one-up stat cards is four screens of scrolling. Two-up fits 375px
+     and still leaves the number legible. dial.css only loads on the three
+     dialer screens, so this never reaches the rest of HQ. */
+  .cards { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .cards .card.stat { padding: 14px 15px; }
+  .stat .num { font-size: 27px; }
+  .stat .label { font-size: 13px; line-height: 1.35; }
+
+  .dl-practice { align-items: flex-start; gap: 11px; padding: 15px 16px; }
+  .dl-practice > i { margin-top: 3px; }
+  .dl-practice .inline-form { width: 100%; }
+  .dl-practice .inline-form .btn { width: 100%; min-height: 44px; font-size: 14px; }
+
+  .dl-allclear { align-items: flex-start; line-height: 1.5; }
+  .dl-allclear i { margin-top: 2px; }
+
+  .dl-setup { gap: 14px; padding: 16px; }
+  .dl-setup .wiz-meter-pct { font-size: 13px; }
+  .dl-setup > .btn {
+    width: 100%; min-height: 46px; display: inline-flex;
+    align-items: center; justify-content: center; gap: 6px;
+  }
+
+  .alert-card { align-items: flex-start; }
+
+  /* The three big actions become icon-left rows: same targets, a third of
+     the height, so the campaign list is reachable without a long scroll. */
+  .dl-actions { grid-template-columns: 1fr; gap: 10px; }
+  .dl-action {
+    display: grid; grid-template-columns: 24px 1fr; column-gap: 13px;
+    align-items: start; padding: 15px 16px;
+  }
+  .dl-action > i { font-size: 20px; line-height: 1.3; grid-row: 1 / span 2; }
+  .dl-action-name { margin-top: 0; font-size: 15px; }
+  .dl-action-sub { font-size: 13px; margin-top: 3px; }
+
+  .dl-lanes { gap: 8px; }
+  .dl-lane { padding: 13px 14px; min-height: 50px; }
+  .dl-lane-state, .dl-lane-fix { font-size: 13px; }
+  .dl-lane-fix { padding: 6px 0; }
+
+  /* ------------------------------------------- tables become stacked cards
+     A six-column table at 375px is either clipped at the right edge or a
+     sideways scroll inside a box. Neither is usable one-handed, so each row
+     becomes its own card with the column name as a label. */
+  .dl-table {
+    display: block; width: 100%; background: none; border: none;
+    box-shadow: none; border-radius: 0; overflow: visible;
+  }
+  .dl-table tbody { display: block; }
+  .dl-table tr {
+    display: flex; flex-direction: column; background: var(--surface);
+    border: 1px solid #EAE3DA; border-radius: 13px; padding: 13px 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(28,24,20,.04), 0 6px 18px rgba(28,24,20,.05);
+  }
+  .dl-table tr:first-child { display: none; }          /* the header row */
+  .dl-table tr:hover td { background: transparent; }
+  .dl-table td {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+    border: none; padding: 5px 0; font-size: 14px;
+  }
+  .dl-table td[data-label]::before {
+    content: attr(data-label); flex: 1 0 auto; margin-right: auto;
+    font-size: 11px; font-weight: 800; letter-spacing: .07em;
+    text-transform: uppercase; color: #A79C90;
+  }
+  .dl-table td.dl-cell-title {
+    order: -1; display: block; text-align: left; white-space: normal;
+    font-size: 15.5px; font-weight: 800; padding: 0 0 8px;
+    margin-bottom: 6px; border-bottom: 1px solid var(--line);
+  }
+  /* the card's own title is the primary tap target, so give it the height */
+  .dl-table td.dl-cell-title > a {
+    display: flex; align-items: center; min-height: 44px; line-height: 1.3;
+  }
+  .dl-table .pill { font-size: 13px; }
+  .dl-table td.dl-cell-actions {
+    display: flex; flex-wrap: wrap; justify-content: flex-end;
+    gap: 8px; padding-top: 12px;
+  }
+  .dl-table td.dl-cell-actions .chip-btn {
+    min-height: 40px; padding: 0 18px; font-size: 13px; border-radius: 10px;
+    display: inline-flex; align-items: center; text-decoration: none;
+  }
+
+  /* ============================================== /dialer/dial (the session)
+     One column, and the dark console comes first -- it is the only part a
+     rep touches while someone is talking. The lead card follows it and the
+     playbook rail folds up underneath. */
+  .dl-grid { gap: 12px; }
+
+  .dl-strip { gap: 0 16px; padding: 12px 15px; justify-content: space-between; }
+  .dl-strip-num { font-size: 18px; }
+  .dl-strip-conn {
+    margin-left: 0; width: 100%; margin-top: 11px; padding-top: 11px;
+    border-top: 1px solid var(--line); font-size: 13px;
+  }
+
+  .dl-centre { padding: 15px 14px; border-radius: 15px; }
+  /* the native chevron sits on top of a long campaign name without this */
+  .dl-centre .dl-select { min-height: 48px; padding-right: 34px; text-overflow: ellipsis; }
+  .dl-session { min-height: 56px; padding: 15px 16px; }
+  .dl-timer-wrap { margin: 16px 0 4px; }
+  .dl-timer { font-size: 54px; }
+  .dl-countdown { flex-wrap: wrap; justify-content: center; padding: 11px 13px; }
+  .dl-countdown-cancel { min-height: 36px; padding: 0 14px; font-size: 13px; }
+
+  /* nine outcomes, three across, every one a real thumb target */
+  .dl-grid .disp-grid { gap: 7px; }
+  .dl-grid .disp-btn { min-height: 80px; padding: 11px 5px 10px; gap: 4px; }
+  .dl-grid .disp-ico { font-size: 19px; }
+  .dl-grid .disp-label { font-size: 13px; line-height: 1.25; }
+
+  /* A phone has no number row, so the hotkey chrome is pure noise here.
+     The pop-out keeps its badges -- it is a 430px window on a desktop. */
+  .dl-grid .disp-key,
+  .dl-grid .dl-key-badge,
+  .dl-grid .pb-obj-key,
+  .dl-grid .dl-kbd-only,
+  .dl-grid .dl-shortcuts { display: none; }
+
+  .dl-grid .dl-notes { min-height: 118px; }
+
+  /* Drop voicemail and Hang up stack full width: the one that ends a live
+     call can never be the neighbour of the one that does not. */
+  .dl-centre-actions { grid-template-columns: 1fr; gap: 11px; margin-top: 16px; }
+  .dl-centre-actions .dl-big-btn { min-height: 56px; font-size: 15px; padding: 14px 12px; }
+  .dl-centre-actions .dl-big-btn i { font-size: 18px; }
+
+  /* No sticky bottom bar. Stacking the two buttons full width already keeps
+     them a thumb apart, and a fixed bar would sit on top of the notes box
+     exactly when a rep is typing into it. */
+
+  /* the DTMF pad: folded by default, big keys once it is open */
+  .dl-grid .dl-keypad-wrap > summary { min-height: 44px; align-items: center; font-size: 13px; }
+  .dl-grid .keypad { gap: 8px; }
+  .dl-grid .key { padding: 0; min-height: 54px; font-size: 20px; }
+  .dl-grid .dl-keypad-display { min-height: 38px; }
+  .dl-grid .dl-keypad-clear { min-height: 44px; font-size: 13px; }
+
+  /* nothing a rep reads mid-call should be smaller than this */
+  .dl-grid .dl-sec-note { font-size: 12px; }
+  .dl-grid .dl-card-sub { font-size: 12.5px; }
+  .dl-grid .pb-goal { font-size: 13px; }
+
+  /* the lead card */
+  .lead-facts { grid-template-columns: 1fr 1fr; }
+  .lead-name { font-size: 20px; }
+  .dl-left .btn.sm { min-height: 44px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+
+  /* the playbook rail */
+  details.dl-fold > summary { cursor: pointer; min-height: 44px; }
+  details.dl-fold > summary::after {
+    content: "\F282"; font-family: 'bootstrap-icons'; font-weight: normal;
+    margin-left: auto; font-size: 12px; color: #A79C90;
+  }
+  details.dl-fold[open] > summary::after { content: "\F286"; }
+  details.dl-fold:not([open]) > summary { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
+  .dl-grid .pb-nav .btn { min-height: 44px; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
+  .dl-grid .pb-q { padding: 10px 9px; font-size: 14px; }
+  .dl-grid .pb-q input { width: 20px; height: 20px; }
+  .dl-grid .pb-q-dq { font-size: 13px; }
+  .dl-grid .pb-obj-also { font-size: 12.5px; }
+  .dl-grid .pb-search { min-height: 46px; }
+  .dl-grid .pb-obj > summary { min-height: 46px; align-items: center; font-size: 13.5px; }
+  .dl-grid .coach-list { max-height: none; }
+
+  /* ============================================ /dialer/phone (the pop-out)
+     Already built for 430px, so this only grows the targets that were sized
+     for a mouse. */
+  .ph-body .key { padding: 0; min-height: 52px; font-size: 20px; }
+  .ph-body .ph-dial-row .chip-btn,
+  .ph-body .ph-next-row .chip-btn {
+    min-height: 46px; padding: 0 18px; font-size: 13px; border-radius: 11px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .ph-body .dl-select.sm { min-height: 46px; }
+  .ph-body .dl-big-btn.call { min-height: 56px; }
+  .ph-body .ph-actions .dl-big-btn { min-height: 50px; }
+  .ph-body details.ph-card > summary { min-height: 30px; align-items: center; }
+  .ph-body .ph-recent-row { min-height: 40px; align-items: center; }
+  .ph-body .ph-toggle { min-height: 44px; }
+  .ph-body .ph-toggle input { width: 20px; height: 20px; }
+  .ph-body .pb-obj > summary { min-height: 44px; align-items: center; }
+}
+
+/* A touch keyboard zooms the page in on any field under 16px. Scoped to
+   coarse pointers so the 430px pop-out on a desktop keeps its own sizes. */
+@media (max-width: 760px) and (pointer: coarse) {
+  .dl-grid .dl-notes, .dl-grid .pb-search, .dl-grid .dl-select,
+  .ph-body .dl-notes, .ph-body .ph-search, .ph-body .ph-number,
+  .ph-body .pb-search, .ph-body .dl-select { font-size: 16px; }
+
+  /* The pop-out is dense because it is a 430px window beside a desktop
+     browser. On an actual phone the same window has no hardware keyboard
+     and no mouse, so the hotkeys go and the labels grow. */
+  .ph-body .disp-key, .ph-body .pb-obj-key, .ph-body .dl-kbd-only { display: none; }
+  .ph-body .disp-grid.compact .disp-btn { min-height: 74px; }
+  .ph-body .disp-grid.compact .disp-ico { font-size: 19px; }
+  .ph-body .disp-grid.compact .disp-label { font-size: 13px; line-height: 1.25; }
+  .ph-body .dl-notes.compact { min-height: 96px; }
+}
+
+/* ============================================================================
+   PHONE LAYOUT, SECOND PASS (2026-10-01, review)
+   Append-only on top of the block above. Everything here was measured on a
+   375x812 coarse-pointer viewport against the three screens dial.css owns;
+   nothing below changes a desktop window. Bootstrap Icons only, no emoji.
+   ========================================================================= */
+
+@media (max-width: 760px) {
+
+  /* ---------------------------------------------------- the page header */
+  /* admin.css sets ".topbar-actions { align-items: center }" and the grid
+     above inherits it, so two buttons that share a row are centred instead
+     of stretched: on /dialer/dial "Pop the phone out" wraps to two lines and
+     ends up 54.5px tall and 5px higher than the 44px "Back to Calling"
+     beside it -- a visibly ragged row. Stretch the row so both chips are the
+     height of the taller one and their tops line up. The status pill keeps
+     the align-self:center it was already given. */
+  .dl-topbar .topbar-actions { align-items: stretch; }
+  .dl-topbar .topbar-actions .btn.sm,
+  .dl-topbar .topbar-actions .inline-form { align-self: stretch; }
+  .dl-topbar .topbar-actions .inline-form .btn { height: 100%; }
+
+  /* ------------------------------------------------- /dialer (the home) */
+  /* The row cards' action chips were 40px. They are the only control on a
+     card, so they get the full 44. */
+  .dl-table td.dl-cell-actions .chip-btn { min-height: 44px; }
+
+  /* The empty state under "Campaigns running now" is what a new account
+     actually sees, and its only button was a 27px .btn.sm. */
+  .card.empty .btn,
+  .dl-empty .btn {
+    min-height: 44px; padding: 10px 18px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  /* --------------------------------------- /dialer/dial (the session) */
+  /* The objection rows are <details>, and their only "this opens" cue on a
+     desktop is the hotkey badge -- which the block above hides on a phone,
+     leaving five boxes that read as dead text. Give them the same chevron
+     the folded rail panels use. */
+  .dl-grid .pb-obj > summary::after {
+    content: "\F282"; font-family: 'bootstrap-icons'; font-weight: normal;
+    margin-left: auto; font-size: 12px; color: #A79C90; flex-shrink: 0;
+  }
+  .dl-grid .pb-obj[open] > summary::after { content: "\F286"; }
+}
+
+/* The pop-out on a real phone. Scoped to coarse pointers exactly like the
+   block above it, so the 430px window beside a desktop browser is untouched:
+   these were all sized for a mouse and measured 14-41px on a phone. */
+@media (max-width: 760px) and (pointer: coarse) {
+
+  /* "Send tones" and "Script & objections" were 30px tap strips. */
+  .ph-body details.ph-card > summary,
+  .ph-body .dl-keypad-wrap > summary { min-height: 44px; }
+
+  /* ...and the rail card had no open/close cue at all. The keypad card
+     already draws its own chevron, so it is excluded here. */
+  .ph-body details.ph-card:not(.dl-keypad-wrap) > summary::after,
+  .ph-body .pb-obj > summary::after {
+    content: "\F282"; font-family: 'bootstrap-icons'; font-weight: normal;
+    margin-left: auto; font-size: 12px; color: #A79C90; flex-shrink: 0;
+  }
+  .ph-body details.ph-card:not(.dl-keypad-wrap)[open] > summary::after,
+  .ph-body .pb-obj[open] > summary::after { content: "\F286"; }
+
+  /* The script's Back and Next were 29px tall, and Back -- an icon on its
+     own -- was 39px wide. They are the two controls a rep uses on every
+     call. */
+  .ph-body .pb-nav .btn {
+    min-height: 44px; min-width: 44px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  }
+
+  /* Both search fields were 41px, the recent-call rows that redial a number
+     were 40px, and the two text links under them were 14px. */
+  .ph-body .ph-search, .ph-body .pb-search { min-height: 46px; }
+  .ph-body .ph-recent-row { min-height: 44px; }
+  .ph-body .dl-keypad-clear,
+  .ph-body .ph-crm-link {
+    min-height: 44px; display: inline-flex; align-items: center; gap: 5px;
+  }
+}
+
+
+/* ---------- pop-out phone: on an actual phone, stop putting Drop voicemail
+   and Hang up side by side. The live session page already stacks them; the
+   pop-out was doing the opposite with a 7px gap between them. ---------- */
+@media (pointer: coarse) {
+  .ph-actions, .ph-call-actions {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .ph-actions > *, .ph-call-actions > * {
+    width: 100%; min-height: 54px; font-size: 15px;
+  }
+  /* hang up sits lowest, nearest the thumb, furthest from voicemail */
+  .ph-actions .hang, .ph-call-actions .hang { order: 9; }
+}

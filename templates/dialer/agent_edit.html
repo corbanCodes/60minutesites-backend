@@ -172,22 +172,33 @@
     </div>
   </form>
 
-  <aside class="promptbox">
-    <div class="promptbox-head">
-      <h2><i class="bi bi-file-earmark-code"></i> Exactly what the AI is told</h2>
+  {#- A <details> so a phone gets a one-line heading instead of a wall of monospace.
+      The script below opens it on anything wider than a phone, which is how it has
+      always behaved on a desktop. -#}
+  <details class="promptbox" id="promptbox">
+    <summary class="promptbox-head">
+      <h2><i class="bi bi-file-earmark-code"></i> Exactly what the AI is told
+        <i class="bi bi-chevron-down promptbox-chev"></i></h2>
       <p>Read-only. This is the complete instruction set the agent is given, assembled from the fields on the
         left and your compliance settings. It updates when you save.</p>
-    </div>
+    </summary>
     <pre>{{ prompt_preview | default('Nothing to show yet. Save the agent and the instructions appear here.', true) }}</pre>
     <div class="promptbox-foot">
       <i class="bi bi-lock-fill"></i>
       <span>The disclosure block cannot be removed. You can change your company name and callback number, but
         the sentence saying a machine is calling always goes out first.</span>
     </div>
-  </aside>
+  </details>
 </div>
 
 <script>
+(function () {
+  // Open on a desktop, closed on a phone, so the Save button is not buried
+  // under several screens of monospace.
+  var box = document.getElementById('promptbox');
+  if (box && window.matchMedia('(min-width: 761px)').matches) box.open = true;
+})();
+
 (function () {
   // The voice name is stored alongside the id so the list reads properly even
   // when ElevenLabs is unreachable.

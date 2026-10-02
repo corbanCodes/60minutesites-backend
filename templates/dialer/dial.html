@@ -26,7 +26,7 @@
 {% block content %}
 <link rel="stylesheet" href="/static-admin/dial.css">
 
-<div class="topbar">
+<div class="topbar dl-topbar">
   <h1>Live session</h1>
   <div class="topbar-actions">
     {% if ready and ready.simulating %}<span class="pill" style="background:#9A6B14">Practice mode</span>{% endif %}
@@ -133,7 +133,7 @@
       <button class="dl-countdown-cancel" type="button" onclick="HQPhone.cancelAutoAdvance()">Cancel (Esc)</button>
     </div>
 
-    <div class="dl-sec-label">Outcome <span class="dl-sec-note">press the number</span></div>
+    <div class="dl-sec-label">Outcome <span class="dl-sec-note dl-kbd-only">press the number</span></div>
     <div class="disp-grid" id="disp-grid">
       {% for d in DISPOSITIONS %}
       <button class="disp-btn" type="button" data-disp="{{ d[0] }}" disabled>
@@ -157,7 +157,7 @@
     </div>
 
     <details class="dl-keypad-wrap">
-      <summary><i class="bi bi-grid-3x3-gap"></i> Keypad <span class="dl-sec-note">for "press 0 for the operator"</span></summary>
+      <summary><i class="bi bi-grid-3x3-gap"></i> Keypad <span class="dl-sec-note dl-kbd-only">for "press 0 for the operator"</span></summary>
       <div class="dl-keypad-display dl-mono" id="dl-digits" aria-live="polite">—</div>
       <div class="keypad">
         {% for k in ['1','2','3','4','5','6','7','8','9','*','0','#'] %}
@@ -196,8 +196,8 @@
     </div>
 
     {% if pb_questions %}
-    <div class="dl-card">
-      <div class="dl-card-head"><i class="bi bi-check2-square"></i> Qualify</div>
+    <details class="dl-card dl-fold" open>
+      <summary class="dl-card-head"><i class="bi bi-check2-square"></i> Qualify</summary>
       <div class="pb-qs" id="pb-qs">
         {% for q in pb_questions %}
         <label class="pb-q">
@@ -206,14 +206,14 @@
         </label>
         {% endfor %}
       </div>
-    </div>
+    </details>
     {% endif %}
 
     {% if pb_objections %}
-    <div class="dl-card">
-      <div class="dl-card-head"><i class="bi bi-chat-left-quote"></i> Objections</div>
+    <details class="dl-card dl-fold" open>
+      <summary class="dl-card-head"><i class="bi bi-chat-left-quote"></i> Objections</summary>
       <input class="pb-search" id="pb-search" type="search" placeholder="Type what they said…" autocomplete="off">
-      <p class="dl-hint">With this box focused, press a number to open that answer.</p>
+      <p class="dl-hint dl-kbd-only">With this box focused, press a number to open that answer.</p>
       <div class="pb-objs" id="pb-objs">
         {% for o in pb_objections %}
         <details class="pb-obj" data-n="{{ loop.index }}"
@@ -230,15 +230,15 @@
         {% endfor %}
       </div>
       <p class="pb-noresults muted" id="pb-noresults" hidden>Nothing in the playbook matches that yet.</p>
-    </div>
+    </details>
     {% endif %}
 
-    <div class="dl-card">
-      <div class="dl-card-head"><i class="bi bi-broadcast"></i> Live coaching</div>
+    <details class="dl-card dl-fold" open>
+      <summary class="dl-card-head"><i class="bi bi-broadcast"></i> Live coaching</summary>
       <div id="dl-coach" class="coach-list">
         <p class="muted">Suggestions appear here while a call is running.</p>
       </div>
-    </div>
+    </details>
 
   </aside>
 </div>
@@ -475,6 +475,14 @@ document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('#pb-qs input').forEach(function (i) {
     i.addEventListener('change', pushQualification);
   });
+
+  // ------------------------------------------------- phone: fold the rail
+  // The rail panels ship open so a desktop sees the same three panels it
+  // always has. On a phone they start closed -- otherwise the lead card and
+  // the console sit above four full-height panels the rep has to scroll past.
+  if (window.matchMedia('(max-width: 760px)').matches) {
+    document.querySelectorAll('details.dl-fold').forEach(function (d) { d.open = false; });
+  }
 
   // ----------------------------------------------------------- objections
   var search = $('pb-search');

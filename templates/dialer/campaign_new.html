@@ -7,7 +7,8 @@
 <div class="mg-head">
   <div class="mg-head-text">
     <h1>New campaign</h1>
-    <p class="mg-sub">Pick who gets called and how. The panel on the right updates as you type and shows
+    {#- "the preview panel", not "the panel on the right": on a phone it sits above the form. -#}
+    <p class="mg-sub">Pick who gets called and how. The preview panel updates as you type and shows
       exactly which of those leads the compliance gate will let this kind of campaign dial.</p>
   </div>
   <div class="mg-actions">
@@ -111,7 +112,7 @@
           <select class="multi" id="f-statuses" name="statuses" multiple size="7">
             {% for st in statuses | default([]) %}<option value="{{ st }}">{{ st }}</option>{% endfor %}
           </select>
-          <span class="field-hint">Hold Command (or Control) to pick more than one.</span>
+          <span class="field-hint"><span class="only-pointer">Hold Command (or Control) to pick more than one</span><span class="only-touch">Tap to pick more than one.</span>.</span>
         </div>
         <div>
           <label for="f-sources">Where the lead came from</label>

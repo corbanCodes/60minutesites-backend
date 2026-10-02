@@ -88,15 +88,15 @@
   </form>
 
   {% if suppressions %}
-  <table style="margin-top:12px">
-    <tr><th>Number</th><th>Why</th><th>How it got here</th><th>Added</th><th></th></tr>
+  <table class="mg-cards" style="margin-top:12px">
+    <tr class="mg-hrow"><th>Number</th><th>Why</th><th>How it got here</th><th>Added</th><th></th></tr>
     {% for sup in suppressions %}
     <tr>
-      <td><span class="rowlink">{{ sup.phone_key }}</span></td>
-      <td class="muted">{{ sup.reason or '—' }}</td>
-      <td class="muted">{{ (sup.source or 'manual') | replace('_', ' ') }}</td>
-      <td class="muted mg-nowrap">{{ sup.created_at | localdate if sup.created_at else '—' }}</td>
-      <td class="mg-right">
+      <td class="mg-cardtitle"><span class="rowlink">{{ sup.phone_key }}</span></td>
+      <td class="muted" data-label="Why">{{ sup.reason or '—' }}</td>
+      <td class="muted" data-label="Source">{{ (sup.source or 'manual') | replace('_', ' ') }}</td>
+      <td class="muted mg-nowrap" data-label="Added">{{ sup.created_at | localdate if sup.created_at else '—' }}</td>
+      <td class="mg-right mg-cardactions">
         <form method="post" action="/dialer/compliance" class="inline-form"
               onsubmit="return confirm('Take {{ sup.phone_key }} off the do-not-call list? They become dialable again.')">
           <input type="hidden" name="action" value="unsuppress">
@@ -119,15 +119,15 @@
   <p class="mg-note">A consent record is what lets an AI agent call a mobile number even with the gate on. It
     is evidence, so keep the source specific.</p>
   {% if consents %}
-  <table>
-    <tr><th>Number</th><th>Kind</th><th>Source</th><th>Captured</th><th>Status</th></tr>
+  <table class="mg-cards">
+    <tr class="mg-hrow"><th>Number</th><th>Kind</th><th>Source</th><th>Captured</th><th>Status</th></tr>
     {% for cr in consents %}
     <tr>
-      <td><span class="rowlink">{{ cr.phone_key or '—' }}</span></td>
-      <td>{{ (cr.kind or 'express') | replace('_', ' ') | capitalize }}</td>
-      <td class="muted">{{ cr.source or '—' }}</td>
-      <td class="muted mg-nowrap">{{ cr.captured_at | localdate if cr.captured_at else '—' }}</td>
-      <td>{% if cr.revoked_at %}<span class="pill st-skipped">Revoked</span>{% else %}<span class="pill ok-pill">Good</span>{% endif %}</td>
+      <td class="mg-cardtitle"><span class="rowlink">{{ cr.phone_key or '—' }}</span></td>
+      <td data-label="Kind">{{ (cr.kind or 'express') | replace('_', ' ') | capitalize }}</td>
+      <td class="muted" data-label="Source">{{ cr.source or '—' }}</td>
+      <td class="muted mg-nowrap" data-label="Captured">{{ cr.captured_at | localdate if cr.captured_at else '—' }}</td>
+      <td data-label="Status">{% if cr.revoked_at %}<span class="pill st-skipped">Revoked</span>{% else %}<span class="pill ok-pill">Good</span>{% endif %}</td>
     </tr>
     {% endfor %}
   </table>

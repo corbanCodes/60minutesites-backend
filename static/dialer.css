@@ -218,3 +218,436 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
 .wiz-reset { margin: 22px 0 8px; text-align: right; }
 .wiz-reset .chip-btn { opacity: .7; }
 .wiz-reset .chip-btn:hover { opacity: 1; }
+
+/* ===========================================================================
+   PHONE LAYER  (2026-10-01) — append-only, tokens only, Bootstrap Icons only.
+   Scope: the calling setup wizard (/dialer/setup/1..11) and the team pages
+   (/admin/team, /admin/team/log). Everything is namespaced to those
+   components so no other screen in HQ is touched.
+
+   Targets: 375px must work, 390-430px must look good. Tap targets >= 44px.
+   Nothing may push the page wider than the viewport.
+   ======================================================================== */
+
+@media (max-width: 760px) {
+
+  /* ---------- page gutter ----------------------------------------------- */
+  /* admin.css asks for a 16px gutter in its own 760px block, but its later
+     ".main { padding: 30px 34px }" wins the cascade, so a phone actually gets
+     34px and loses 36px of a 375px screen. Rather than reach into admin.css,
+     this pulls the gutter back to 16px on the three pages this file owns. */
+  .main:has(> .wizard),
+  .main:has(> .seatbar),
+  .main:has(> table.cardtable) { padding-left: 16px; padding-right: 16px; }
+
+  /* ---------- wizard shell --------------------------------------------- */
+  /* minmax(0,1fr) instead of 1fr: a bare 1fr track still inflates to the
+     min-content width of the rail, which is what used to shove the whole
+     page sideways. */
+  .wizard { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .wizard > * { min-width: 0; }
+  .wiz-body { gap: 13px; }
+
+  /* ---------- the rail becomes a progress strip ------------------------- */
+  .wiz-rail { min-width: 0; padding: 13px 13px 15px; border-radius: 13px; }
+  .wiz-meter-head { margin-bottom: 6px; }
+  .wiz-meter-label { font-size: 13px; }
+  .wiz-meter-pct { font-size: 12px; }
+  .wiz-meter-note { margin: 7px 0 0; font-size: 12.5px; }
+
+  .wiz-steps {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    margin-top: 13px;
+    padding-top: 12px;
+  }
+  .wiz-steps::before {
+    content: "Jump to a step";
+    grid-column: 1 / -1;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--ink-2);
+    margin: -2px 0 2px;
+  }
+
+  .wiz-step {
+    position: relative;
+    grid-template-columns: 1fr;
+    justify-items: center; align-content: center;
+    gap: 2px; min-height: 46px; padding: 5px 2px;
+    white-space: normal;
+    border: 1.5px solid var(--line); background: #fff;
+    box-shadow: none;
+  }
+  .wiz-step .wiz-ico { display: block; order: -1; font-size: 15px; line-height: 1; opacity: .75; }
+  .wiz-step .wiz-num { display: block; font-size: 10.5px; text-align: center; line-height: 1; }
+  .wiz-step .wiz-name { display: none; }
+
+  /* state lives on the chip itself; the dot shrinks to a corner badge */
+  .wiz-step.done { background: #F2F9F5; border-color: #BFD9C8; }
+  .wiz-step.done .wiz-num { color: var(--good); }
+  .wiz-step.stale { background: #FFF9EE; border-color: #EBD5AC; }
+  .wiz-step.stale .wiz-num { color: #8A6616; }
+  .wiz-step.skipped { background: #FAF8F5; opacity: .7; }
+  .wiz-step.current {
+    background: #FFF3EC; border-color: var(--orange);
+    box-shadow: 0 0 0 2.5px rgba(255,107,53,.18);
+  }
+  .wiz-step.current .wiz-num, .wiz-step.current .wiz-ico { color: var(--orange-dark); opacity: 1; }
+
+  .wiz-step .wiz-dot {
+    position: absolute; top: -6px; right: -6px;
+    width: 16px; height: 16px; font-size: 9px;
+  }
+  .wiz-step.todo .wiz-dot { display: none; }
+  .wiz-step.done .wiz-dot,
+  .wiz-step.stale .wiz-dot,
+  .wiz-step.skipped .wiz-dot { box-shadow: 0 0 0 2px var(--surface); }
+
+  /* ---------- step header + body --------------------------------------- */
+  .wiz-head { gap: 11px; }
+  .wiz-head-icon { width: 40px; height: 40px; border-radius: 11px; font-size: 18px; }
+  .wiz-kicker { font-size: 10px; gap: 8px; }
+  .wiz-title { font-size: 18px; line-height: 1.25; }
+  .wiz-why { gap: 9px; padding: 11px 13px; border-radius: 11px; }
+  .wiz-why p { font-size: 13px; line-height: 1.6; }
+  .wiz-h3 { font-size: 14.5px; }
+
+  .wiz-body .card { padding: 15px; }
+  .wiz-form { padding: 15px; border-radius: 13px; }
+  .wiz-steps-card h3, .rec-widget h3 { font-size: 14.5px; }
+  .wiz-ol, .plain-list { font-size: 13.5px; padding-left: 17px; }
+  .wiz-callout { gap: 11px; }
+  .two-up-col { padding: 12px 13px; }
+
+  /* Roomier switches — the whole label is the tap target.
+     admin.css's ".form label { display:block; font-weight:700 }" is one point
+     more specific than ".addon", so inside a .form the checkbox lands on its
+     own line and the help text comes out bold. Put the row back together.
+     (Same thing happens on desktop — worth fixing there too.) */
+  .wiz-form label.addon { display: flex; margin-bottom: 0; font-weight: 400; font-size: 13.5px; }
+  .wiz-form .addon > span { font-weight: 600; }
+  .wiz-form .addon em { font-weight: 400; }
+  .addons { padding: 13px 13px 14px; }
+  .addon { padding: 9px 0; }
+  .addon input { width: 19px; height: 19px; margin-top: 2px; }
+  .addon span { font-size: 13.5px; }
+  .addon-sub { padding-left: 29px; }
+
+  /* every control a thumb has to hit clears 44px */
+  /* inline-flex trims the whitespace that used to separate a button's icon
+     from its label, so the gap has to be declared */
+  .wizard .btn, .invite-form .btn { min-height: 44px; display: inline-flex;
+    align-items: center; justify-content: center; gap: 6px; }
+  .wizard .btn i, .invite-form .btn i { margin-right: 0; }
+  .wizard .btn.sm { padding: 8px 14px; font-size: 13.5px; }
+  .wizard select, .wizard input[type=time], .wizard input[type=number],
+  .wizard input[type=text], .wizard input[type=email], .wizard input[type=tel],
+  .invite-form input, .invite-form select { min-height: 44px; }
+  .wizard .scope-select { min-height: 44px; }
+
+  .wiz-foot { padding-top: 14px; gap: 10px; }
+  .wiz-foot-left:empty { display: none; }
+  .wiz-reset { margin-top: 18px; }
+  .wiz-reset .chip-btn { min-height: 44px; padding: 0 16px; font-size: 13px; border-radius: 9px; }
+
+  /* vendor panels */
+  .vendor-row { gap: 8px; }
+  .vendor-actions .btn { flex: 1 1 auto; }
+  .vendor-facts td { display: block; border: none; padding: 7px 0 0; }
+  .vendor-facts tr { display: block; padding: 9px 0; border-bottom: 1px solid #F0EAE2; }
+  .vendor-facts tr:last-child { border-bottom: none; }
+  .vendor-facts td:first-child { padding-top: 0; font-size: 10.5px; font-weight: 800;
+    letter-spacing: .07em; text-transform: uppercase; color: #A79C90; }
+  .vendor-facts { display: block; overflow: visible; }
+
+  /* ---------- compliance: weekday pills --------------------------------- */
+  .daypick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .daychip span {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; min-width: 0; min-height: 44px;
+    font-size: 13.5px; border-radius: 10px; padding: 6px 4px;
+  }
+  .inline-num input { width: 100%; max-width: 120px; }
+  .disclosure-preview { padding: 11px 13px; }
+  .disclosure-preview p { font-size: 13.5px; }
+
+  /* ---------- voicemail recorder: one big obvious button ---------------- */
+  .rec-stage { padding: 14px; }
+  .rec-controls { gap: 10px; }
+  .rec-controls .btn:first-child {
+    flex: 1 0 100%; min-height: 56px; font-size: 16px; border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(255,107,53,.32);
+  }
+  .rec-controls .btn:first-child i { font-size: 18px; }
+  .rec-controls .btn.ghost { flex: 0 1 auto; min-height: 46px; }
+  .rec-timer { margin-left: auto; font-size: 24px; }
+  /* the recorder's own <form> has no .form class, so its labels never got the
+     block treatment and sat alongside their inputs */
+  .rec-widget label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+  .rec-widget input[type=text], .rec-widget input[type=file] {
+    width: 100%; min-height: 44px; padding: 10px 12px;
+    border: 1.5px solid var(--line); border-radius: 8px;
+    font-family: var(--font); font-size: 14px; background: #fff;
+  }
+  .rec-widget input[type=text]:focus {
+    outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,107,53,.15);
+  }
+  .vm-audio, .vm-audio.wide { width: 100%; max-width: 100%; height: 40px; }
+  .vm-sample { font-size: 14px; padding: 11px 14px; }
+
+  /* ---------- team: seats, roles ---------------------------------------- */
+  .seatbar { gap: 12px; padding: 15px; }
+  .seatbar-meter { gap: 4px; }
+  .seat { width: 14px; height: 20px; }
+  .seatbar-text { font-size: 13.5px; }
+  .invite-form { padding: 15px; }
+  .rolepick { grid-template-columns: 1fr; gap: 8px; }
+  /* same ".form label" clash as the addon rows: it makes the whole card bold */
+  .invite-form label.rolecard { font-weight: 400; margin-bottom: 0; }
+  .rolecard-body { padding: 12px 14px; }
+  .rolecard-name { font-size: 14px; }
+  .rolecard-blurb { font-size: 12.5px; }
+
+  /* ---------- tables that read better as cards -------------------------- */
+  /* The header row is the first <tr> in these templates, so it is the row we
+     hide; every data cell carries its own data-label instead. */
+  table.cardtable {
+    display: block; overflow: visible;
+    background: none; border: none; border-radius: 0; box-shadow: none;
+  }
+  /* tbody must go block too: left as table-row-group it spawns an anonymous
+     table box that shrink-wraps, and the cards come out narrower than their
+     container. */
+  table.cardtable thead, table.cardtable tbody { display: block; }
+  table.cardtable tr:first-child { display: none; }
+  table.cardtable tr {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 9px 12px;
+    background: var(--surface); border: 1px solid #EAE3DA; border-radius: 12px;
+    padding: 13px 14px; margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(28,24,20,.04), 0 6px 18px rgba(28,24,20,.04);
+  }
+  table.cardtable tr:hover td,
+  table.cardtable tr:hover { background: var(--surface); }
+  table.cardtable td {
+    display: block; border: none; padding: 0;
+    font-size: 13.5px; line-height: 1.45; min-width: 0;
+    text-align: left !important;      /* beats the inline text-align:right */
+    white-space: normal !important;
+  }
+  table.cardtable td::before {
+    content: attr(data-label);
+    display: block; margin-bottom: 3px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .07em;
+    text-transform: uppercase; color: #A79C90;
+  }
+  table.cardtable td:not([data-label])::before { content: none; }
+
+  table.cardtable td.ct-wide { grid-column: 1 / -1; }
+  table.cardtable td.ct-title {
+    font-size: 15px; font-weight: 800;
+    padding-bottom: 10px; border-bottom: 1px solid #F2ECE4;
+  }
+  table.cardtable td.ct-title::before { content: none; }
+  table.cardtable td.ct-title .subtext { font-weight: 500; margin-top: 3px; }
+  table.cardtable td.ct-title .pill { margin-left: 6px; vertical-align: 2px; }
+  table.cardtable td.ct-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  table.cardtable td.ct-actions::before { content: none; }
+  table.cardtable td.ct-actions:empty { display: none; }
+  table.cardtable .chip-btn, table.cardtable .btn.sm {
+    min-height: 44px; padding: 0 15px; font-size: 13px; border-radius: 9px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  table.cardtable .scope-select, table.cardtable select { width: 100%; min-height: 44px; }
+  table.cardtable .inline-form { display: inline-flex !important; }
+  table.cardtable tr.row-off { opacity: .6; }
+  table.cardtable tr.row-off td { opacity: 1; }
+  /* the "suggested" tint belongs to the whole card, not one cell */
+  .plan-table.cardtable tr.plan-pick { background: #FFF6F1; border-color: #F2CDB9; }
+  .plan-table.cardtable tr.plan-pick td,
+  .plan-table.cardtable tr.plan-pick:hover td { background: transparent; }
+
+  /* ---------- tables that stay tabular, but scroll ---------------------- */
+  /* The first column is the row's name, so it is pinned and stays readable
+     while the rest slides under the thumb. */
+  table.matrix, table.tscroll { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.matrix th:first-child, table.matrix td:first-child,
+  table.tscroll th:first-child, table.tscroll td:first-child {
+    position: sticky; left: 0; z-index: 2;
+    min-width: 132px; max-width: 170px;
+    background: var(--surface);
+    box-shadow: 1px 0 0 var(--line), 7px 0 9px -7px rgba(28,24,20,.22);
+  }
+  table.matrix th:first-child, table.tscroll th:first-child { background: #FBF8F5; z-index: 3; }
+  table.matrix tr:hover td:first-child, table.tscroll tr:hover td:first-child { background: #FFF9F5; }
+  /* The group band spans every column. A sticky colspan cell cannot move --
+     it already fills its row -- so the label inside it is what gets pinned,
+     otherwise it scrolls out of sight the moment the table moves. */
+  table.matrix tr.matrix-group td { position: static; background: #F6F1EB;
+    min-width: 0; max-width: none; box-shadow: none; }
+  table.matrix tr.matrix-group .mg-label { position: sticky; left: 11px; display: inline-block; }
+  table.matrix td, table.matrix th { padding: 9px 11px; }
+  /* give the columns room so a long note is not spelled out one word per
+     line; the table scrolls sideways instead of squeezing */
+  table.tscroll td, table.tscroll th { font-size: 12.5px; padding: 9px 11px; min-width: 98px; }
+  table.tscroll td:last-child, table.tscroll th:last-child { min-width: 215px; }
+  table.tscroll td .subtext { font-size: 11px; }
+
+  /* the reference tables live inside <details class="guide"> — give them
+     the same 16px gutter as the rest of the page */
+  details.guide .guide-body { padding: 6px 14px 14px; font-size: 13.5px; }
+  details.guide summary { padding: 13px 14px; font-size: 14px; min-height: 48px; }
+  details.guide .guide-tag, details.guide .count-chip { margin-left: auto; }
+}
+
+/* the very narrowest phones (320-360px) give up the two-up card grid */
+@media (max-width: 360px) {
+  .wiz-rail { padding: 12px 11px 14px; }
+  .wiz-body .card, .wiz-form { padding: 13px; }
+  .wiz-title { font-size: 17px; }
+  table.cardtable tr { grid-template-columns: 1fr; padding: 12px; }
+  .daypick { grid-template-columns: repeat(3, 1fr); }
+  .wiz-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ===========================================================================
+   PHONE LAYER — REVIEW PASS (2026-10-01). Append-only, same scope and tokens
+   as the block above. Seven things the first pass measured past:
+
+     1. every field in the wizard was 14px, so iOS zoomed the page on focus
+     2. the menu button and the topbar button were both under 44px
+     3. step 1's intent cards came out entirely bold
+     4. a .chip-btn on an <a> keeps the browser's underline
+     5. an empty cell in a card table still printed its label
+     6. the state table squeezed its pills until the words inside them wrapped
+     7. the voicemail page's file picker was the one unstyled control left
+   ======================================================================== */
+
+@media (max-width: 760px) {
+
+  /* ---------- 1. the zoom trap ------------------------------------------ */
+  /* iOS Safari zooms the whole page in when you focus a form control whose
+     font is under 16px, and it does not zoom back out when you leave the
+     field -- you are left pinching the page back down after every answer.
+     Every input and select in the wizard and the invite form was 14px (the
+     area-code box 13.3px), so this fired on all eleven steps. The 44px
+     min-heights were the other half of this fix and were already here. */
+  .wizard input:not([type=checkbox]):not([type=radio]):not([type=file]),
+  .wizard select,
+  .wizard textarea,
+  .invite-form input:not([type=checkbox]):not([type=radio]),
+  .invite-form select,
+  .rec-widget input[type=text],
+  table.cardtable select,
+  .addon-sub input,
+  .addon-form .seatnum { font-size: 16px; }
+
+  /* A <select> cannot wrap, and step 7's "what happens after the
+     announcement" option is 95 characters, so the closed box used to cut a
+     word in half with no sign there was more. Tapping it still opens the
+     native picker with the full text; this just stops it reading like a
+     rendering bug. */
+  .wizard select, .invite-form select, table.cardtable select {
+    text-overflow: ellipsis;
+  }
+
+  /* ---------- 2. the two controls every page in HQ has ------------------- */
+  /* The menu button is the only way to the rest of HQ on a phone and it was
+     40x33. dialer.css is loaded by base.html on every screen, so fixing it
+     here fixes it everywhere -- which is the right answer for a control that
+     is identical everywhere. dial.css's .dl-topbar rules are more specific
+     and load later, so the three screens it owns keep their own treatment. */
+  .nav-toggle {
+    min-width: 44px; min-height: 44px;
+    align-items: center; justify-content: center;
+    padding: 4px; margin-right: -4px;
+  }
+
+  /* "Back to Calling" sits outside .wizard, so the wizard's own 44px rule
+     never reached it: 29px tall on all eleven steps, 39px on the team pages.
+     The team pages hang their button straight off .topbar rather than off
+     .topbar-actions, so both parents have to be named. */
+  .topbar-actions .btn,
+  .topbar > .btn {
+    min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .topbar-actions .btn i, .topbar > .btn i { margin-right: 0; }
+
+  /* The wordmark beside it is a link to the dashboard and was 37px, the
+     same miss one row up.
+
+     The padding here is the .main gutter bug over again. admin.css's own
+     760px block asks for a 10px 14px sidebar and a 4px 0 logo, and its
+     later v3 section -- 22px 14px and 0 10px 16px -- wins the cascade. So a
+     phone gets an 88px sticky header instead of the 64px that block
+     intends, with the wordmark sitting 8px above centre because of a bottom
+     padding meant for the stacked desktop sidebar. Put back what the media
+     query asked for. */
+  .sidebar { padding: 10px 14px; }
+  .side-top .logo {
+    display: inline-flex; align-items: center;
+    min-height: 44px; margin: 0; padding: 4px 0;
+  }
+
+  /* and the menu those two open: every row of the app's navigation was
+     36px. The panel scrolls, so the extra height costs nothing. */
+  .sidebar.open a.nav-item,
+  .sidebar.open span.nav-item { min-height: 44px; align-items: center; }
+
+  /* ---------- 3. step 1's intent cards ---------------------------------- */
+  /* The same ".form label { font-weight: 700 }" clash that was fixed for
+     .addon and for .invite-form's role cards, in the one place it was
+     missed: the four cards on step 1 are inside .wiz-form, so every word of
+     their body copy rendered at 700 and the page opened shouting. */
+  .wiz-form label.rolecard { font-weight: 400; margin-bottom: 0; }
+  .wiz-form .rolecard-name { font-weight: 800; }
+  .wiz-form .rolecard-blurb { font-weight: 400; }
+
+  /* ---------- 4. chip buttons that are links ---------------------------- */
+  /* .chip-btn in admin.css was written for <button> and never clears the
+     underline. It did not show much at 11.5px; now that the mobile rule
+     gives it a 44px box and a border, an underlined label inside a button
+     reads as broken. Step 9's "Edit" is the one on screen. */
+  .wizard a.chip-btn,
+  .wizard a.btn,
+  table.cardtable a.chip-btn,
+  table.cardtable a.btn { text-decoration: none; }
+
+  /* ---------- 5. labels with nothing under them ------------------------- */
+  /* Card tables draw a cell's heading from data-label, so a row with no
+     value for a column printed the heading over empty space. Most rows in
+     the activity log have no detail, so nearly every card carried a
+     dangling "DETAIL". */
+  table.cardtable td:empty { display: none; }
+
+  /* ---------- 6. the state reference table ------------------------------ */
+  /* The table scrolls, so a narrow column buys nothing -- and at 98px the
+     status pills were wrapping INSIDE themselves: "Ask a lawyer" became a
+     two-line 50px blob, and California's row stood 194px tall. Let the
+     pills and the headers keep their line and give the notes column enough
+     width to read as sentences. */
+  table.tscroll .pill,
+  table.tscroll th { white-space: nowrap; }
+  table.tscroll td, table.tscroll th { min-width: 116px; }
+  table.tscroll td:last-child, table.tscroll th:last-child { min-width: 278px; }
+  table.tscroll td { vertical-align: top; }
+
+  /* ---------- 7. the file picker ---------------------------------------- */
+  /* The recorder's upload field was the last control still drawn by the
+     browser: a small grey "Choose File" chip inside an otherwise styled
+     box, with no way to hit it reliably. */
+  .rec-widget input[type=file] {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; font-size: 13.5px; color: var(--ink-2);
+  }
+  .rec-widget input[type=file]::file-selector-button {
+    min-height: 36px; padding: 0 14px;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: #F3EDE6; color: var(--ink-2);
+    font-family: var(--font); font-size: 13px; font-weight: 800;
+    cursor: pointer;
+  }
+  .rec-widget input[type=file]::file-selector-button:hover { background: #EDE4D9; }
+}

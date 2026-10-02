@@ -3,19 +3,19 @@
 
 {% if playbooks %}
 <h3 class="wiz-h3">Your playbooks <span class="count-chip">{{ playbooks | length }}</span></h3>
-<table>
+<table class="cardtable">
   <tr><th>Name</th><th>Steps</th><th>Questions</th><th>Objections</th><th></th></tr>
   {% for p in playbooks %}
   <tr>
-    <td>
+    <td class="ct-title ct-wide">
       <a class="rowlink" href="/dialer/playbooks/{{ p.id }}">{{ p.name }}</a>
       {% if p.is_default %}<span class="pill" style="background:#2E7D4F">Default</span>{% endif %}
       {% if p.description %}<div class="subtext">{{ p.description }}</div>{% endif %}
     </td>
-    <td>{{ p.steps | length }}</td>
-    <td>{{ p.questions | length }}</td>
-    <td>{{ p.objections | length }}</td>
-    <td style="text-align:right">
+    <td data-label="Steps">{{ p.steps | length }}</td>
+    <td data-label="Questions">{{ p.questions | length }}</td>
+    <td data-label="Objections">{{ p.objections | length }}</td>
+    <td class="ct-actions ct-wide" style="text-align:right">
       <a class="chip-btn" href="/dialer/playbooks/{{ p.id }}">Edit</a>
     </td>
   </tr>

@@ -48,9 +48,9 @@
       the recordings and a spreadsheet of the transcripts.</span>
   </div>
 
-  <table>
-    <tr>
-      <th class="chkcol"><input type="checkbox" id="chkall" aria-label="Select every call on this page"></th>
+  <table class="mg-cards has-selectall">
+    <tr class="mg-hrow">
+      <th class="chkcol"><label class="chkhit"><input type="checkbox" id="chkall" aria-label="Select every call on this page"></label></th>
       <th>When</th><th>Lead</th><th>Number</th><th>Outcome</th>
       <th class="mg-right">Length</th><th class="mg-right">Score</th><th class="mg-right">Cost</th><th></th>
     </tr>
@@ -58,14 +58,17 @@
     {% set lead = leads.get(call.lead_id) if leads else None %}
     <tr>
       <td class="chkcol">
-        <input type="checkbox" name="call_id" value="{{ call.id }}" class="callchk"
-               aria-label="Select the call on {{ call.started_at | local if call.started_at else 'this row' }}">
+        {#- the label is the tap target: a bare 26px box is too small for a thumb -#}
+        <label class="chkhit">
+          <input type="checkbox" name="call_id" value="{{ call.id }}" class="callchk"
+                 aria-label="Select the call on {{ call.started_at | local if call.started_at else 'this row' }}">
+        </label>
       </td>
-      <td>
+      <td data-label="When">
         <div class="callrow-when">{{ call.started_at | localdate if call.started_at else '—' }}
           <span>{{ call.started_at | local('%-I:%M %p') if call.started_at else '' }}</span></div>
       </td>
-      <td>
+      <td class="mg-cardtitle">
         {% if lead %}
           <a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a>
           {% if lead.business %}<div class="subtext">{{ lead.business }}</div>{% endif %}
@@ -73,26 +76,26 @@
           <span class="muted">No CRM record</span>
         {% endif %}
       </td>
-      <td class="mg-nowrap">{{ call.to_number or '—' }}
+      <td class="mg-nowrap" data-label="Number">{{ call.to_number or '—' }}
         {% if call.direction == 'inbound' %}<div class="subtext">inbound</div>{% endif %}
       </td>
-      <td>
+      <td data-label="Outcome">
         {% if call.disposition %}
           <span class="pill disp disp-{{ call.disposition }}">{{ call.disposition | replace('_', ' ') | capitalize }}</span>
         {% else %}
           <span class="muted">{{ (call.system_outcome or 'not set') | replace('_', ' ') }}</span>
         {% endif %}
       </td>
-      <td class="mg-right mg-num">{{ call.duration_pretty }}</td>
-      <td class="mg-right">
+      <td class="mg-right mg-num mg-cardstat" data-label="Length">{{ call.duration_pretty }}</td>
+      <td class="mg-right mg-cardstat" data-label="Score">
         {% if call.score is not none %}
           <span class="score-chip {{ 'hi' if call.score >= 7 else ('lo' if call.score <= 4 else '') }}">{{ call.score }}/10</span>
         {% else %}
           <span class="muted">—</span>
         {% endif %}
       </td>
-      <td class="mg-right mg-num">{{ '$%.2f' | format(call.cost_estimate | default(0) | float) }}</td>
-      <td class="mg-right"><a class="chip-btn" href="/dialer/calls/{{ call.id }}">Open</a></td>
+      <td class="mg-right mg-num mg-cardstat" data-label="Cost">{{ '$%.2f' | format(call.cost_estimate | default(0) | float) }}</td>
+      <td class="mg-right mg-cardactions"><a class="chip-btn" href="/dialer/calls/{{ call.id }}">Open</a></td>
     </tr>
     {% endfor %}
   </table>

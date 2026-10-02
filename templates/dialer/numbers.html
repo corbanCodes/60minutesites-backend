@@ -19,17 +19,17 @@
 </div>
 
 {% if numbers %}
-<table>
-  <tr>
+<table class="mg-cards">
+  <tr class="mg-hrow">
     <th>Number</th><th>Pool</th><th>Purpose</th><th>Daily cap</th><th>Today</th><th>State</th><th></th>
   </tr>
   {% for n in numbers %}
   <tr>
-    <td>
+    <td class="mg-cardtitle">
       <span class="rowlink">{{ n.pretty }}</span>
       <div class="subtext">{{ n.region or n.area_code or '' }}{% if n.friendly_name and n.friendly_name != n.e164 %} · {{ n.friendly_name }}{% endif %}</div>
     </td>
-    <td>
+    <td data-label="Pool">
       <form method="post" action="/dialer/numbers/{{ n.id }}/pool" class="inline-form">
         <select name="pool" class="scope-select" onchange="this.form.submit()" aria-label="Pool for {{ n.pretty }}">
           <option value="rep" {{ 'selected' if n.pool != 'ai' }}>You and your reps</option>
@@ -37,15 +37,15 @@
         </select>
       </form>
     </td>
-    <td class="muted">{{ (n.purpose or 'both') | capitalize }}</td>
-    <td>
+    <td class="muted" data-label="Purpose">{{ (n.purpose or 'both') | capitalize }}</td>
+    <td data-label="Daily cap">
       <form method="post" action="/dialer/numbers/{{ n.id }}/cap" class="inline-cap">
         <input type="number" name="daily_cap" min="1" max="1000" value="{{ n.daily_cap | default(120) }}"
                aria-label="Daily call cap for {{ n.pretty }}">
         <button class="chip-btn" type="submit">Save</button>
       </form>
     </td>
-    <td>
+    <td data-label="Today">
       {% set cap = n.daily_cap | default(120) or 120 %}
       {% set used = n.calls_today | default(0) or 0 %}
       {% set share = ((used / cap) * 100) | round(0, 'floor') | int if cap else 0 %}
@@ -57,8 +57,8 @@
         <span class="meter-text">{{ used }} / {{ cap }}</span>
       </div>
     </td>
-    <td><span class="pill st-{{ n.state or 'active' }}">{{ (n.state or 'active') | capitalize }}</span></td>
-    <td class="mg-right mg-nowrap">
+    <td data-label="State"><span class="pill st-{{ n.state or 'active' }}">{{ (n.state or 'active') | capitalize }}</span></td>
+    <td class="mg-right mg-nowrap mg-cardactions">
       {% if n.state != 'released' %}
         {% if n.state == 'parked' %}
         <form method="post" action="/dialer/numbers/{{ n.id }}/unpark" class="inline-form">

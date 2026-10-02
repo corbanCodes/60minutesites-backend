@@ -330,3 +330,516 @@ tr.flagged td:first-child { box-shadow: inset 3px 0 0 #B3362B; }
   .suppress-form { flex-direction: column; align-items: stretch; }
   .suppress-form input { width: 100%; }
 }
+
+/* ============================================================================
+   PHONE LAYER (2026-10-01) — append-only, nothing above is edited.
+   Everything that changes layout lives inside a max-width query, so the
+   desktop screens are byte-for-byte what they were. 375px (iPhone SE / mini)
+   is the floor; 390–430px is the common case.
+   ========================================================================= */
+
+/* ---- prompt preview is a <details> now: same look, collapsible on a phone.
+        Opened by script on anything wider than a phone, so a desktop is
+        unchanged. These few rules are width-independent by necessity. ---- */
+.promptbox > summary { display: block; cursor: pointer; list-style: none; }
+.promptbox > summary::-webkit-details-marker { display: none; }
+.promptbox > summary::marker { content: ""; }
+.promptbox > summary:focus-visible { outline: 2px solid var(--orange); outline-offset: -2px; }
+.promptbox-chev { margin-left: auto; font-size: 12px; color: #B3A89B; transition: transform .15s ease; }
+.promptbox[open] .promptbox-chev { transform: rotate(180deg); }
+.promptbox:not([open]) > summary.promptbox-head { border-bottom: none; }
+
+@media (max-width: 760px) {
+
+  /* =======================================================================
+     1. Touch targets. Nothing a thumb aims at is under 44px, and every text
+        field is 16px so iOS stops zooming the page on focus.
+     ===================================================================== */
+  .main .btn,
+  .main .btn.sm {
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 0 18px; font-size: 14px;
+  }
+  .main .chip-btn {
+    min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 15px; font-size: 13px; border-radius: 10px; text-decoration: none;
+  }
+  .main .dayswitch a,
+  .main .viewtab { min-height: 44px; display: inline-flex; align-items: center; }
+
+  .main .form input[type=text], .main .form input[type=email], .main .form input[type=tel],
+  .main .form input[type=password], .main .form input[type=number], .main .form select,
+  .main .filterbar input, .main .filterbar select,
+  .main .suppress-form input, .main .inline-cap input, .main .scope-select,
+  .main .rowcard input[type=text] {
+    min-height: 44px; font-size: 16px;
+  }
+  .main .form textarea, .main .rowcard textarea, .main .gate-attest textarea {
+    font-size: 16px; line-height: 1.6; min-height: 96px;
+  }
+  /* admin.css sizes text/email/tel/password but not number, so a number
+     field sat as a little square next to full-width neighbours. */
+  .main .form input[type=number] { width: 100%; }
+  .main .multi { font-size: 15px; min-height: 150px; }
+  .main .checkline { gap: 11px; font-size: 14px; padding: 3px 0; }
+  .main .checkline input[type=checkbox] { width: 22px; height: 22px; margin-top: 1px; }
+  .main .checkline em { font-size: 13px; }
+  .main .field-hint { font-size: 13px; }
+  .main .form label, .main .rowcard label { font-size: 13px; }
+
+  /* =======================================================================
+     2. Button rows wrap in pairs instead of running off the edge.
+     ===================================================================== */
+  .main .mg-actions { gap: 8px; }
+  .main .mg-actions .btn { flex: 1 1 auto; min-width: 46%; }
+  .main .mg-actions form { flex: 1 1 auto; min-width: 46%; display: flex; }
+  .main .mg-actions form .btn { width: 100%; }
+
+  .main .camp-bar { gap: 8px; }
+  .main .camp-bar form { flex: 1 1 46%; display: flex; }
+  .main .camp-bar form .btn { width: 100%; }
+  .main .camp-bar > .mg-note { flex: 1 1 100%; }
+
+  .main .savebar { gap: 10px; }
+  .main .savebar .btn { flex: 1 1 100%; }
+  .main .savebar > .mg-note { flex: 1 1 100%; }
+
+  .main .bulkrow .btn { flex: 1 1 100%; }
+  .main .bulkrow .mg-note { font-size: 13px; }
+
+  .main .filterbar > input,
+  .main .filterbar > select,
+  .main .filterbar > .search-wrap { flex: 1 1 100%; min-width: 0; }
+  .main .filterbar .btn { flex: 1 1 auto; }
+  /* .filterbar's own padding shorthand cancels .search-wrap's padding-left,
+     so the magnifier sits on top of the placeholder. Put the gutter back. */
+  .main .filterbar .search-wrap input { padding-left: 36px; }
+
+  /* a pill broken across three lines stops looking like a pill */
+  .main .pill { white-space: nowrap; }
+
+  .main .mg-empty { padding: 32px 18px; }
+  .main .mg-empty p { font-size: 13.5px; }
+  .main .mg-sub, .main .mg-note { font-size: 13.5px; }
+
+  /* =======================================================================
+     3. The wide data tables become stacked cards. Reference tables that are
+        genuinely tabular (state rules, the cost breakdown) keep scrolling
+        inside their own box, which admin.css already does.
+     ===================================================================== */
+  .main table.mg-cards {
+    display: block; width: 100%; border: 0; background: none;
+    border-radius: 0; box-shadow: none; overflow: visible;
+  }
+  .main table.mg-cards > tbody { display: block; }
+  .main table.mg-cards > tbody > tr.mg-hrow { display: none; }
+
+  .main table.mg-cards > tbody > tr {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    background: var(--surface); border: 1px solid #EAE3DA; border-radius: 14px;
+    padding: 13px 15px 11px; margin: 0 0 10px;
+    box-shadow: 0 1px 2px rgba(28,24,20,.04), 0 6px 18px rgba(28,24,20,.05);
+  }
+  .main table.mg-cards > tbody > tr:last-child { margin-bottom: 0; }
+
+  .main table.mg-cards > tbody > tr > td,
+  .main table.mg-cards > tbody > tr:hover > td {
+    flex: 0 0 100%; max-width: 100%; min-width: 0;
+    display: block; background: none; text-align: left; white-space: normal;
+    padding: 9px 0; border-bottom: 1px solid #F3EDE6;
+    font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere;
+  }
+  .main table.mg-cards > tbody > tr > td:last-child {
+    border-bottom: none; padding-bottom: 0;
+  }
+
+  /* label : value — the label is taken out of flow so a cell can hold any
+     number of children (a pill plus a sub-line, a form, a meter) and they
+     all still stack tidily in the value column. */
+  .main table.mg-cards > tbody > tr > td[data-label] {
+    position: relative; display: block;
+    padding: 11px 0 11px 98px; min-height: 48px;
+  }
+  .main table.mg-cards > tbody > tr > td[data-label]::before {
+    content: attr(data-label); position: absolute; left: 0; top: 13px; width: 88px;
+    font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+    color: #A79C90; line-height: 1.3;
+  }
+  .main table.mg-cards > tbody > tr > td[data-label] select,
+  .main table.mg-cards > tbody > tr > td[data-label] .scope-select { width: 100%; }
+
+  /* The headline of the card. min-width keeps a short name from sharing its
+     line with the numeric footer cells below. */
+  .main table.mg-cards > tbody > tr > td.mg-cardtitle {
+    order: -1; flex: 1 1 auto; min-width: 74%; font-size: 15.5px; font-weight: 700;
+    padding: 0 0 11px; line-height: 1.35;
+  }
+  .main table.mg-cards > tbody > tr > td.mg-cardtitle .subtext,
+  .main table.mg-cards > tbody > tr > td.mg-cardtitle .muted { font-size: 12.5px; font-weight: 500; }
+
+  /* queue position, sitting left of the headline. align-self:stretch keeps
+     its underline on the same line as the headline's. */
+  .main table.mg-cards > tbody > tr > td.mg-cardnum {
+    order: -2; flex: 0 0 auto; align-self: stretch; padding: 0 9px 11px 0;
+    font-size: 15.5px; font-weight: 800; color: #C4B8AB;
+  }
+  .main table.mg-cards > tbody > tr > td.mg-cardnum::before { content: "#"; }
+
+  /* the row tick box, also left of the headline */
+  .main table.mg-cards > tbody > tr > td.chkcol {
+    order: -2; flex: 0 0 auto; align-self: stretch; width: auto;
+    display: flex; align-items: center; padding: 0 12px 11px 0; text-align: left;
+  }
+  /* 44px of thumb around a 26px box */
+  .main table.mg-cards .chkhit {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 44px; min-height: 44px; margin: 0 -9px; cursor: pointer;
+  }
+  .main table.mg-cards td.chkcol input,
+  .main table.mg-cards th.chkcol input { width: 26px; height: 26px; margin: 0; }
+
+  /* three-up numeric footer */
+  .main table.mg-cards > tbody > tr > td.mg-cardstat[data-label] {
+    display: block; flex: 1 1 28%; max-width: none; text-align: center; min-height: 0;
+    border-bottom: none; border-top: 1px solid #F3EDE6;
+    padding: 10px 2px 2px; margin-top: 2px;
+    font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .main table.mg-cards > tbody > tr > td.mg-cardstat[data-label]::before {
+    position: static; display: block; width: auto; padding: 0;
+    margin-bottom: 4px; font-size: 10.5px;
+  }
+  .main table.mg-cards > tbody > tr > td.mg-cardstat .muted {
+    display: block; font-size: 12px; font-weight: 600; margin-top: 1px;
+  }
+  .main table.mg-cards > tbody > tr > td.mg-cardstat .score-chip { font-size: 13.5px; }
+
+  /* the buttons at the foot of the card */
+  .main table.mg-cards > tbody > tr > td.mg-cardactions {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    border-bottom: none; padding: 13px 0 0; margin-top: 2px;
+  }
+  .main table.mg-cards td.mg-cardactions .inline-form { flex: 1 1 auto; display: flex; }
+  .main table.mg-cards td.mg-cardactions .release-form {
+    flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .main table.mg-cards td.mg-cardactions .release-form .chk {
+    min-height: 44px; font-size: 12.5px; flex: 1 1 auto;
+  }
+  .main table.mg-cards td.mg-cardactions .release-form input[type=checkbox] { width: 22px; height: 22px; }
+  .main table.mg-cards td.mg-cardactions .chip-btn,
+  .main table.mg-cards td.mg-cardactions .btn { flex: 1 1 auto; }
+  .main table.mg-cards td.mg-cardactions .inline-form .chip-btn { width: 100%; }
+
+  /* trailing cell that is empty most of the time */
+  .main table.mg-cards > tbody > tr > td.mg-cardflag:empty { display: none; }
+
+  /* row states survive the card conversion */
+  .main table.mg-cards > tbody > tr.is-skipped { background: #FDF7F5; border-color: #EFD9D2; }
+  .main table.mg-cards > tbody > tr.is-done { opacity: .75; }
+  .main table.mg-cards > tbody > tr.row-off { opacity: .62; }
+  .main table.mg-cards > tbody > tr.flagged { border-left: 4px solid #B3362B; }
+  .main table.mg-cards > tbody > tr.flagged > td:first-child { box-shadow: none; }
+
+  /* select-all, kept from the hidden header row — no extra markup */
+  .main table.mg-cards.has-selectall > tbody > tr.mg-hrow {
+    display: flex; align-items: center; gap: 11px;
+    background: none; border: none; border-radius: 0; box-shadow: none;
+    padding: 0 2px 12px; margin: 0;
+  }
+  .main table.mg-cards.has-selectall > tbody > tr.mg-hrow > th { display: none; }
+  .main table.mg-cards.has-selectall > tbody > tr.mg-hrow > th.chkcol {
+    display: inline-flex; align-items: center; gap: 11px; width: auto;
+    padding: 0; border: none; background: none; min-height: 44px;
+  }
+  .main table.mg-cards.has-selectall > tbody > tr.mg-hrow > th.chkcol::after {
+    content: "Select every call below";
+    font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none;
+    color: var(--ink-2); white-space: nowrap;
+  }
+
+  /* The state rules stay a real table — you scan down a column of states —
+     but it scrolls sideways at a sane width instead of squeezing the notes
+     column to 100px and making every row 350px tall. */
+  .main .state-table td, .main .state-table th {
+    font-size: 13px; padding: 10px 12px; vertical-align: top;
+  }
+  .main .state-table td:first-child, .main .state-table th:first-child { min-width: 128px; }
+  .main .state-table td:nth-child(2), .main .state-table th:nth-child(2) { min-width: 150px; }
+  .main .state-table td:nth-child(3), .main .state-table th:nth-child(3) { min-width: 128px; }
+  .main .state-table td:last-child, .main .state-table th:last-child { min-width: 250px; }
+
+  /* =======================================================================
+     4. Reports
+     ===================================================================== */
+  .main .cards.mg-tiles { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .main .cards.mg-tiles .card.stat { padding: 13px 15px; border-radius: 12px; }
+  .main .cards.mg-tiles .stat .num { font-size: 23px; line-height: 1.2; overflow-wrap: anywhere; }
+  .main .cards.mg-tiles .stat .label { line-height: 1.4; margin-top: 3px; }
+
+  /* bar chart: the name gets its own line so it never truncates */
+  .main .barchart { gap: 13px; }
+  .main .barchart-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "label value" "track track";
+    column-gap: 10px; row-gap: 6px; align-items: center; font-size: 13.5px;
+  }
+  .main .barchart-label {
+    grid-area: label; white-space: normal; overflow: visible; text-overflow: clip;
+  }
+  .main .barchart-val { grid-area: value; font-size: 13px; }
+  .main .barchart-track { grid-area: track; height: 15px; }
+
+  /* 24-hour strip: scrolls sideways so every bar and label stays legible */
+  .main .hourscroll {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    margin: 0 -4px; padding: 0 4px 2px;
+  }
+  .main .hourscroll .hourstrip,
+  .main .hourscroll .hourlabels { min-width: 530px; }
+  .main .hourstrip { height: 118px; }
+  .main .hourlabel { font-size: 11px; }
+
+  .main .gauge { gap: 10px; }
+  .main .gauge-track { flex: 1 1 100%; min-width: 0; }
+  .main .gauge-meta { flex: 1 1 100%; font-size: 13px; }
+  .main .vs-line { font-size: 13.5px; padding: 6px 0; }
+
+  /* =======================================================================
+     5. Call detail
+     ===================================================================== */
+  .main .call-grid { gap: 14px; }
+  .main .audio-panel { padding: 12px 13px; }
+  .main .audio-panel audio { width: 100%; min-height: 44px; }
+  .main .transcript { max-height: 62vh; }
+  .main .fact, .main .evidence-row { padding: 10px 0; }
+  .main .fact dt, .main .evidence-row dt {
+    font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    color: #A79C90;
+  }
+  .main .fact dd, .main .evidence-row dd { font-size: 13.5px; }
+  .main .evidence { border-radius: 0 13px 13px 0; padding: 14px 15px; }
+  .main .qa-grid { grid-template-columns: minmax(0, 1fr); }
+  .main .tl-row { padding: 10px 0; font-size: 13px; }
+  .main .tl-kind { font-size: 13px; }
+  .main .scorebig b { font-size: 30px; }
+  .main .reasonlist { font-size: 13.5px; }
+
+  /* =======================================================================
+     6. New campaign — the live preview is what the user is watching while
+        they change filters, so it sits above the form and stays pinned.
+        .builder becomes a flex column so the sticky item has room to stick
+        (a grid item can only stick inside its own single-row grid area).
+     ===================================================================== */
+  .main .builder { display: flex; flex-direction: column; gap: 14px; }
+  .main .builder-form { order: 2; }
+  .main .preview-panel {
+    order: 1; position: sticky; top: 84px; z-index: 20;
+    max-height: 34vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  /* a fade at the foot of the pinned panel, so a clipped list reads as
+     "there is more below" rather than as a hard crop */
+  .main .preview-panel::after {
+    content: ""; display: block; position: sticky; bottom: 0; height: 20px;
+    margin-top: -20px; pointer-events: none;
+    background: linear-gradient(rgba(255,255,255,0), var(--surface));
+  }
+  /* a field the browser scrolls to on focus must not land under the panel */
+  .main .builder-form input, .main .builder-form select,
+  .main .builder-form textarea, .main .builder-form .mg-card { scroll-margin-top: 370px; }
+  .main .preview-head { position: sticky; top: 0; padding: 11px 15px; }
+  .main .preview-head h2 { font-size: 13.5px; }
+  .main .preview-head p { display: none; }
+  .main .preview-body { padding: 13px 15px 15px; }
+  .main .preview-counts { gap: 7px; margin-bottom: 11px; }
+  .main .preview-count { padding: 8px 4px; }
+  .main .preview-count b { font-size: 21px; }
+  .main .preview-state { font-size: 13px; }
+  .main .reason-copy, .main .sample-row { font-size: 13px; }
+  .main .picked-note { font-size: 13.5px; }
+
+  /* =======================================================================
+     7. Campaign detail, playbook editor, numbers
+     ===================================================================== */
+  .main .camp-tiles { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .main .camp-tile { padding: 11px 8px; text-align: center; }
+  .main .camp-tile b { font-size: 21px; }
+  .main .camp-tile span { font-size: 9.5px; letter-spacing: .04em; }
+  .main .open-phone { padding: 14px 16px; gap: 11px; }
+  .main .open-phone .go { flex: 1 1 100%; min-height: 44px; display: flex; align-items: center; }
+  .main .mg-progress { min-width: 0; }
+
+  .main .rowcard { padding: 12px 13px; }
+  .main .rowcard-head { gap: 8px; margin-bottom: 8px; }
+  .main .rowcard-grid { grid-template-columns: minmax(0, 1fr); }
+  .main .rowcard textarea { min-height: 104px; }
+  .main .rowset-empty { font-size: 13.5px; }
+
+  .main .buyrow b { font-size: 15.5px; }
+  .main .buyrow form { flex-wrap: wrap; gap: 8px; }
+  .main .buyrow form .scope-select { flex: 1 1 100%; }
+  .main .buyrow form .btn { flex: 1 1 100%; }
+
+  /* collapsed, the prompt preview is a single tidy bar */
+  .main .promptbox:not([open]) > summary p { display: none; }
+  .main .promptbox > summary { min-height: 44px; }
+  .main .promptbox pre { max-height: 44vh; font-size: 12px; }
+
+  .main .gate-line { font-size: 13.5px; }
+  .main .gate-record, .main .evidence-flag { font-size: 13px; }
+  .main .suppress-form label { font-size: 13px; }
+}
+
+/* ----------------------------------------------------------------------------
+   Tablet band (761–1050px). The sidebar is still 220px wide here but admin.css
+   only starts scrolling tables at 760px, so a wide table pushed the whole page
+   sideways. Same treatment, one band higher, and only on these screens.
+   ------------------------------------------------------------------------- */
+@media (min-width: 761px) and (max-width: 1050px) {
+  /* .main is a flex item, so its automatic minimum size is its content's —
+     without this the wide table stretches the column instead of scrolling. */
+  .main { min-width: 0; }
+  .main table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .main .hourscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* ============================================================================
+   PHONE LAYER — REVIEW PASS (2026-10-01b). Append-only; nothing above is
+   edited. Every layout rule stays inside the phone query, so the desktop and
+   tablet screens are byte-for-byte what they were before this block.
+   ========================================================================= */
+
+@media (max-width: 760px) {
+
+  /* -----------------------------------------------------------------------
+     1. The card headline was the only way into a record on /dialer/calls,
+        /dialer/agents, /dialer/playbooks and the campaign queue, and it was
+        a bare 16–19px line of text — a 19px tall thumb target. Stretch the
+        link across the whole headline cell (name + sub-line + the card's top
+        padding) so you are tapping the block you are actually aiming at.
+        The anchor itself stays static so the overlay resolves against the
+        cell, and it paints over the sub-line, which is not interactive.
+     --------------------------------------------------------------------- */
+  .main table.mg-cards > tbody > tr > td.mg-cardtitle {
+    position: relative; min-height: 44px;
+  }
+  .main table.mg-cards > tbody > tr > td.mg-cardtitle > a::after {
+    content: ""; position: absolute; left: 0; right: 0; top: -13px; bottom: 0;
+  }
+  /* the same line, in the fact list on a call page */
+  .main .fact dd > a, .main .evidence-row dd > a {
+    display: inline-block; padding: 14px 0; margin: -14px 0;
+  }
+
+  /* -----------------------------------------------------------------------
+     2. Reports opens with two groups of five tiles, so the 2-up grid left a
+        card-shaped hole beside "Spend" and beside "Follow-ups created".
+        An odd last tile takes the whole row instead.
+     --------------------------------------------------------------------- */
+  .main .cards.mg-tiles > .card.stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+  /* -----------------------------------------------------------------------
+     3. The 24-hour strip scrolls sideways, but nothing on screen said so and
+        the window opens on hours 0–10, which are empty on most accounts — so
+        the chart read as a broken empty box. Classic local/scroll background
+        pair: the surface-coloured covers ride with the content and uncover a
+        shadow at whichever edge still has hours behind it.
+     --------------------------------------------------------------------- */
+  .main .hourscroll {
+    background:
+      linear-gradient(90deg, var(--surface) 40%, rgba(255,255,255,0)) 0 0 / 34px 100% no-repeat local,
+      linear-gradient(270deg, var(--surface) 40%, rgba(255,255,255,0)) 100% 0 / 34px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgba(28,24,20,.17), rgba(28,24,20,0)) 0 0 / 14px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgba(28,24,20,.17), rgba(28,24,20,0)) 100% 0 / 14px 100% no-repeat scroll;
+  }
+
+  /* -----------------------------------------------------------------------
+     4. admin.css turns every table into a block so wide ones can scroll, and
+        a block table shrink-wraps: the two-column cost table on /dialer/reports
+        sat 40px short of the right edge of its own card. Let the row group
+        fill the block again — a genuinely wide table still scrolls.
+     --------------------------------------------------------------------- */
+  .main table:not(.mg-cards):not(.state-table) > tbody { display: table; width: 100%; }
+
+  /* -----------------------------------------------------------------------
+     5. /dialer/compliance — the state rules table. Left as a side-scrolling
+        table it was 894px wide in a 305px box: you saw State and AI calling,
+        the Hours column cut through the middle of a word, and Notes — the
+        column you actually read — was off the right edge with nothing saying
+        to swipe. Rows also inherited the height of the hidden Notes cell, so
+        the visible part was a ragged column of states with up to 140px of
+        blank space between them. Same card treatment as the other lists;
+        the column labels come from the fixed column order, so no markup
+        change is needed. Explicit min-width: 0 everywhere, because the
+        min-widths set above have the higher specificity otherwise.
+     --------------------------------------------------------------------- */
+  .main .state-table {
+    display: block; width: 100%; border: 0; background: none;
+    border-radius: 0; box-shadow: none; overflow: visible;
+  }
+  .main .state-table > tbody { display: block; }
+  .main .state-table > tbody > tr:first-child { display: none; }   /* header */
+  .main .state-table > tbody > tr {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 10px; align-items: baseline;
+    background: var(--surface); border: 1px solid #EAE3DA; border-radius: 13px;
+    padding: 12px 14px; margin: 0 0 9px;
+    box-shadow: 0 1px 2px rgba(28,24,20,.04), 0 6px 18px rgba(28,24,20,.05);
+  }
+  .main .state-table > tbody > tr:last-child { margin-bottom: 0; }
+  .main .state-table > tbody > tr > td,
+  .main .state-table > tbody > tr:hover > td {
+    display: block; min-width: 0; border: 0; background: none;
+    padding: 0; text-align: left; vertical-align: baseline;
+    font-size: 13px; line-height: 1.55; overflow-wrap: anywhere;
+  }
+  /* row 1: the state, and how AI calling stands there */
+  .main .state-table > tbody > tr > td:nth-child(1) {
+    grid-area: 1 / 1; min-width: 0; font-size: 15px; font-weight: 700;
+  }
+  .main .state-table > tbody > tr > td:nth-child(2) {
+    grid-area: 1 / 2; min-width: 0; justify-self: end;
+  }
+  /* row 2: the window on the left, the daily cap on the right */
+  .main .state-table > tbody > tr > td:nth-child(3) {
+    grid-area: 2 / 1; min-width: 0; margin-top: 6px;
+    white-space: normal; color: var(--ink-2); font-weight: 600;
+  }
+  .main .state-table > tbody > tr > td:nth-child(4) {
+    grid-area: 2 / 2; min-width: 0; margin-top: 6px; justify-self: end;
+    color: var(--ink-2); font-weight: 600; white-space: nowrap;
+  }
+  .main .state-table > tbody > tr > td:nth-child(4)::before { content: "cap "; }
+  /* row 3: the notes, which is the column you came for */
+  .main .state-table > tbody > tr > td:nth-child(5) {
+    grid-area: 3 / 1 / 4 / 3; min-width: 0; margin-top: 9px; padding-top: 9px;
+    border-top: 1px solid #F3EDE6; color: var(--ink-2);
+  }
+  .main .state-table > tbody > tr > td:nth-child(5):empty { display: none; }
+
+  /* -----------------------------------------------------------------------
+     6. /dialer/campaigns/new — the pinned preview stuck at 84px, but the
+        sticky top bar is only 64px tall (10px padding + a 44px logo) once
+        the webfont has loaded. A 20px slot of the form scrolled through
+        between the two, the whole way down the page. Pin the panel 2px
+        under the bar instead: the bar is z-60 over the panel's z-20, so
+        the overlap is hidden and the slot closes.
+     --------------------------------------------------------------------- */
+  .main .preview-panel { top: 62px; }
+
+  /* -----------------------------------------------------------------------
+     7. A select or a text box inside a card cell was squeezed into the
+        155px left over beside the 88px label — "You and your reps" came out
+        as "You and your rep". When the cell holds a control, the label goes
+        above it and the control gets the full card width.
+     --------------------------------------------------------------------- */
+  .main table.mg-cards > tbody > tr > td[data-label]:has(select),
+  .main table.mg-cards > tbody > tr > td[data-label]:has(input) {
+    padding: 11px 0 11px; min-height: 0;
+  }
+  .main table.mg-cards > tbody > tr > td[data-label]:has(select)::before,
+  .main table.mg-cards > tbody > tr > td[data-label]:has(input)::before {
+    position: static; display: block; width: auto; margin-bottom: 6px;
+  }
+}
