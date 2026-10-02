@@ -18,14 +18,14 @@
   playbooks | length != real_playbooks | length %}<span class="muted" style="font-weight:500; font-size:13px">
   &nbsp;+ {{ playbooks | length - real_playbooks | length }} sample</span>{% endif %}</h3>
 <table class="cardtable">
-  <tr><th>Name</th><th>Steps</th><th>Questions</th><th>Objections</th><th>Transfer</th><th></th></tr>
+  <tr><th>Name</th><th>Steps</th><th>Questions</th><th>Objections</th><th>Hands to a person</th><th></th></tr>
   {% for p in playbooks %}
   {% set is_demo = p.name.startswith(DEMO_PREFIX) %}
   <tr{{ ' class=row-muted' | safe if is_demo }}>
     <td class="ct-title ct-wide">
       <a class="rowlink" href="/dialer/playbooks/{{ p.id }}">{{ p.name }}</a>
-      {% if is_demo %}<span class="pill" style="background:#8A7F73">Sample</span>
-      {% elif p.is_default %}<span class="pill" style="background:#2E7D4F">Default</span>{% endif %}
+      {% if is_demo %}<span class="pill" style="background:#8A7F73">Sample</span>{% endif %}
+      {% if p.is_default %}<span class="pill" style="background:#2E7D4F">Reps read this one</span>{% endif %}
       {% if p.description %}<div class="subtext">{{ p.description }}</div>{% endif %}
       {% if is_demo %}<div class="subtext"><b>Does not count towards setup.</b> It came with the
         demo, not from you.</div>{% endif %}
@@ -33,11 +33,16 @@
     <td data-label="Steps">{{ p.steps | length }}</td>
     <td data-label="Questions">{{ p.questions | length }}</td>
     <td data-label="Objections">{{ p.objections | length }}</td>
-    <td data-label="Transfer">
-      {% if p.transfer_criteria %}<span class="pill" style="background:#2E7D4F">Set</span>
-      {% else %}<span class="pill" style="background:#B98A2B">Not set</span>{% endif %}
+    <td data-label="Hands to a person">
+      {% if p.transfer_criteria %}<span class="pill" style="background:#2E7D4F">Yes</span>
+      {% else %}<span class="pill" style="background:#B98A2B">Never</span>{% endif %}
     </td>
     <td class="ct-actions ct-wide" style="text-align:right">
+      {% if not p.is_default %}
+      <form method="post" action="/dialer/playbooks/{{ p.id }}/default" class="inline-form">
+        <button class="chip-btn" type="submit">Use this one</button>
+      </form>
+      {% endif %}
       <a class="chip-btn" href="/dialer/playbooks/{{ p.id }}">Edit</a>
     </td>
   </tr>

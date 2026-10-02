@@ -87,15 +87,15 @@ def test_a_playbook_with_no_transfer_rule_is_flagged(account):
     owner, client = account
     add_playbook(owner.id, "No transfer set")
     body = client.get("/dialer/setup/9").get_data(as_text=True)
-    assert "<th>Transfer</th>" in body
-    assert "Not set" in body
+    assert "<th>Hands to a person</th>" in body
+    assert "Never" in body
 
 
 def test_a_playbook_with_a_transfer_rule_reads_as_set(account):
     owner, client = account
     add_playbook(owner.id, "Has one", transfer="Transfer on a yes.")
     body = client.get("/dialer/setup/9").get_data(as_text=True)
-    assert ">Set<" in body
+    assert ">Yes<" in body
 
 
 # ------------------------------------------------------------ the drafter

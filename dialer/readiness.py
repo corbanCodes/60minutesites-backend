@@ -8,9 +8,25 @@ from dialer.models import AiAgent, PhoneNumber, Playbook, VoicemailDrop
 from dialer.providers import registry
 
 
-def _blocker(feature, needs, step, fix, severity="blocker"):
+def _blocker(feature, needs, step, fix, severity="blocker", url="", key=""):
+    """One thing that is missing, and where to go and fix it.
+
+    `url` exists because not everything lives in the setup wizard: the AI
+    agent warning used to link to step 9, which is the playbook step, so
+    following it landed you somewhere that could not possibly help and the
+    warning stayed up. `key` is stable so a warning can be dismissed and stay
+    dismissed.
+    """
     return {"feature": feature, "needs": needs, "step": step, "fix": fix,
-            "severity": severity}
+            "severity": severity,
+            "url": url or f"/dialer/setup/{step}",
+            "key": key or f"{feature}:{step}".lower().replace(" ", "_")}
+
+
+def dismissed_keys(settings):
+    saved = (settings.wizard or {}) if settings else {}
+    keys = saved.get("dismissed_warnings")
+    return set(keys) if isinstance(keys, list) else set()
 
 
 def check(settings, account_id):
@@ -97,8 +113,10 @@ def check(settings, account_id):
     if not agents and settings.has_elevenlabs:
         warnings.append(_blocker(
             "AI calling", "an AI agent", 9,
-            "You've connected ElevenLabs but haven't built an agent yet.",
-            "warning"))
+            "You've connected ElevenLabs but haven't built an agent yet. "
+            "An agent is the thing that does the talking: a voice, a "
+            "playbook and a rule for when to hand over.",
+            "warning", url="/dialer/agents", key="ai_agent_missing"))
     if agents and not ai_numbers and not sim:
         warnings.append(_blocker(
             "AI calling", "a number in the AI pool", 4,
@@ -156,7 +174,15 @@ def check(settings, account_id):
         "ai_inbound": bool(sim or (settings.has_twilio and ai_ready and agents)),
         "voicemail": bool(sim or (settings.has_twilio and numbers and drops)),
     }
+    # Blockers are never hidden -- they are the reasons nothing will dial.
+    # Warnings are advice, and advice you have read and rejected should stop
+    # shouting at you.
+    hidden = dismissed_keys(settings)
+    shown = [w for w in warnings if w["key"] not in hidden]
+    hidden_count = len(warnings) - len(shown)
+    warnings = shown
     return {"ok": not blockers, "blockers": blockers, "warnings": warnings,
+            "hidden_count": hidden_count,
             "lanes": lanes, "simulating": sim,
             "counts": {"numbers": len(numbers), "rep": len(rep_numbers),
                        "ai": len(ai_numbers), "agents": len(agents),

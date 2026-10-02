@@ -129,6 +129,7 @@ def _step_data(key, s):
     if key == "playbook":
         from dialer.demo import DEMO_PREFIX
         rows = Playbook.query.filter_by(account_id=acct).all()
+        _repair_playbook_default(rows, DEMO_PREFIX)
         # The wizard counts only playbooks the customer wrote, so the page
         # has to draw the same line or it says "1" beside a step that will
         # not go green and explains nothing.
@@ -968,6 +969,25 @@ def playbook_new():
     return redirect(url_for("dialer.playbook_edit", playbook_id=pb.id))
 
 
+def _repair_playbook_default(rows, demo_prefix):
+    """Exactly one playbook is the default, and it is not the sample.
+
+    The sample was seeded holding it, which meant a rep's rail showed demo
+    wording on a real call until somebody noticed.
+    """
+    mine = [p for p in rows if not p.name.startswith(demo_prefix)]
+    flagged = [p for p in rows if p.is_default]
+    broken = len(flagged) != 1 or (mine and flagged and
+                                   flagged[0].name.startswith(demo_prefix))
+    if not broken or not rows:
+        return
+    keep = (next((p for p in flagged if p in mine), None)
+            or (mine[0] if mine else flagged[0] if flagged else rows[0]))
+    for p in rows:
+        p.is_default = (p.id == keep.id)
+    db.session.commit()
+
+
 @bp.route("/playbooks/draft", methods=["POST"])
 @require("playbooks.edit")
 def playbook_draft():
@@ -1056,6 +1076,25 @@ def _rows(form, prefix, fields, split=None):
             out.append(row)
         i += 1
     return json.dumps(out)
+
+
+@bp.route("/playbooks/<int:playbook_id>/default", methods=["POST"])
+@require("playbooks.edit")
+def playbook_default(playbook_id):
+    """Choose the playbook a rep sees when a campaign does not name one.
+
+    There was no way to pick, so whichever row was created first held it for
+    ever, which on a seeded account means the sample.
+    """
+    pb = Playbook.query.get_or_404(playbook_id)
+    if pb.account_id != g.account_id:
+        abort(403)
+    for other in Playbook.query.filter_by(account_id=g.account_id):
+        other.is_default = (other.id == pb.id)
+    db.session.commit()
+    flash(f"“{pb.name}” is the script reps get when a campaign does not "
+          f"name one of its own.")
+    return redirect(url_for("dialer.setup", step=9))
 
 
 @bp.route("/playbooks/<int:playbook_id>/delete", methods=["POST"])
@@ -1929,6 +1968,37 @@ def test_call():
 
 
 # ----------------------------------------------------- practice mode / demo
+@bp.route("/warnings/dismiss", methods=["POST"])
+@require("dialer.settings")
+def dismiss_warning():
+    """Put a warning away. Blockers cannot be dismissed; they are the reason
+    nothing will dial, and hiding one would only move the confusion."""
+    s = get_settings(g.account_id)
+    key = (request.form.get("key") or "").strip()[:60]
+    if key:
+        saved = s.wizard
+        hidden = saved.get("dismissed_warnings")
+        hidden = list(hidden) if isinstance(hidden, list) else []
+        if key not in hidden:
+            hidden.append(key)
+        saved["dismissed_warnings"] = hidden[:40]
+        s.set_wizard(saved)
+        db.session.commit()
+    return redirect(request.referrer or url_for("dialer.home"))
+
+
+@bp.route("/warnings/restore", methods=["POST"])
+@require("dialer.settings")
+def restore_warnings():
+    s = get_settings(g.account_id)
+    saved = s.wizard
+    saved.pop("dismissed_warnings", None)
+    s.set_wizard(saved)
+    db.session.commit()
+    flash("All the advice is back.")
+    return redirect(request.referrer or url_for("dialer.home"))
+
+
 @bp.route("/practice", methods=["POST"])
 @require("dialer.settings")
 def practice_toggle():

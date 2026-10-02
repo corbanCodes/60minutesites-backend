@@ -92,17 +92,37 @@
 
 {% if ready and ready.warnings %}
 <div class="alert-list" style="margin-top:10px">
+  {# A warning is advice, not a locked door. Nothing here stops a call going
+     out, so each one can be put away; the blockers above cannot. #}
   {% for w in ready.warnings %}
-  <a class="alert-card warn" href="/dialer/setup/{{ w.step }}">
+  <div class="alert-card warn alert-dismissable">
     <i class="bi bi-exclamation-triangle-fill"></i>
     <div>
       <div class="alert-title">{{ w.feature }}{% if w.needs %} needs {{ w.needs }}{% endif %}</div>
       <div class="alert-body">{{ w.fix }}</div>
+      <div class="alert-actions">
+        <a class="alert-cta" href="{{ w.url }}">{{ 'Open step ' ~ w.step
+          if w.url.startswith('/dialer/setup/') else 'Fix this' }}
+          <i class="bi bi-chevron-right"></i></a>
+        {% if can('dialer.settings') %}
+        <form method="post" action="/dialer/warnings/dismiss" class="inline-form">
+          <input type="hidden" name="key" value="{{ w.key }}">
+          <button class="alert-hide" type="submit"
+                  title="Stop showing this. It is advice, not a blocker.">Not now</button>
+        </form>
+        {% endif %}
+      </div>
     </div>
-    <span class="alert-cta">Open step {{ w.step }} <i class="bi bi-chevron-right"></i></span>
-  </a>
+  </div>
   {% endfor %}
 </div>
+{% endif %}
+
+{% if ready and ready.hidden_count and can('dialer.settings') %}
+<form method="post" action="/dialer/warnings/restore" class="inline-form" style="margin-top:8px">
+  <button class="btn ghost sm" type="submit">Show the {{ ready.hidden_count }} piece{{ ''
+    if ready.hidden_count == 1 else 's' }} of advice I hid</button>
+</form>
 {% endif %}
 
 {% if ready and ready.ok and not ready.warnings %}

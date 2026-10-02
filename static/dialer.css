@@ -792,3 +792,18 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
   .pb-draft-actions .btn { width: 100%; }
   .pb-draft-actions .muted { display: none; }
 }
+
+/* ------------------------------------------ dismissable advice --------- */
+.alert-dismissable { display: flex; gap: 13px; align-items: flex-start; }
+.alert-actions { display: flex; align-items: center; gap: 14px; margin-top: 9px; flex-wrap: wrap; }
+.alert-actions .alert-cta { font-weight: 700; font-size: 13.5px; text-decoration: none; }
+.alert-hide {
+  background: none; border: 0; padding: 4px 0; cursor: pointer;
+  font-family: inherit; font-size: 13px; color: var(--ink-3, #8A7F73);
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.alert-hide:hover { color: var(--ink-2, #6A6056); }
+@media (max-width: 860px) {
+  .alert-actions { gap: 18px; }
+  .alert-hide { padding: 10px 0; }   /* a thumb, not a pointer */
+}

@@ -15,7 +15,15 @@
 (function (global) {
   'use strict';
 
-  var SDK_URL = 'https://sdk.twilio.com/js/voice/releases/2.11.0/twilio.min.js';
+  /* Twilio's own CDN started answering 403 to every version of this file,
+     which showed up as "Could not load the Twilio voice library" and no
+     working phone. The npm build is the same library, so try the mirrors
+     first and keep Twilio's host last in case the 403 is temporary. */
+  var SDK_URLS = [
+    'https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.15.0/dist/twilio.min.js',
+    'https://unpkg.com/@twilio/voice-sdk@2.15.0/dist/twilio.min.js',
+    'https://sdk.twilio.com/js/voice/releases/2.11.0/twilio.min.js'
+  ];
   var CHANNEL_NAME = 'hqphone';
   var AUTO_ADVANCE_SECONDS = 3;
   var NOTES_DEBOUNCE_MS = 2000;
@@ -174,15 +182,26 @@
     if (sdkPromise) return sdkPromise;
     sdkPromise = new Promise(function (resolve, reject) {
       if (global.Twilio && global.Twilio.Device) { resolve(global.Twilio); return; }
-      var el = document.createElement('script');
-      el.src = SDK_URL;
-      el.async = true;
-      el.onload = function () {
-        if (global.Twilio && global.Twilio.Device) resolve(global.Twilio);
-        else reject(new Error('The Twilio voice library loaded but looks wrong.'));
-      };
-      el.onerror = function () { reject(new Error('Could not load the Twilio voice library.')); };
-      document.head.appendChild(el);
+
+      /* Walk the mirrors in order. One host being down or blocked is not a
+         reason the phone cannot work, and the old loader treated it as one. */
+      (function attempt(i) {
+        if (i >= SDK_URLS.length) {
+          reject(new Error('Could not load the Twilio voice library from any ' +
+            'of ' + SDK_URLS.length + ' sources. A network block or an ad ' +
+            'blocker is the usual cause.'));
+          return;
+        }
+        var el = document.createElement('script');
+        el.src = SDK_URLS[i];
+        el.async = true;
+        el.onload = function () {
+          if (global.Twilio && global.Twilio.Device) resolve(global.Twilio);
+          else attempt(i + 1);
+        };
+        el.onerror = function () { attempt(i + 1); };
+        document.head.appendChild(el);
+      })(0);
     });
     return sdkPromise;
   }
