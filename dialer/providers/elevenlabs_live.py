@@ -63,13 +63,24 @@ def _api_message(resp):
             if msg:
                 return str(msg)
         elif isinstance(detail, list) and detail:
-            first = detail[0]
-            if isinstance(first, dict):
-                msg = first.get("msg") or first.get("message")
-                if msg:
-                    return str(msg)
-            elif first:
-                return str(first)
+            # A validation error names the offending field in `loc` and puts
+            # only "Field required" in `msg`. Reporting the msg alone is how
+            # a wrong request body of ours got read as a permissions problem
+            # on the customer's side, so the field comes too.
+            parts = []
+            for item in detail[:3]:
+                if isinstance(item, dict):
+                    msg = item.get("msg") or item.get("message") or ""
+                    loc = [str(x) for x in (item.get("loc") or [])
+                           if str(x) not in ("body", "query", "path")]
+                    where = ".".join(loc)
+                    parts.append(f"{msg} ({where})" if where and msg
+                                 else (msg or where))
+                elif item:
+                    parts.append(str(item))
+            parts = [p for p in parts if p]
+            if parts:
+                return "; ".join(parts)
         elif isinstance(detail, str) and detail.strip():
             return detail
     text = (getattr(resp, "text", "") or "").strip()
