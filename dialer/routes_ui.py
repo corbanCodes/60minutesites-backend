@@ -2035,10 +2035,37 @@ def test_call():
     if number is None:
         number = camp_mod.pick_number(g.account_id, "ai" if agent else "rep",
                                       lead, simulate_ok=registry.simulating(s))
+    if number is None and agent:
+        flash("No number is in the AI pool. Open step 4 and switch one of "
+              "your numbers to “AI agents”; a number cannot serve both the "
+              "AI and your reps.", "error")
+        return redirect(url_for("dialer.setup", step=11))
     if number is None:
         flash("No number on your account can place this call. Buy one on "
               "step 4, or check none of them are parked.", "error")
         return redirect(url_for("dialer.setup", step=11))
+    if agent:
+        # ElevenLabs places the call, not Twilio, so it has to have been
+        # given the number first. Importing only happened when a number was
+        # bought or moved pools, so a number that existed before ElevenLabs
+        # was connected was never sent over, and the call came back
+        # "Document with id not found" -- which names nothing you could act
+        # on. Import it now rather than failing.
+        if number is not None and not number.elevenlabs_phone_id:
+            _link_number_to_elevenlabs(s, number)
+            db.session.commit()
+        if number is not None and not number.elevenlabs_phone_id \
+                and not registry.simulating(s):
+            flash(f"{number.pretty} has not reached ElevenLabs yet, so the AI "
+                  f"has nothing to call from. Open step 4 and move it into "
+                  f"the AI pool, or use “Just ring my phone” to test the "
+                  f"rest of the chain.", "error")
+            return redirect(url_for("dialer.setup", step=11))
+        if not agent.elevenlabs_agent_id:
+            flash(f"“{agent.name}” has not synced to ElevenLabs. Open it and "
+                  f"press “Try the sync again”.", "error")
+            return redirect(url_for("dialer.setup", step=11))
+
     call = calls_mod.start_call(g.account_id, lead, mode, s,
                                 from_number=number.e164 if number else "",
                                 ai_agent=agent, gate=ev)
