@@ -324,6 +324,9 @@ def recheck_business():
         flash({"business": "Approved — you're on full throughput.",
                "individual": "Twilio approved an Individual profile. That caps "
                              "you at 3 calls at once; re-register as a business.",
+               "unknown": "Twilio approved a profile but didn't say which "
+                          "type. Check it on Twilio's page — if it says "
+                          "Business you're fine.",
                "pending": "Still in review with Twilio.",
                "none": "Twilio has no profile for this account yet."}.get(
                    s.twilio_pcp_status, "Checked."))

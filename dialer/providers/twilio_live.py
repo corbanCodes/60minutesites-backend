@@ -45,18 +45,31 @@ TWIML_MAX_CHARS = 4000
 TRUSTHUB_PROFILES_URL = "https://trusthub.twilio.com/v1/CustomerProfiles"
 HTTP_TIMEOUT = 30
 
-# TrustHub tells you *which* policy a bundle was filed under, not whether the
-# business is a business. These are the published Customer Profile policies;
-# anything unrecognised falls back to sniffing the bundle text (see
-# `_profile_kind`), and ties break toward "individual" -- the weaker status --
-# so we never over-claim a trust level the account hasn't actually earned.
+TRUSTHUB_POLICIES_URL = "https://trusthub.twilio.com/v1/Policies"
+
+# A bundle does not say whether it is a Business or an Individual profile.
+# Nothing on it does -- there is no type field and no endpoint that returns
+# one. The only thing that encodes it is which POLICY the bundle was filed
+# under, and the policy's own friendly_name spells it out in words:
+# "Primary Customer Profile of type Business". That string is what the Twilio
+# console itself displays, so resolving the policy is the authoritative check
+# and `_policy_names` does it.
+#
+# Hard-coding SIDs here was how this got broken before: Twilio never publishes
+# the Primary Business policy SID (primary profiles can only be created in the
+# console, so you never POST one), two of the three SIDs that used to live here
+# were simply wrong, and one of them was a Starter policy sitting in the
+# BUSINESS set. These two are documented and are kept only as an offline
+# shortcut; the Primary case is resolved by name, never by guessing.
 BUSINESS_POLICY_SIDS = {
-    "RNdfbf3fae0e1107f8aded0e7cead80bf5",   # Primary profile, type Business
-    "RN806dd6cd175f314e1f96a9727ee271f4",   # Secondary profile, type Business
+    "RNdfbf3fae0e1107f8aded0e7cead80bf5",   # Secondary Customer Profile, Business
 }
 INDIVIDUAL_POLICY_SIDS = {
-    "RNb0d4771c2c98518d916a3d4cd70a8f8b",   # Starter / Individual Customer Profile
+    "RN806dd6cd175f314e1f96a9727ee271f4",   # Starter Customer Profile
 }
+# The EndUser that only a business profile carries. Its presence is a second,
+# independent proof, used when the policy catalogue cannot be read.
+BUSINESS_END_USER_TYPE = "customer_profile_business_information"
 APPROVED_STATUSES = {"twilio-approved"}
 PENDING_STATUSES = {"draft", "pending-review", "in-review", "pending"}
 
@@ -688,12 +701,17 @@ class TwilioTelephony(Telephony):
 
     # -------------------------------------------------------------- trusthub
     def customer_profiles(self):
-        """Trust Hub Customer Profile status -> none|individual|business|pending.
+        """Trust Hub profile status -> none|individual|business|unknown|pending.
 
         Hit with raw requests because the shape of these bundles changes more
         often than the SDK does. Never errors out: an unreadable TrustHub
         returns status="unknown" so the setup screen can say "couldn't check"
         instead of claiming the account has no profile.
+
+        An approved profile whose TYPE cannot be established also comes back
+        "unknown" rather than "individual". Guessing the weaker answer sounds
+        cautious and is not: it tells someone holding a perfectly good business
+        profile that they have hit a dead end and should start over.
         """
         if not self._has_credentials():
             return err(NO_CREDENTIALS, "no_credentials")
@@ -713,42 +731,107 @@ class TwilioTelephony(Telephony):
         if not isinstance(bundles, list):
             return ok(status="unknown", sid="")
 
-        approved_business = approved_individual = pending = None
-        for b in bundles:
-            if not isinstance(b, dict):
-                continue
-            status = str(b.get("status") or "").strip().lower()
-            sid = str(b.get("sid") or "")
-            if status in APPROVED_STATUSES:
-                if self._profile_kind(b) == "business":
-                    approved_business = approved_business or sid
-                else:
-                    approved_individual = approved_individual or sid
-            elif status in PENDING_STATUSES:
-                pending = pending or sid
+        approved = [b for b in bundles if isinstance(b, dict)
+                    and str(b.get("status") or "").strip().lower()
+                    in APPROVED_STATUSES]
+        pending = next((str(b.get("sid") or "") for b in bundles
+                        if isinstance(b, dict)
+                        and str(b.get("status") or "").strip().lower()
+                        in PENDING_STATUSES), None)
 
-        if approved_business:
-            return ok(status="business", sid=approved_business)
-        if approved_individual:
-            return ok(status="individual", sid=approved_individual)
+        if approved:
+            # One lookup covers every bundle, so it costs the same whether the
+            # account has one profile or ten.
+            names = self._policy_names()
+            kinds = [(self._profile_kind(b, names), str(b.get("sid") or ""))
+                     for b in approved]
+            for want in ("business", "individual"):
+                hit = next((sid for kind, sid in kinds if kind == want), None)
+                if hit:
+                    return ok(status=want, sid=hit)
+            return ok(status="unknown", sid=kinds[0][1],
+                      error="Twilio approved this profile but did not say "
+                            "whether it is a business or an individual one.")
         if pending:
             return ok(status="pending", sid=pending)
         return ok(status="none", sid="")
 
-    @staticmethod
-    def _profile_kind(bundle):
-        """business vs individual, defensively. The policy SID is the real
-        signal; when it's one we don't recognise we sniff the bundle's text,
-        and ties break to "individual" so we never over-report trust."""
+    def _policy_names(self):
+        """{policy_sid: friendly_name} for the account's policy catalogue.
+
+        The friendly name is the whole point: Twilio writes "Primary Customer
+        Profile of type Business" there, which is the exact string the console
+        shows. An empty dict means the catalogue was unreadable, and the
+        callers degrade rather than guess.
+        """
+        try:
+            r = requests.get(TRUSTHUB_POLICIES_URL, auth=self._basic_auth(),
+                             params={"PageSize": 100}, timeout=HTTP_TIMEOUT)
+            if r.status_code != 200:
+                return {}
+            results = (r.json() or {}).get("results")
+            if not isinstance(results, list):
+                return {}
+            return {str(p.get("sid") or ""): str(p.get("friendly_name") or "")
+                    for p in results if isinstance(p, dict)}
+        except Exception:
+            return {}
+
+    def _has_business_entity(self, bundle_sid):
+        """True when the bundle carries the EndUser only a business profile has.
+
+        Independent of the policy catalogue, so it still answers when that call
+        fails. None means the question could not be asked, which is different
+        from False and is why this does not return a plain bool.
+        """
+        if not bundle_sid:
+            return None
+        try:
+            r = requests.get(
+                f"{TRUSTHUB_PROFILES_URL}/{bundle_sid}/EntityAssignments",
+                auth=self._basic_auth(),
+                params={"ObjectType": BUSINESS_END_USER_TYPE, "PageSize": 5},
+                timeout=HTTP_TIMEOUT)
+            if r.status_code != 200:
+                return None
+            results = (r.json() or {}).get("results")
+            if not isinstance(results, list):
+                return None
+            return bool(results)
+        except Exception:
+            return None
+
+    def _profile_kind(self, bundle, policy_names=None):
+        """business | individual | unknown, in order of how much it is worth.
+
+        1. The policy's friendly_name, which says the answer in English and is
+           what the console reads.
+        2. The two policy SIDs Twilio actually publishes.
+        3. Whether the bundle carries the business-information EndUser.
+        4. Give up and say unknown.
+
+        What it deliberately no longer does is sniff the bundle's own text.
+        A bundle carries a friendly_name the customer typed, so a company
+        called anything without the word "business" in it read as an
+        individual, and that is precisely the bug this replaces.
+        """
         policy = str(bundle.get("policy_sid") or "")
+
+        name = (policy_names or {}).get(policy, "").lower()
+        if name:
+            # "Primary Customer Profile of type Business" and its siblings.
+            if "individual" in name or "starter" in name or "sole prop" in name:
+                return "individual"
+            if "business" in name:
+                return "business"
+
         if policy in BUSINESS_POLICY_SIDS:
             return "business"
         if policy in INDIVIDUAL_POLICY_SIDS:
             return "individual"
-        blob = " ".join(str(v) for v in bundle.values()
-                        if isinstance(v, (str, int, float))).lower()
-        if any(w in blob for w in ("individual", "sole prop", "starter")):
-            return "individual"
-        if "business" in blob:
+
+        has_business = self._has_business_entity(str(bundle.get("sid") or ""))
+        if has_business is True:
             return "business"
-        return "individual"
+
+        return "unknown"

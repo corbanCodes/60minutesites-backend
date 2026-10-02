@@ -14,6 +14,9 @@
     {% elif pcp == 'individual' %}
       <span class="pill" style="background:#B3362B">Approved as an individual</span>
       <span class="vendor-meta">This is the wrong kind of profile for a dialer. Read the warning below.</span>
+    {% elif pcp == 'unknown' %}
+      <span class="pill" style="background:#B98A2B">Approved, type unconfirmed</span>
+      <span class="vendor-meta">Twilio approved a profile but would not tell us which type. Check it yourself.</span>
     {% else %}
       <span class="pill" style="background:#888">Not started</span>
       <span class="vendor-meta">Twilio has no business profile for this account yet.</span>
@@ -35,7 +38,19 @@
     for you. Come back here and press <b>Check again</b> once Twilio emails you.</p>
 </div>
 
-{% if pcp == 'individual' %}
+{% if pcp == 'unknown' %}
+<div class="card wiz-callout">
+  <i class="bi bi-question-circle-fill"></i>
+  <div>
+    <b>Twilio approved you. We just cannot tell which kind.</b>
+    <p style="margin:4px 0 0">Nothing on a Twilio profile states its type, so we read the policy it was filed
+      under, and this account's did not resolve. Open the Twilio page above and look at <b>Profile type</b>
+      next to your profile name. If it reads <b>Business</b> you are finished with this step and nothing is
+      wrong. If it reads Individual, read the warning you would have got below: that profile caps you at
+      three calls at once and cannot be upgraded.</p>
+  </div>
+</div>
+{% elif pcp == 'individual' %}
 <div class="card wiz-callout danger">
   <i class="bi bi-exclamation-triangle-fill"></i>
   <div>

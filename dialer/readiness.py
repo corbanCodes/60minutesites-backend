@@ -55,6 +55,13 @@ def check(settings, account_id):
             "You have an Individual profile approved. That's a dead end for a "
             "dialer: 3 calls at once, 1 per second, and no way to raise it. "
             "Re-register as a business.", "warning"))
+    elif settings.twilio_pcp_status == "unknown":
+        warnings.append(_blocker(
+            "Calling", "", 3,
+            "Twilio has approved a profile for this account but did not say "
+            "whether it is a business or an individual one. Open step 3 and "
+            "check the type on Twilio's own page before you rely on your "
+            "throughput.", "warning"))
     elif settings.twilio_pcp_status == "pending":
         warnings.append(_blocker(
             "Calling", "Twilio business verification", 3,
