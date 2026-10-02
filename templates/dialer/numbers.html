@@ -27,7 +27,16 @@
   <tr>
     <td class="mg-cardtitle">
       <span class="rowlink">{{ n.pretty }}</span>
-      <div class="subtext">{{ n.region or n.area_code or '' }}{% if n.friendly_name and n.friendly_name != n.e164 %} · {{ n.friendly_name }}{% endif %}</div>
+      <div class="subtext">{{ n.region or n.area_code or '' }}{% if n.state == 'parked' %} &middot; parked{% endif %}</div>
+      {# The label is the only way to tell two numbers in the same area code
+         apart, so it is an input rather than text you cannot reach. #}
+      <form method="post" action="/dialer/numbers/{{ n.id }}/name" class="inline-form num-name">
+        <input type="text" name="friendly_name" class="num-name-input"
+               value="{{ '' if n.friendly_name == n.e164 else (n.friendly_name or '') }}"
+               placeholder="Name this line, e.g. AI calls out"
+               aria-label="Label for {{ n.pretty }}" maxlength="120">
+        <button class="btn ghost xs" type="submit">Save</button>
+      </form>
     </td>
     <td data-label="Pool">
       <form method="post" action="/dialer/numbers/{{ n.id }}/pool" class="inline-form">

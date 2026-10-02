@@ -73,6 +73,46 @@ _fills("NV", "702 725 775")
 _fills("CT", "203 475 860 959")
 _fills("MS", "228 601 662 769")
 
+# The rest of the country. The table started as "states we wrote a calling
+# rule for", which left a bought Ohio number showing a bare "440" where its
+# state should be. The real hazard is the other direction: _state_rule()
+# returns None for a lead whose area code is unmapped, so the day someone adds
+# a rule for a state missing from here, that rule silently never fires.
+# test_area_codes.py asserts the two lists cannot drift apart again.
+_fills("AL", "205 251 256 334 659 938")
+_fills("AK", "907")
+_fills("AZ", "480 520 602 623 928")
+_fills("AR", "327 479 501 870")
+_fills("CO", "303 719 720 970 983")
+_fills("DE", "302")
+_fills("DC", "202 771")
+_fills("GA", "229 404 470 478 678 706 762 770 912 943")
+_fills("HI", "808")
+_fills("ID", "208 986")
+_fills("IN", "219 260 317 463 574 765 812 930")
+_fills("IA", "319 515 563 641 712")
+_fills("KS", "316 620 785 913")
+_fills("KY", "270 364 502 606 859")
+_fills("LA", "225 318 337 504 985")
+_fills("ME", "207")
+_fills("MN", "218 320 507 612 651 763 952")
+_fills("MO", "235 314 417 557 573 636 660 816")
+_fills("NE", "308 402 531")
+_fills("NM", "505 575")
+_fills("NC", "252 336 472 704 743 828 910 919 980 984")
+_fills("ND", "701")
+_fills("OH", "216 220 234 326 330 380 419 440 513 567 614 740 937")
+_fills("OR", "458 503 541 971")
+_fills("RI", "401")
+_fills("SC", "803 839 843 854 864")
+_fills("SD", "605")
+_fills("UT", "385 435 801")
+_fills("VT", "802")
+_fills("VA", "276 434 540 571 703 757 804 826 948")
+_fills("WV", "304 681")
+_fills("WI", "262 274 414 534 608 715 920")
+_fills("WY", "307")
+
 
 def area_code(e164):
     d = "".join(c for c in str(e164 or "") if c.isdigit())

@@ -112,6 +112,20 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
 
 /* Same shape as the practice-mode banner, different colour, because it is the
    same kind of message: something about this account is not real yet. */
+/* The number label sits under its number and only shows its Save button
+   once it is being edited, so four rows of them are not four live buttons. */
+.num-name { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.num-name-input {
+  flex: 1; min-width: 0; max-width: 260px; padding: 5px 9px; font-size: 13px;
+  border: 1px solid var(--line, #E6DFD6); border-radius: 7px; background: #fff;
+  font-family: inherit; color: inherit;
+}
+.num-name-input:focus { outline: none; border-color: var(--orange, #FF6B35);
+  box-shadow: 0 0 0 3px rgba(255,107,53,.14); }
+.num-name .btn.xs { padding: 5px 10px; font-size: 12px; opacity: 0; transition: opacity .15s; }
+.num-name:focus-within .btn.xs { opacity: 1; }
+@media (hover: none) { .num-name .btn.xs { opacity: 1; } }
+
 .dl-demo { border-left: 4px solid #6B5BD2; }
 .dl-demo > i { color: #6B5BD2; }
 

@@ -438,12 +438,30 @@ def number_action(number_id, action):
               f"back reaches you, but nothing new dials out from it.")
     elif action == "unpark":
         n.state = "active"
+    elif action == "name":
+        # A number people have to choose between needs a name they chose.
+        # Twilio's own label is the number again, which tells you nothing
+        # about which line is the AI and which one a human picks up.
+        label = (request.form.get("friendly_name") or "").strip()[:120]
+        n.friendly_name = label
+        flash(f"{n.pretty} is now called \u201c{label}\u201d." if label
+              else f"{n.pretty} has no label now.")
     elif action == "release":
         # People you have already called have this number in their phone.
         if n.first_outbound_at and request.form.get("confirm") != "yes":
             flash("That number has made outbound calls. Releasing it hands it "
                   "to a stranger and sends your callbacks to them. Park it "
                   "instead, or tick the confirmation.", "error")
+            return redirect(url_for("dialer.numbers"))
+        # A sample number was never bought, so there is nothing at Twilio to
+        # give back. Asking Twilio to release a SID it has never issued fails,
+        # which is how demo rows became impossible to remove: the error looked
+        # like a billing problem and the row stayed put forever.
+        if _is_local_only(n):
+            db.session.delete(n)
+            db.session.commit()
+            flash(f"{n.pretty} removed. It was sample data, so nothing was "
+                  f"released at Twilio and nothing was refunded or charged.")
             return redirect(url_for("dialer.numbers"))
         r = registry.telephony(s).release_number(n.twilio_sid)
         if not r.get("ok"):
@@ -457,6 +475,24 @@ def number_action(number_id, action):
         abort(404)
     db.session.commit()
     return redirect(url_for("dialer.numbers"))
+
+
+def _is_local_only(number):
+    """True when this row has no real number behind it at Twilio.
+
+    A genuine Twilio SID is PN followed by 32 hex characters. The seeder
+    writes "PNdemo0101", and an imported row with no SID at all is equally
+    nothing to release. Checking the shape rather than the "Demo: " prefix
+    means a renamed sample number is still recognised.
+    """
+    import re
+    from dialer.demo import DEMO_PREFIX
+    sid = (number.twilio_sid or "").strip()
+    if not sid:
+        return True
+    if not re.fullmatch(r"PN[0-9a-fA-F]{32}", sid):
+        return True
+    return (number.friendly_name or "").startswith(DEMO_PREFIX)
 
 
 def _link_number_to_elevenlabs(s, number):
