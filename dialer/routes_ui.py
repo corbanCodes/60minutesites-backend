@@ -187,6 +187,7 @@ def setup_reset():
     """
     s = get_settings(g.account_id)
     s.set_wizard({})
+    s.intent = ""          # also a hand-made choice, not a connection
     log("dialer.setup_reset", account_id=g.account_id, user=g.member)
     db.session.commit()
     flash("Setup progress cleared. The steps that depend on a real connection "
