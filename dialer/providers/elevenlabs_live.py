@@ -179,9 +179,18 @@ class ElevenLabsAgent(VoiceAgent):
                 label_str = ", ".join(str(x) for x in labels.values() if x)
             else:
                 label_str = str(labels or "")
+            # preview_url is a plain public mp3, so the browser can play it
+            # with no key and nothing proxied through us. category is how a
+            # stock voice is told apart from one the customer cloned, which
+            # is the only thing distinguishing forty near-identical rows.
             out.append({"voice_id": v.get("voice_id", ""),
                         "name": v.get("name", ""),
-                        "labels": label_str[:120]})
+                        "labels": label_str[:120],
+                        "preview_url": v.get("preview_url") or "",
+                        "category": str(v.get("category") or "").strip(),
+                        "hq_models": [str(m) for m in
+                                      (v.get("high_quality_base_model_ids")
+                                       or [])]})
             if len(out) >= limit:
                 break
         return ok(voices=out)

@@ -163,11 +163,17 @@ class FakeVoiceAgent(VoiceAgent):
         return ok(tier="pro", concurrency=20, voices=self.list_voices()["voices"])
 
     def list_voices(self, limit=40):
+        # No preview_url: practice mode has no audio to play, and a dead
+        # play button is worse than none, so the template hides it.
         return ok(voices=[
-            {"voice_id": "sim-rachel", "name": "Rachel", "labels": "calm, American"},
-            {"voice_id": "sim-adam", "name": "Adam", "labels": "deep, American"},
-            {"voice_id": "sim-bella", "name": "Bella", "labels": "friendly, American"},
-            {"voice_id": "sim-josh", "name": "Josh", "labels": "warm, American"},
+            {"voice_id": "sim-rachel", "name": "Rachel", "labels": "calm, American",
+             "preview_url": "", "category": "premade", "hq_models": []},
+            {"voice_id": "sim-adam", "name": "Adam", "labels": "deep, American",
+             "preview_url": "", "category": "premade", "hq_models": []},
+            {"voice_id": "sim-bella", "name": "Bella", "labels": "friendly, American",
+             "preview_url": "", "category": "cloned", "hq_models": []},
+            {"voice_id": "sim-josh", "name": "Josh", "labels": "warm, American",
+             "preview_url": "", "category": "premade", "hq_models": []},
         ][:limit])
 
     def ensure_webhook(self, url, name):

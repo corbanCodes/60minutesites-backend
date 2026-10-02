@@ -13,14 +13,32 @@
         <input type="radio" name="voice_id" value="{{ v.voice_id }}"
                {{ 'checked' if s.elevenlabs_default_voice_id == v.voice_id or (not s.elevenlabs_default_voice_id and loop.first) }}>
         <span class="voicecard-body">
-          <span class="voicecard-name"><i class="bi bi-soundwave"></i> {{ v.name or v.voice_id }}</span>
+          <span class="voicecard-name">
+            {# The play button is a button, not the label, so clicking it
+               auditions the voice without also selecting it. Choosing and
+               listening are different intentions. #}
+            {% if v.preview_url %}
+            <button type="button" class="voiceplay" data-src="{{ v.preview_url }}"
+                    aria-label="Hear {{ v.name or v.voice_id }}">
+              <i class="bi bi-play-fill"></i>
+            </button>
+            {% else %}
+            <span class="voiceplay voiceplay-off" aria-hidden="true"><i class="bi bi-soundwave"></i></span>
+            {% endif %}
+            <span class="voicecard-title">{{ v.name or v.voice_id }}</span>
+          </span>
+          {% if v.category %}
+          <span class="voicetag voicetag-{{ v.category }}">{{ VOICE_KINDS.get(v.category, v.category) }}</span>
+          {% endif %}
           {% if v.labels %}<span class="voicecard-labels">{{ v.labels }}</span>{% endif %}
         </span>
       </label>
       {% endfor %}
     </div>
-    <p class="muted" style="margin:8px 0 0">Pick the one that sounds like someone who works for you. A voice
-      that is too polished reads as a robot; a plain one gets further into the call.</p>
+    <p class="muted" style="margin:8px 0 0">Press play to hear one. Pick the one that sounds like someone who
+      works for you &mdash; a voice that is too polished reads as a robot, and a plain one gets further into
+      the call. <b>Stock</b> voices ship with ElevenLabs and everyone has them. <b>Yours</b> is one you cloned
+      or made, which no competitor calling the same list will be using.</p>
     {% else %}
     <div class="card empty">
       <i class="bi bi-soundwave"></i>
@@ -173,4 +191,6 @@
       real person does. It is not a disguise and it should never be used as one. Keep the disclosure on.</p>
   </div>
 </details>
+<script src="/static-admin/voiceplay.js"></script>
+
 {% endblock %}

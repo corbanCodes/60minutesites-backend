@@ -121,21 +121,36 @@
 {% if voices %}
 <div class="card wiz-steps-card">
   <h3>Voices on this account <span class="count-chip">{{ voices | length }}</span></h3>
-  <p class="muted" style="margin:0 0 12px">You pick the default voice on the next step. This is here so you can
-    see the connection is real.</p>
+  <p class="muted" style="margin:0 0 12px">Proof the connection is real. <b>Do not choose here</b> &mdash;
+    picking the voice your callers actually hear happens on
+    <a href="/dialer/setup/8"><b>step 8</b></a>, where you can play each one before you commit.</p>
   <div class="voicegrid">
     {% for v in voices %}
     <div class="voicecard static">
       <span class="voicecard-body">
-        <span class="voicecard-name"><i class="bi bi-soundwave"></i> {{ v.name or v.voice_id }}</span>
+        <span class="voicecard-name">
+          {% if v.preview_url %}
+          <button type="button" class="voiceplay" data-src="{{ v.preview_url }}"
+                  aria-label="Hear {{ v.name or v.voice_id }}"><i class="bi bi-play-fill"></i></button>
+          {% else %}
+          <span class="voiceplay voiceplay-off" aria-hidden="true"><i class="bi bi-soundwave"></i></span>
+          {% endif %}
+          <span class="voicecard-title">{{ v.name or v.voice_id }}</span>
+        </span>
+        {% if v.category %}
+        <span class="voicetag voicetag-{{ v.category }}">{{ VOICE_KINDS.get(v.category, v.category) }}</span>
+        {% endif %}
         {% if v.labels %}<span class="voicecard-labels">{{ v.labels }}</span>{% endif %}
       </span>
     </div>
     {% endfor %}
   </div>
+  <p style="margin:14px 0 0"><a class="btn sm" href="/dialer/setup/8">Choose the voice on step 8
+    <i class="bi bi-arrow-right"></i></a></p>
 </div>
 {% endif %}
 
+<script src="/static-admin/voiceplay.js"></script>
 <script>
   (function () {
     var btn = document.getElementById('replace-toggle');

@@ -38,13 +38,28 @@ def ctx():
     return s, readiness.check(s, g.account_id), wizard.progress(s, g.account_id)
 
 
+# ElevenLabs' own category names, in words a customer recognises. "premade"
+# and "professional" both mean a voice ElevenLabs supplies; what a buyer
+# actually cares about is whether anyone else calling the same list could be
+# using it too.
+VOICE_KINDS = {
+    "premade": "Stock",
+    "professional": "Stock, premium",
+    "high_quality": "Stock, premium",
+    "famous": "Stock, famous",
+    "cloned": "Yours",
+    "generated": "Yours, generated",
+}
+
+
 @bp.app_context_processor
 def _dialer_globals():
     """DISPOSITIONS and its label/icon/hotkey maps, available to every
     template, so nothing has to mirror the list in Jinja."""
     from dialer.models import (DISPOSITION_HOTKEYS, DISPOSITION_ICONS,
                                DISPOSITION_LABELS, DISPOSITIONS)
-    return {"DISPOSITIONS": DISPOSITIONS,
+    return {"VOICE_KINDS": VOICE_KINDS,
+            "DISPOSITIONS": DISPOSITIONS,
             "DISPOSITION_LABELS": DISPOSITION_LABELS,
             "DISPOSITION_ICONS": DISPOSITION_ICONS,
             "DISPOSITION_HOTKEYS": DISPOSITION_HOTKEYS}
