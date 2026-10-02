@@ -352,7 +352,8 @@
       ? 'Your browser is blocking the microphone, so nobody will hear you. Click the padlock beside the address bar, set Microphone to Allow, then reload this page.'
       : '';
     publish();
-    if (S.micOk === false) emit('mic', { ok: false, message: S.micMessage });
+    // Practice mode never opens a mic, so warning about it there is noise.
+    if (S.micOk === false && !S.simulating) emit('mic', { ok: false, message: S.micMessage });
   }
 
   /* Called right before the first real dial. Practice mode skips it, because

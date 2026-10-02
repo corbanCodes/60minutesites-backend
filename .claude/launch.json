@@ -2,10 +2,18 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "60ms-backend",
+      "name": "60ms-dialer-demo",
       "runtimeExecutable": "./.venv/bin/python",
-      "runtimeArgs": ["app.py"],
-      "port": 5062
+      "runtimeArgs": [
+        "app.py"
+      ],
+      "port": 5062,
+      "env": {
+        "DIALER_SIMULATION": "1",
+        "SECRET_KEY": "demo",
+        "ADMIN_PASSWORD": "demoadmin",
+        "DATABASE_URL": "sqlite:////Users/corbandamukaitis/Desktop/Personal Projects/60minutesites-backend/instance/dialer-demo.db"
+      }
     }
   ]
 }

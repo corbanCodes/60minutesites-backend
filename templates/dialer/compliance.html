@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Compliance | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+{% set gate_on = s.gate_on if s else True %}
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>Compliance</h1>
+    <p class="mg-sub">The rules that decide what may be dialed, who is permanently off the list, and the
+      evidence behind both. Everything here is written onto each call as it is placed.</p>
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Calling</a>
+  </div>
+</div>
+
+{# =============================================================== 1. gate #}
+<div class="mg-section">
+  <h2><i class="bi bi-shield-lock"></i> The mobile gate</h2>
+  <form class="mg-card gatecard {{ '' if gate_on else 'off' }}" id="gateform" method="post" action="/dialer/compliance">
+    <input type="hidden" name="action" value="gate">
+
+    <div class="mg-wrap" style="margin-bottom:12px">
+      {% if gate_on %}
+      <span class="gate-state on"><i class="bi bi-shield-check"></i> On</span>
+      {% else %}
+      <span class="gate-state off"><i class="bi bi-shield-exclamation"></i> Off</span>
+      {% endif %}
+      {% if s and s.gate_ai_line_type_off_at %}
+      <span class="pill-soft">Switched off {{ s.gate_ai_line_type_off_at | local }}</span>
+      {% endif %}
+    </div>
+
+    <p class="gate-line">Calling a mobile number with an AI voice without the person's consent carries real
+      legal risk in the US, and switching this off is you confirming you have that consent for the numbers
+      on your list.</p>
+
+    <label class="checkline">
+      <input type="checkbox" id="gatechk" name="gate_ai_line_type" value="on" {{ 'checked' if gate_on }}>
+      <span>Only let AI agents call landlines
+        <em>With this on, an AI campaign skips any number that is a mobile, a VoIP line, or one we have not
+          checked yet — unless there is a consent record for it. You can still dial those numbers yourself.</em></span>
+    </label>
+
+    <div class="gate-attest {{ '' if gate_on else 'required' }}" id="attestwrap">
+      <label for="attestation">Your confirmation</label>
+      <textarea id="attestation" name="attestation" minlength="20"
+                placeholder="I confirm we have prior express written consent to place automated calls to the numbers on this list."
+                >{{ s.gate_attestation if s and s.gate_attestation else '' }}</textarea>
+      <span class="field-hint" id="attesthint">
+        Required when the gate is off. At least 20 characters, in your own words.
+      </span>
+    </div>
+
+    <div class="gate-record">
+      <i class="bi bi-journal-text"></i>
+      <span>Switching the gate off is recorded against every call it produces, with your name and the time.
+        That record is shown on each call page and cannot be edited afterwards.</span>
+    </div>
+
+    <div class="savebar">
+      <button class="btn" type="submit"><i class="bi bi-check2"></i> Save the gate setting</button>
+    </div>
+  </form>
+</div>
+
+{# ======================================================== 2. suppression #}
+<div class="mg-section">
+  <h2><i class="bi bi-slash-circle"></i> Do-not-call list <span class="count-chip">{{ suppressions | length }}</span></h2>
+  <p class="mg-note">Numbers on this list are never dialed again from this account, by anyone, in any mode.
+    Adding one also pulls it out of every queue immediately.</p>
+
+  <form class="mg-card suppress-form" method="post" action="/dialer/compliance">
+    <input type="hidden" name="action" value="suppress">
+    <div>
+      <label for="sup-phone">Phone number</label>
+      <input type="tel" id="sup-phone" name="phone" required placeholder="(865) 555-0142">
+    </div>
+    <div style="flex:1;min-width:200px">
+      <label for="sup-reason">Why</label>
+      <input type="text" id="sup-reason" name="reason" style="width:100%"
+             placeholder="Asked to be removed on the call">
+    </div>
+    <button class="btn" type="submit"><i class="bi bi-plus-lg"></i> Add</button>
+  </form>
+
+  {% if suppressions %}
+  <table style="margin-top:12px">
+    <tr><th>Number</th><th>Why</th><th>How it got here</th><th>Added</th><th></th></tr>
+    {% for sup in suppressions %}
+    <tr>
+      <td><span class="rowlink">{{ sup.phone_key }}</span></td>
+      <td class="muted">{{ sup.reason or '—' }}</td>
+      <td class="muted">{{ (sup.source or 'manual') | replace('_', ' ') }}</td>
+      <td class="muted mg-nowrap">{{ sup.created_at | localdate if sup.created_at else '—' }}</td>
+      <td class="mg-right">
+        <form method="post" action="/dialer/compliance" class="inline-form"
+              onsubmit="return confirm('Take {{ sup.phone_key }} off the do-not-call list? They become dialable again.')">
+          <input type="hidden" name="action" value="unsuppress">
+          <input type="hidden" name="id" value="{{ sup.id }}">
+          <button class="chip-btn danger" type="submit">Remove</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="mg-note" style="margin-top:12px">Nobody on the list yet. When someone asks to be removed — on a
+    call, by text, or by email — add them here and they are blocked within the second.</p>
+  {% endif %}
+</div>
+
+{# ============================================================ 3. consent #}
+<div class="mg-section">
+  <h2><i class="bi bi-file-earmark-check"></i> Consent records <span class="count-chip">{{ consents | length }}</span></h2>
+  <p class="mg-note">A consent record is what lets an AI agent call a mobile number even with the gate on. It
+    is evidence, so keep the source specific.</p>
+  {% if consents %}
+  <table>
+    <tr><th>Number</th><th>Kind</th><th>Source</th><th>Captured</th><th>Status</th></tr>
+    {% for cr in consents %}
+    <tr>
+      <td><span class="rowlink">{{ cr.phone_key or '—' }}</span></td>
+      <td>{{ (cr.kind or 'express') | replace('_', ' ') | capitalize }}</td>
+      <td class="muted">{{ cr.source or '—' }}</td>
+      <td class="muted mg-nowrap">{{ cr.captured_at | localdate if cr.captured_at else '—' }}</td>
+      <td>{% if cr.revoked_at %}<span class="pill st-skipped">Revoked</span>{% else %}<span class="pill ok-pill">Good</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="mg-note">No consent records yet. A lead who fills in your form or calls you first is the usual
+    source; record it against their number so the gate lets an agent call them back.</p>
+  {% endif %}
+</div>
+
+{# ======================================================== 4. state rules #}
+<div class="mg-section">
+  <h2><i class="bi bi-map"></i> State rules</h2>
+  <p class="mg-note">Applied automatically by the lead's state, on top of your own calling window. A state set
+    to "counsel" or "block" stops AI calling there outright.</p>
+  {% if states %}
+  <table class="state-table">
+    <tr><th>State</th><th>AI calling</th><th>Hours</th><th class="mg-right">Calls per day</th><th>Notes</th></tr>
+    {% for st in states %}
+    <tr>
+      <td><b>{{ st.state_code }}</b>{% if st.name %} <span class="muted">{{ st.name }}</span>{% endif %}</td>
+      <td>
+        {% if st.ai_outbound == 'block' %}<span class="pill st-skipped">Blocked</span>
+        {% elif st.ai_outbound == 'counsel' %}<span class="pill st-paused">Ask a lawyer first</span>
+        {% else %}<span class="pill ok-pill">Allowed</span>{% endif %}
+      </td>
+      <td class="muted mg-nowrap">
+        {% if st.window_start or st.window_end %}{{ st.window_start or '—' }} to {{ st.window_end or '—' }}{% else %}your own window{% endif %}
+        {% if st.no_sunday %} · no Sundays{% endif %}
+      </td>
+      <td class="mg-right mg-num">{{ st.max_calls_per_day if st.max_calls_per_day else '—' }}</td>
+      <td class="muted">{{ st.notes or '' }}{% if st.all_party_recording %} Everyone on the call must be told it is recorded.{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="mg-note">No state rules loaded. Your own calling window still applies everywhere.</p>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  var chk = document.getElementById('gatechk');
+  var wrap = document.getElementById('attestwrap');
+  var box = document.getElementById('attestation');
+  var hint = document.getElementById('attesthint');
+  var form = document.getElementById('gateform');
+  if (!chk || !box || !wrap) return;
+
+  function sync() {
+    var off = !chk.checked;
+    box.required = off;
+    wrap.classList.toggle('required', off);
+    if (form) form.classList.toggle('off', off);
+    hint.textContent = off
+      ? 'Required. At least 20 characters, in your own words, confirming you have consent for these numbers.'
+      : 'Only needed if you switch the gate off.';
+  }
+
+  chk.addEventListener('change', sync);
+  form.addEventListener('submit', function (e) {
+    if (!chk.checked && box.value.trim().length < 20) {
+      e.preventDefault();
+      box.focus();
+      hint.textContent = 'Type at least 20 characters confirming you have consent for these numbers.';
+    }
+  });
+  sync();
+})();
+</script>
+{% endblock %}
