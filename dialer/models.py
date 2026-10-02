@@ -346,6 +346,13 @@ class AiAgent(db.Model):
     # and because the page used to send people to a settings screen that
     # does not contain it.
     transfer_to_number = db.Column(db.String(32), default="")
+    # blind|conference. Conference parks the prospect in a Twilio conference
+    # room while the destination is dialled, and an unconfigured Twilio
+    # conference plays its default classical playlist -- so a hand-off that
+    # takes fifteen seconds sounds like being put on hold by a utility
+    # company. Blind hands the leg straight over: normal ringing, original
+    # caller ID, no music, and the agent is gone the moment it fires.
+    transfer_handoff = db.Column(db.String(20), default="blind")
     # A hand-written system prompt that replaces the generated one entirely.
     # Empty means "use the assembled one", which is the right default and
     # not a restriction.

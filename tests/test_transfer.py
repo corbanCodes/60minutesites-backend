@@ -76,12 +76,23 @@ def test_the_tool_is_built_and_shaped_the_way_elevenlabs_wants(setup):
     assert dest == {"type": "phone", "phone_number": "+18174032179"}
 
 
-def test_the_transfer_is_a_conference_not_a_blind_hand_off(setup):
-    """A cold call that was just qualified cannot survive silence and a
-    click; the caller has to hear a person arrive."""
+def test_the_transfer_is_blind_so_there_is_no_hold_music(setup):
+    """This asserted "conference" until a live call showed what conference
+    actually sounds like. The reasoning was that a qualified caller cannot
+    survive silence and a click, so they should hear a person arrive. What
+    they hear instead is a Twilio conference room, and an unconfigured one
+    plays the default classical playlist -- so the hand-off sounds like
+    being put on hold by a utility company, for as long as the destination
+    takes to answer. The conference belongs to ElevenLabs, so waitUrl is not
+    ours to set, and there is no option for silence.
+
+    Blind hands the leg over as it is: normal ringing, original caller ID,
+    and the agent gone the moment it fires. Conference is still selectable
+    per agent for anyone who wants the warm hand-off and will accept the
+    music."""
     owner, s = setup
     cfg = transfer_config(agent_with(owner.id), s)
-    assert cfg["params"]["transfers"][0]["transfer_type"] == "conference"
+    assert cfg["params"]["transfers"][0]["transfer_type"] == "blind"
 
 
 def test_the_playbooks_own_wording_becomes_the_condition(setup):

@@ -474,6 +474,7 @@ def _ensure_schema_inner():
                      "transfer_line": "VARCHAR(300)",
                      "opening_mode": "VARCHAR(10)",
                      "transfer_to_number": "VARCHAR(32)",
+                     "transfer_handoff": "VARCHAR(20)",
                      "prompt_override": "TEXT"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---
@@ -532,6 +533,7 @@ def _ensure_schema_inner():
         # inheriting the old talk-over-the-hello behaviour by accident.
         ("ai_agent", "opening_mode"): "'wait'",
         ("ai_agent", "transfer_style"): "'brief'",
+        ("ai_agent", "transfer_handoff"): "'blind'",
     }
     for (table, col), value in backfill.items():
         if col not in added.get(table, []):

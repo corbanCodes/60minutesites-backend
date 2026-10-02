@@ -67,10 +67,11 @@ def _dialer_globals():
     template, so nothing has to mirror the list in Jinja."""
     from dialer.models import (DISPOSITION_HOTKEYS, DISPOSITION_ICONS,
                                DISPOSITION_LABELS, DISPOSITIONS)
-    from dialer.agents import TRANSFER_STYLES
+    from dialer.agents import HANDOFFS, TRANSFER_STYLES
     return {"VOICE_KINDS": VOICE_KINDS,
             "ELEVEN_MODELS": ELEVEN_MODELS,
             "TRANSFER_STYLES": TRANSFER_STYLES,
+            "HANDOFFS": HANDOFFS,
             "DISPOSITIONS": DISPOSITIONS,
             "DISPOSITION_LABELS": DISPOSITION_LABELS,
             "DISPOSITION_ICONS": DISPOSITION_ICONS,
@@ -1360,7 +1361,7 @@ def agent_edit(agent_id):
         for field in ("name", "voice_id", "voice_name", "llm_model",
                       "first_message", "persona", "company_facts",
                       "knowledge_text", "transfer_rules", "voicemail_message",
-                      "background_preset"):
+                      "background_preset", "transfer_handoff"):
             if field in request.form:
                 setattr(a, field, request.form.get(field) or "")
         if "prompt_override" in request.form:
@@ -2199,6 +2200,23 @@ def test_call():
         compliance.enrich_lead(lead)
     agent = db.session.get(AiAgent, agent_id) if agent_id else None
     mode = "ai_outbound" if agent else "manual"
+
+    # Testing a hand-off by having the AI ring the same phone it will hand
+    # off TO cannot work, and fails in the most misleading way available:
+    # hold music, no second ring, then your own voicemail. There is no error
+    # anywhere, so without this the only reading left is "transfers are
+    # broken".
+    from dialer import agents as agents_mod
+    if agent and agents_mod.transfer_collides(agent, s, e164):
+        dest = agents_mod.transfer_number(s, agent)
+        flash(f"This call would hand off to {dest}, which is the number it "
+              f"is calling. That phone is busy taking the call, so the "
+              f"hand-off rolls to its voicemail and you hear hold music "
+              f"until it does — it looks exactly like a broken transfer. "
+              f"Use a second phone: put one number here and the other in "
+              f"“Hand the call to” on “{agent.name}”.", "error")
+        return redirect(url_for("dialer.setup", step=12))
+
     ev = compliance.can_dial(lead, mode, s, g.account_id)
     if not ev["ok"] and ev["reason"] not in ("line_type_unknown",):
         flash(compliance.explain(ev), "error")

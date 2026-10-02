@@ -79,7 +79,18 @@
                  value="{{ a.transfer_to_number or '' }}" placeholder="+1 555 010 0000">
           <span class="field-hint">The phone a qualified call is handed to. Leave it empty to use the
             account-wide number{% if transfer_to %}, currently {{ transfer_to }}{% else %}, which is not set,
-            so this agent would qualify and never hand over{% endif %}.</span>
+            so this agent would qualify and never hand over{% endif %}. It must not be the phone you are
+            testing on — a hand-off to a line that is already on the call rolls to its own voicemail.</span>
+          <label for="ag-handoff" style="margin-top:14px">What the prospect hears during the hand-off</label>
+          <select id="ag-handoff" name="transfer_handoff">
+            {% for key, h in HANDOFFS.items() %}
+            <option value="{{ key }}" {{ 'selected' if (a.transfer_handoff or 'blind') == key }}>
+              {{ h.label }}</option>
+            {% endfor %}
+          </select>
+          <span class="field-hint">
+            {% for key, h in HANDOFFS.items() %}{% if (a.transfer_handoff or 'blind') == key %}{{
+              h.hint }}{% endif %}{% endfor %}</span>
           <p class="ag-transfer-map">
             <b>When</b> it transfers comes from the playbook's “when to hand the call to a person”.
             <b>How</b> it sounds and <b>where</b> it rings are both on this page, right here.

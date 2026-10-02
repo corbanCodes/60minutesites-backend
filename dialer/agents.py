@@ -299,6 +299,61 @@ def transfer_number(settings, agent=None):
     return settings.ai_callback_number or ""
 
 
+HANDOFFS = {
+    "blind": {
+        "label": "Straight through \u2014 no hold music",
+        "hint": "The leg is handed over as it is. They hear a normal ring, "
+                "your caller ID is preserved, and the AI is gone the instant "
+                "it fires. If nobody picks up they reach that phone's "
+                "voicemail, and the AI cannot come back.",
+    },
+    "conference": {
+        "label": "Park them while it rings you",
+        "hint": "The prospect waits in a conference room while your phone is "
+                "dialled. Twilio plays its own classical hold music during "
+                "the wait and there is no way to change or silence it.",
+    },
+}
+
+
+def handoff_type(agent):
+    """Which of ElevenLabs' three transfer types to ask for.
+
+    Conference was the old hard-coded choice and it is the reason a hand-off
+    sounded like being put on hold: an unconfigured Twilio conference plays
+    the default classical playlist while the destination is dialled, and the
+    conference belongs to ElevenLabs, so waitUrl is not ours to set.
+
+    sip_refer is deliberately not offered. It needs a SIP trunk that permits
+    REFER, and every number here arrives through the native Twilio
+    integration, so asking for it would fail on every account we have.
+    """
+    want = (getattr(agent, "transfer_handoff", "") or "blind").strip()
+    return want if want in HANDOFFS else "blind"
+
+
+def transfer_collides(agent, settings, to_number):
+    """True when the hand-off would dial the phone already on the call.
+
+    On a one-person account the hand-off destination falls back to the
+    callback number, which is that person's mobile -- the same mobile they
+    answer the test call on. The transfer then dials a line that is busy by
+    definition, the carrier rolls it to voicemail, and the prospect sits
+    listening to hold music until the AI bridges them to the voicemail
+    greeting of the man who is already on the phone.
+
+    Nothing in that chain reports an error. It is a working transfer to an
+    impossible destination, so it has to be caught before the call is placed.
+    """
+    from dialer import compliance
+    dest = transfer_number(settings, agent)
+    if not dest or not to_number:
+        return False
+    _, a, ok_a = compliance.normalize(dest)
+    _, b, ok_b = compliance.normalize(to_number)
+    return bool(ok_a and ok_b and a == b)
+
+
 def transfer_config(agent, settings):
     """The transfer_to_number system tool, or None.
 
@@ -327,10 +382,7 @@ def transfer_config(agent, settings):
                 "transfer_destination": {"type": "phone",
                                          "phone_number": number},
                 "condition": condition[:900],
-                # Conference, so the caller hears a human arrive rather than
-                # silence and a click. A blind transfer on a cold call that
-                # was just qualified loses people.
-                "transfer_type": "conference",
+                "transfer_type": handoff_type(agent),
             }],
         },
     }
