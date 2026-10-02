@@ -128,28 +128,60 @@ def _disposition(account_id, body):
     return {"ok": True, "disposition": call.disposition}
 
 
+# ElevenLabs validates every property in a tool's request body and rejects
+# the whole agent unless each one sets description, dynamic_variable,
+# is_system_provided, constant_value or is_omitted. A bare {"type": "string"}
+# fails the agent sync with a wall of schema paths, so every field below
+# carries a description -- which the model reads anyway, and which is the
+# difference between a tool it uses correctly and one it guesses at.
+CONVERSATION_ID = {
+    "type": "string",
+    "description": "The id of this conversation. Always include it; it is "
+                   "how we match what you say to the right call and the "
+                   "right person.",
+}
+
 TOOL_SPECS = [
     {"name": "lookup_lead", "description":
      "Look up what we already know about the person you are speaking to. "
      "Call this at the start if you need their history.",
      "parameters": {"type": "object", "properties": {
-         "phone": {"type": "string"}, "conversation_id": {"type": "string"}}}},
+         "phone": {"type": "string",
+                   "description": "The phone number you dialled, in full "
+                                  "international form such as +18655550101."},
+         "conversation_id": CONVERSATION_ID}}},
     {"name": "log_note", "description":
      "Write something you learned onto the lead's record.",
      "parameters": {"type": "object", "properties": {
-         "note": {"type": "string"}, "conversation_id": {"type": "string"}},
+         "note": {"type": "string",
+                  "description": "What you learned, in one or two plain "
+                                 "sentences. Include any day or time they "
+                                 "gave you for a callback, in their words."},
+         "conversation_id": CONVERSATION_ID},
          "required": ["note"]}},
     {"name": "book_followup", "description":
      "Schedule a follow-up task when they ask to be called back later.",
      "parameters": {"type": "object", "properties": {
-         "title": {"type": "string"}, "in_days": {"type": "integer"},
-         "conversation_id": {"type": "string"}}, "required": ["title"]}},
+         "title": {"type": "string",
+                   "description": "What the person picking this up should "
+                                  "do, such as \"Call Dana back about the "
+                                  "napkin programme\"."},
+         "in_days": {"type": "integer",
+                     "description": "How many days from today, as a whole "
+                                    "number. Use 1 for tomorrow."},
+         "conversation_id": CONVERSATION_ID}, "required": ["title"]}},
     {"name": "set_disposition", "description":
      "Record the outcome. Use dnc immediately if they ask not to be called "
      "again.",
      "parameters": {"type": "object", "properties": {
-         "disposition": {"type": "string", "enum": [
-             "dm_reached", "gatekeeper", "callback", "meeting_set", "qualified",
-             "not_interested", "voicemail_left", "wrong_number", "dnc"]},
-         "conversation_id": {"type": "string"}}, "required": ["disposition"]}},
+         "disposition": {
+             "type": "string",
+             "description": "How the call ended. Use callback when they "
+                            "asked to be reached another time, qualified "
+                            "when they are the right person and interested, "
+                            "and dnc the moment they ask not to be called.",
+             "enum": ["dm_reached", "gatekeeper", "callback", "meeting_set",
+                      "qualified", "not_interested", "voicemail_left",
+                      "wrong_number", "dnc"]},
+         "conversation_id": CONVERSATION_ID}, "required": ["disposition"]}},
 ]

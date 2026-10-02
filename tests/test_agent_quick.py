@@ -133,3 +133,42 @@ def test_the_new_agent_is_selectable_on_the_test_call(account):
     body = client.get("/dialer/setup/11").get_data(as_text=True)
     picker = body.split('id="agent_id"')[1].split("</select>")[0]
     assert "NapkinAds Official agent" in picker
+
+
+# ------------------------------------------- the schema ElevenLabs demands
+def test_every_tool_field_satisfies_elevenlabs_validation():
+    """ElevenLabs rejects the WHOLE agent unless each property in a tool's
+    request body sets one of description, dynamic_variable,
+    is_system_provided, constant_value or is_omitted. A bare
+    {"type": "string"} failed the sync with a wall of schema paths and no
+    agent, which is exactly how the build button fell over the first time."""
+    from dialer.tools import TOOL_SPECS
+    allowed = ("description", "dynamic_variable", "is_system_provided",
+               "constant_value", "is_omitted")
+    missing = []
+    for tool in TOOL_SPECS:
+        props = tool["parameters"].get("properties") or {}
+        assert props, f"{tool['name']} has no properties"
+        for field, spec in props.items():
+            if not any(k in spec for k in allowed):
+                missing.append(f"{tool['name']}.{field}")
+    assert not missing, (
+        "ElevenLabs will refuse the agent over these fields: " + str(missing))
+
+
+def test_a_description_is_a_sentence_not_a_placeholder():
+    """The model reads these, so "the phone" helps nobody."""
+    from dialer.tools import TOOL_SPECS
+    for tool in TOOL_SPECS:
+        for field, spec in (tool["parameters"].get("properties") or {}).items():
+            text = spec.get("description", "")
+            assert len(text) > 25, f"{tool['name']}.{field}: {text!r}"
+
+
+def test_the_tools_still_carry_their_required_fields():
+    from dialer.tools import TOOL_SPECS
+    by_name = {t["name"]: t for t in TOOL_SPECS}
+    assert by_name["log_note"]["parameters"]["required"] == ["note"]
+    assert by_name["set_disposition"]["parameters"]["required"] == ["disposition"]
+    assert "dnc" in by_name["set_disposition"]["parameters"]["properties"][
+        "disposition"]["enum"]
