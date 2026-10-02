@@ -110,6 +110,13 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
 .wiz-ol code, .wiz-steps-card code { background: #F3EDE6; border-radius: 5px; padding: 1px 6px; font-size: 12.5px; }
 .plain-list { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.8; }
 
+/* A walkthrough list, where each step is a decision plus the reason for it.
+   The note is a block so the bold choice reads on its own line first -- the
+   whole point is that someone skimming mid-form can see what to click. */
+.wiz-ol-roomy li { margin-bottom: 13px; }
+.wiz-note { display: block; margin-top: 3px; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+.wiz-note-warn { border-left: 3px solid #B98A2B; padding-left: 10px; margin-top: 5px; }
+
 .wiz-callout { display: flex; gap: 13px; align-items: flex-start; border-left: 4px solid #B98A2B; }
 .wiz-callout > i { font-size: 19px; color: #B98A2B; margin-top: 1px; flex-shrink: 0; }
 .wiz-callout p { font-size: 13.5px; line-height: 1.65; color: var(--ink-2); }
@@ -318,6 +325,8 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
   .wiz-form { padding: 15px; border-radius: 13px; }
   .wiz-steps-card h3, .rec-widget h3 { font-size: 14.5px; }
   .wiz-ol, .plain-list { font-size: 13.5px; padding-left: 17px; }
+  .wiz-ol-roomy li { margin-bottom: 15px; }
+  .wiz-note { font-size: 12.5px; }
   .wiz-callout { gap: 11px; }
   .two-up-col { padding: 12px 13px; }
 

@@ -74,13 +74,14 @@
     <tr>
       <td class="ct-title ct-wide"><b>Caller attestation</b></td>
       <td data-label="Before approval">B or C &mdash; the carrier is not sure the call is really from you</td>
-      <td data-label="After approval">A &mdash; the highest level, which carriers trust</td>
+      <td data-label="After approval">A &mdash; the highest level, which carriers trust. One more step after
+        approval switches it on; see below.</td>
     </tr>
     <tr>
       <td class="ct-title ct-wide"><b>Voice Integrity</b></td>
       <td data-label="Before approval">Not available</td>
-      <td data-label="After approval">Free, and it is the tool that gets a number cleared when it starts
-        showing as &ldquo;Spam Likely&rdquo;</td>
+      <td data-label="After approval">Unlocked and free. You still have to switch it on per number; see
+        below</td>
     </tr>
   </table>
   <p class="muted" style="margin:12px 0 0">Two calls at once sounds survivable until you watch it. One rep in a
@@ -89,18 +90,73 @@
 </div>
 
 <div class="card wiz-steps-card">
-  <h3>What Twilio will ask you for</h3>
-  <ol class="wiz-ol">
-    <li>Your legal business name, address and business type, exactly as they appear on your registration.</li>
-    <li>Your EIN, or your business registration number.</li>
-    <li>A website or a business email at your own domain.</li>
-    <li>An <b>authorized representative</b>: a real person's name, job title, email and phone number.</li>
-    <li>That person's <b>government photo ID</b> and a <b>selfie</b> taken on the spot. Twilio verifies the face
-      against the ID. Have your driver's licence or passport in hand before you start.</li>
+  <h3>What you will see on Twilio, screen by screen</h3>
+  <p class="muted" style="margin:0 0 12px">Twilio calls this a <b>Customer Profile</b>, not &ldquo;business
+    verification&rdquo;, which is why the link above lands somewhere that looks unrelated. These are the
+    choices that are hard to undo. Everything else on the form is just typing.</p>
+  <ol class="wiz-ol wiz-ol-roomy">
+    <li>
+      <b>Customer Profiles page &rarr; &ldquo;Create Primary Customer Profile&rdquo;.</b>
+      <span class="wiz-note">Leave <i>Secondary Profiles</i> alone. Those describe other people's businesses
+        that you make calls for. You are calling for yourself.</span>
+    </li>
+    <li>
+      <b>Profile type &rarr; Business.</b>
+      <span class="wiz-note wiz-note-warn">Twilio's own wording offers Individual &ldquo;for sole
+        proprietors&rdquo;, and that is a trap. An Individual profile gets you unbranded calls only: no
+        attestation A, no Voice Integrity, and a concurrency cap you cannot lift. Your sole proprietorship
+        is a business. Pick Business.</span>
+    </li>
+    <li>
+      <b>Business identity &rarr; Direct Customer.</b>
+      <span class="wiz-note">The option reading &ldquo;My business uses Twilio to communicate internally or
+        with our customers&rdquo;. <i>ISV Reseller or Partner</i> is for selling Twilio inside a product your
+        own customers use. Picking it changes the vetting path and buys you nothing here.</span>
+    </li>
+    <li>
+      <b>Legal business name and address.</b>
+      <span class="wiz-note">Character for character as they appear on your registration, not your trading
+        name and not a mailbox. This is the single most common reason a profile comes back.</span>
+    </li>
+    <li>
+      <b>Company type &rarr; Sole Proprietorship</b>, if that is what you are. It is in the list and it does
+      not push you off the business path.
+    </li>
+    <li>
+      <b>Business registration ID &rarr; your EIN.</b>
+      <span class="wiz-note wiz-note-warn">If you have never hired anyone you may not have one. An EIN is free
+        from the IRS, the application takes about ten minutes and issues the number during the session. Get it
+        before you start this form rather than halfway through.</span>
+    </li>
+    <li><b>Industry, website and regions of operation.</b> A one-page site is fine.</li>
+    <li>
+      <b>Authorized representative &rarr; you.</b>
+      <span class="wiz-note">Use the name exactly as it reads on your government ID, and a plain job title such
+        as Owner. A playful title invites a manual review.</span>
+    </li>
+    <li><b>Submit.</b> The status turns to <i>In Review</i> and Twilio emails you.</li>
   </ol>
-  <p><b>Start this now, not later.</b> Twilio quotes up to 48 hours for review, and a rejected submission
-    restarts the clock. Everything else in this setup can go on while you wait &mdash; you can connect numbers,
-    write your script and make test calls with the profile still pending.</p>
+  <p><b>Start this now, not later.</b> Twilio quotes up to 48 hours, and a rejected submission restarts the
+    clock. Everything else in this setup can carry on while you wait &mdash; you can connect numbers, write your
+    script and make test calls with the profile still pending.</p>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>After Twilio approves you</h3>
+  <p class="muted" style="margin:0 0 12px">Approval on its own does not sign your calls. The profile proves who
+    you are; two more free products apply that proof to specific numbers. The order is strict, and a number you
+    skip will simply not appear in the next picker.</p>
+  <ol class="wiz-ol">
+    <li>Assign your outbound numbers to the approved business profile.</li>
+    <li>Create the <b>SHAKEN/STIR</b> trust product, link it to that profile, assign the same numbers, submit.
+      This is what actually produces attestation A.</li>
+    <li>Create the <b>Voice Integrity</b> trust product the same way. This is the one that gets a
+      &ldquo;Spam Likely&rdquo; label removed later. Allow another 24 to 48 hours.</li>
+    <li>Optionally add <b>CNAM</b> so your name shows under your number on phones that display it.</li>
+  </ol>
+  <p class="muted">Only relevant if you later split calling across Twilio subaccounts: each subaccount needs its
+    own secondary profile carrying the same details, because a trust product has to live in the same account as
+    the numbers it covers.</p>
 </div>
 
 {% endblock %}
@@ -112,8 +168,10 @@
     <p>Every US carrier now scores incoming calls and decides whether to label them. The score is built from who
       the carrier believes placed the call. If nobody has proved who you are, your calls are unsigned, and
       unsigned calls get labelled.</p>
-    <p>A business profile is how Twilio proves it to the carriers on your behalf. Once it is approved, Twilio
-      signs every call you place at the highest level, which is what the carriers call <b>attestation A</b>.</p>
+    <p>A business profile is how Twilio proves it to the carriers on your behalf. Once it is approved and you
+      have attached your numbers to a SHAKEN/STIR trust product, Twilio signs those calls at the highest level,
+      which is what the carriers call <b>attestation A</b>. Approval alone does not sign anything, which catches
+      a lot of people out.</p>
     <h4>Timeline</h4>
     <ul>
       <li><b>Submitting:</b> 10 to 15 minutes if you have the ID and the EIN ready.</li>
