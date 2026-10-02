@@ -1,14 +1,4 @@
-{%- set DISPOSITIONS = DISPOSITIONS or [
-  ['dm_reached',     'Decision maker',  'bi-person-check',     '1'],
-  ['gatekeeper',     'Gatekeeper',      'bi-person-lock',      '2'],
-  ['callback',       'Call back later', 'bi-clock-history',    '3'],
-  ['meeting_set',    'Meeting set',     'bi-calendar-check',   '4'],
-  ['qualified',      'Qualified',       'bi-patch-check',      '5'],
-  ['not_interested', 'Not interested',  'bi-hand-thumbs-down', '6'],
-  ['voicemail_left', 'Voicemail left',  'bi-voicemail',        '7'],
-  ['wrong_number',   'Wrong number',    'bi-telephone-x',      '8'],
-  ['dnc',            'Do not call',     'bi-slash-circle',     '9']
-] -%}
+{# DISPOSITIONS comes from dialer/models.py via the blueprint's context processor -- do not mirror it here #}
 {%- set pb_steps = (playbook.steps if playbook else []) or [] -%}
 {%- set pb_objections = (playbook.objections if playbook else []) or [] -%}
 {%- set max_call = (s.max_call_seconds if s else 600) or 600 -%}

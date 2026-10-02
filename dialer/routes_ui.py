@@ -38,6 +38,18 @@ def ctx():
     return s, readiness.check(s, g.account_id), wizard.progress(s, g.account_id)
 
 
+@bp.app_context_processor
+def _dialer_globals():
+    """DISPOSITIONS and its label/icon/hotkey maps, available to every
+    template, so nothing has to mirror the list in Jinja."""
+    from dialer.models import (DISPOSITION_HOTKEYS, DISPOSITION_ICONS,
+                               DISPOSITION_LABELS, DISPOSITIONS)
+    return {"DISPOSITIONS": DISPOSITIONS,
+            "DISPOSITION_LABELS": DISPOSITION_LABELS,
+            "DISPOSITION_ICONS": DISPOSITION_ICONS,
+            "DISPOSITION_HOTKEYS": DISPOSITION_HOTKEYS}
+
+
 # ------------------------------------------------------------------ home
 @bp.route("/")
 def home():
@@ -924,9 +936,14 @@ def phone():
     """The pop-out window. Small, and it owns the Twilio Device, so the rest of
     HQ can be navigated -- or closed -- without dropping a live call."""
     s, ready, prog = ctx()
+    uid = getattr(g.member, "id", None)
+    recent = (Call.query.filter_by(account_id=g.account_id)
+              .filter(db.or_(Call.agent_user_id == uid,
+                             Call.agent_user_id.is_(None)))
+              .order_by(Call.started_at.desc()).limit(10).all())
     return render_template(
         "dialer/phone.html", s=s, ready=ready, prog=prog,
-        presence=_presence(),
+        presence=_presence(), campaign=None, recent=recent,
         campaigns=Campaign.query.filter_by(account_id=g.account_id,
                                            status="running", mode="power").all(),
         playbook=_active_playbook(None))
