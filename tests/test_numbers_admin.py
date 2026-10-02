@@ -209,3 +209,28 @@ def test_no_area_code_is_claimed_by_two_states():
         assert code not in seen or seen[code] == state
         seen[code] = state
     assert all(len(c) == 3 and c.isdigit() for c in tz.AREA_STATE)
+
+
+def test_a_number_bought_before_its_state_was_known_repairs_itself(account):
+    """Corban's two Ohio numbers stored an empty region because the table did
+    not have Ohio when he bought them. Loading the page fills it in rather
+    than leaving a bare area code sitting there forever."""
+    owner, client = account
+    n = add_number(owner.id, "+14406642753")
+    n.region = ""                      # what the old table produced
+    db.session.commit()
+
+    client.get("/dialer/numbers")
+
+    assert db.session.get(PhoneNumber, n.id).region == "OH"
+
+
+def test_the_backfill_never_overwrites_a_state_already_set(account):
+    owner, client = account
+    n = add_number(owner.id, "+14406642753")
+    n.region = "Cleveland office"      # somebody's own wording
+    db.session.commit()
+
+    client.get("/dialer/numbers")
+
+    assert db.session.get(PhoneNumber, n.id).region == "Cleveland office"

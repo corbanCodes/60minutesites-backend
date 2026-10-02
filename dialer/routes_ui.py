@@ -341,11 +341,35 @@ def recheck_business():
 @require("dialer.settings")
 def numbers():
     s, ready, prog = ctx()
+    rows = (PhoneNumber.query.filter_by(account_id=g.account_id)
+            .order_by(PhoneNumber.pool, PhoneNumber.e164).all())
+    _backfill_regions(rows)
     return render_template(
         "dialer/numbers.html", s=s, ready=ready, prog=prog,
-        numbers=PhoneNumber.query.filter_by(account_id=g.account_id)
-        .order_by(PhoneNumber.pool, PhoneNumber.e164).all(),
-        results=[], q=request.args.get("area_code", ""))
+        numbers=rows, results=[], q=request.args.get("area_code", ""))
+
+
+def _backfill_regions(rows):
+    """Fill in a state we could not name when the number was bought.
+
+    The state table used to cover only the twenty states that had a calling
+    rule, so a number bought in any other one stored an empty region and the
+    page showed a bare area code where its state belongs. The table is
+    complete now, but rows written before that keep the blank. Rather than a
+    migration for two rows, each page view repairs what it is already looking
+    at, and once repaired it never writes again.
+    """
+    from dialer import tz
+    changed = False
+    for n in rows:
+        if n.region:
+            continue
+        state = tz.state_for(n.e164)
+        if state:
+            n.region = state
+            changed = True
+    if changed:
+        db.session.commit()
 
 
 @bp.route("/numbers/search")
