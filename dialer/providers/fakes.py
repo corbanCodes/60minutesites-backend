@@ -194,7 +194,7 @@ class FakeVoiceAgent(VoiceAgent):
         return ok(webhook_id=_sid("wh", url), secret="wsec_simulated_secret")
 
     def upsert_agent(self, agent, prompt, tools, webhook_id=None,
-                     transfer=None):
+                     transfer=None, first_message=None):
         return ok(agent_id=agent.elevenlabs_agent_id or _sid("ag", agent.name))
 
     def get_agent(self, agent_id):

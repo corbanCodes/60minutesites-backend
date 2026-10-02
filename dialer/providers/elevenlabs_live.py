@@ -263,21 +263,41 @@ class ElevenLabsAgent(VoiceAgent):
 
     # -------------------------------------------------------------- agents
     def upsert_agent(self, agent, prompt, tools, webhook_id=None,
-                     transfer=None):
+                     transfer=None, first_message=None):
+        # Needed before the body is built: an update must not resend the
+        # deprecated tools array, which would wipe the system tools.
+        existing = (getattr(agent, "elevenlabs_agent_id", "") or "").strip()
         """Create (POST) or update (PATCH) the ElevenLabs-side agent."""
         conversation_config = {
             "agent": {
                 "prompt": {
                     "prompt": prompt,
-                    "llm": getattr(agent, "llm_model", "") or "",
-                    "tools": tools or [],
+                    # An empty llm is not a valid enum member. Omitting the
+                    # key keeps whatever model the agent already has;
+                    # sending "" was relying on undefined behaviour.
+                    **({"llm": agent.llm_model}
+                       if getattr(agent, "llm_model", "") else {}),
+                    # `tools` is DEPRECATED and sending it is what was
+                    # destroying the transfer tool. ElevenLabs silently
+                    # migrates a legacy tools array by rebuilding the whole
+                    # tool set from it, and since ours carries only webhook
+                    # tools, built_in_tools came back with every slot null.
+                    # 200 OK, prompt intact, background sound intact, and no
+                    # way to hand a call over. Webhook tools are sent only
+                    # on CREATE, where there is no existing set to clobber;
+                    # on update they are left alone.
+                    **({"tools": tools or []} if not existing else {}),
                     # transfer_to_number is a SYSTEM tool and lives in
                     # built_in_tools, not in the webhook tools list. Putting
                     # it in the wrong place is the same as not sending it.
                     **({"built_in_tools": {"transfer_to_number": transfer}}
                        if transfer else {}),
                 },
-                "first_message": getattr(agent, "first_message", "") or "",
+                # None means "whatever is on the agent"; an empty string is
+                # a deliberate instruction to wait and must not be coalesced
+                # away into the stored value.
+                "first_message": (getattr(agent, "first_message", "") or ""
+                                  if first_message is None else first_message),
                 "language": getattr(agent, "language", "") or "en",
             },
             "tts": {"voice_id": getattr(agent, "voice_id", "") or ""},
@@ -325,7 +345,6 @@ class ElevenLabsAgent(VoiceAgent):
                     "source_type": "preset", "source_id": preset,
                     "volume": 0.3, "crossfade_loop": True}}}})
 
-        existing = (getattr(agent, "elevenlabs_agent_id", "") or "").strip()
         if existing:
             r = self._req("PATCH", f"/v1/convai/agents/{existing}", json=body)
         else:

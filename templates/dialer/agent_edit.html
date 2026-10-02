@@ -167,15 +167,14 @@
           &ldquo;hello&rdquo;. Talking over that is the clearest sign of a machine. Waiting costs about a
           second and is the single biggest change you can make to how this lands.</span>
 
-        <label for="ag-first">First thing it says <span class="muted" id="ag-first-off"
-          hidden>&mdash; not used while it waits</span></label>
+        <label for="ag-first">First thing it says <span class="muted" id="ag-first-off">&mdash; said after they speak, when waiting</span></label>
         <textarea id="ag-first" name="first_message"
                   placeholder="Hi, this is an automated assistant calling on behalf of…">{{ a.first_message or '' }}</textarea>
         <span class="field-hint"><b>Spoken out loud, word for word, exactly as typed.</b> It is a line,
           not an instruction: anything here, including notes in brackets, gets read to the prospect. To tell
           the agent how to behave, use <b>Instructions</b> at the bottom of this page. Leave it empty to use
-          the disclosure line from your compliance settings. Ignored entirely when the call is set to wait
-          for them to speak.</span>
+          the disclosure line from your compliance settings. When it is set to wait, this is what it says once they have
+          spoken, rather than the instant the line opens.</span>
       </div>
       <div>
         <label for="ag-persona">How it comes across</label>
@@ -351,22 +350,4 @@
 })();
 </script>
 
-<script>
-/* Waiting for "hello" works by sending ElevenLabs an EMPTY opening line, so
-   the sync clears this field. Letting someone type a sentence into a box
-   that is about to be wiped is a trap; it greys out instead and says why. */
-(function () {
-  var mode = document.getElementById('ag-open');
-  var first = document.getElementById('ag-first');
-  var note = document.getElementById('ag-first-off');
-  if (!mode || !first) return;
-  function apply() {
-    var waiting = mode.value === 'wait';
-    first.disabled = waiting;
-    first.style.opacity = waiting ? '0.5' : '';
-    if (note) note.hidden = !waiting;
-  }
-  mode.addEventListener('change', apply);
-  apply();
-})();
-</script>
+

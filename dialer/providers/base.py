@@ -117,7 +117,7 @@ class VoiceAgent:
         raise NotImplementedError
 
     def upsert_agent(self, agent, prompt, tools, webhook_id=None,
-                     transfer=None):
+                     transfer=None, first_message=None):
         """-> {ok, agent_id}"""
         raise NotImplementedError
 

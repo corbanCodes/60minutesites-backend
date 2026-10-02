@@ -57,12 +57,24 @@ def _generated_prompt(agent, settings):
     if settings.disclose_ai:
         out.append(_disclosure_block(settings))
     if (getattr(agent, "opening_mode", "") or "wait") == "wait":
-        out.append(
+        block = (
             "# Who speaks first\n"
             "Say NOTHING when the call connects. Wait for them to speak. "
             "People answer a phone with \"hello\" and talking over that is "
-            "the clearest sign of a machine. When they have spoken, greet "
-            "them back naturally and only then begin.")
+            "the clearest sign of a machine.")
+        line = (getattr(agent, "first_message", "") or "").strip()
+        if line:
+            # Waiting and having an opening line are not in conflict, whatever
+            # ElevenLabs' first_message field implies. The line simply belongs
+            # AFTER they speak, which is a prompt instruction rather than a
+            # field that fires the instant the call connects.
+            block += ("\nOnce they have spoken, greet them back briefly and "
+                      "then say this, in these words:\n"
+                      f"  \"{line}\"")
+        else:
+            block += (" When they have spoken, greet them back naturally and "
+                      "only then begin.")
+        out.append(block)
     if settings.records_calls and settings.announce_recording:
         out.append(f"# Recording\nSay this early, before anything substantive: "
                    f"\"{settings.announce_text}\"")
@@ -363,16 +375,22 @@ def sync_agent(agent, settings):
     # connects, instructions and all. Leaving it empty is the documented way
     # to make an agent wait for the other person, so "wait" must not be
     # helpfully filled in.
-    if (agent.opening_mode or "wait") == "wait":
-        agent.first_message = ""
-    elif not agent.first_message and settings.disclose_ai:
+    # ElevenLabs fires first_message the instant the line opens, so it has
+    # to be empty THERE for the agent to wait. What the owner typed is NOT
+    # discarded: it stays on the record and build_prompt carries it in as
+    # the line to say once the other person has spoken. Waiting and having
+    # an opening line were never actually in conflict.
+    waiting = (agent.opening_mode or "wait") == "wait"
+    if not waiting and not agent.first_message and settings.disclose_ai:
         agent.first_message = settings.effective_disclosure
+    opening_for_vendor = "" if waiting else (agent.first_message or "")
     if not agent.voicemail_message:
         agent.voicemail_message = voicemail_text(agent, settings)
 
     r = va.upsert_agent(agent, prompt, tools,
                         webhook_id=settings.elevenlabs_webhook_id or None,
-                        transfer=transfer_config(agent, settings))
+                        transfer=transfer_config(agent, settings),
+                        first_message=opening_for_vendor)
     if r.get("ok"):
         agent.elevenlabs_agent_id = (r.get("agent_id") or "")[:64]
         agent.synced_at = _now()

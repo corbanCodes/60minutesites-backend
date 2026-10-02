@@ -195,3 +195,70 @@ def test_the_page_explains_what_a_transfer_actually_does(ctx, client):
     assert "How the hand-off to a person actually works" in body
     assert "conference" in body
     assert "stop selling" in body
+
+
+# ------------------------------- the thing that was destroying the tool
+def test_an_update_does_not_resend_the_deprecated_tools_array(setup, monkeypatch):
+    """The whole mystery. ElevenLabs silently migrates a legacy `tools`
+    array by rebuilding the agent's entire tool set from it, and ours
+    carries only webhook tools, so built_in_tools came back with every slot
+    null. 200 OK, prompt intact, background sound intact, and no way to
+    hand a call over."""
+    from dialer.providers import elevenlabs_live
+    sent = {}
+    cls = (getattr(elevenlabs_live, "ElevenLabsLive", None)
+           or elevenlabs_live.ElevenLabsAgent)
+    monkeypatch.setattr(cls, "_req", lambda self, m, p, **kw: (
+        sent.update(body=kw.get("json")) or {"ok": True, "data": {"agent_id": "a"}}))
+
+    owner, s = setup
+    a = agent_with(owner.id)
+    a.elevenlabs_agent_id = "agent_existing"
+    db.session.commit()
+
+    cls.__new__(cls).upsert_agent(a, "prompt", [{"name": "log_note"}],
+                                  transfer=transfer_config(a, s))
+
+    prompt_cfg = sent["body"]["conversation_config"]["agent"]["prompt"]
+    assert "tools" not in prompt_cfg, "sending this wipes built_in_tools"
+    assert prompt_cfg["built_in_tools"]["transfer_to_number"]
+
+
+def test_a_brand_new_agent_still_gets_its_webhook_tools(setup, monkeypatch):
+    """On create there is no existing tool set to clobber, so the webhook
+    tools have to go across or the agent cannot log a note."""
+    from dialer.providers import elevenlabs_live
+    sent = {}
+    cls = (getattr(elevenlabs_live, "ElevenLabsLive", None)
+           or elevenlabs_live.ElevenLabsAgent)
+    monkeypatch.setattr(cls, "_req", lambda self, m, p, **kw: (
+        sent.update(body=kw.get("json")) or {"ok": True, "data": {"agent_id": "a"}}))
+
+    owner, s = setup
+    a = agent_with(owner.id)
+    a.elevenlabs_agent_id = ""
+    db.session.commit()
+
+    cls.__new__(cls).upsert_agent(a, "prompt", [{"name": "log_note"}])
+
+    assert sent["body"]["conversation_config"]["agent"]["prompt"]["tools"]
+
+
+def test_an_empty_model_name_is_omitted_rather_than_sent(setup, monkeypatch):
+    """"" is not a member of their model enum, so sending it was relying on
+    undefined behaviour. Omitting the key keeps the current model."""
+    from dialer.providers import elevenlabs_live
+    sent = {}
+    cls = (getattr(elevenlabs_live, "ElevenLabsLive", None)
+           or elevenlabs_live.ElevenLabsAgent)
+    monkeypatch.setattr(cls, "_req", lambda self, m, p, **kw: (
+        sent.update(body=kw.get("json")) or {"ok": True, "data": {"agent_id": "a"}}))
+
+    owner, s = setup
+    a = agent_with(owner.id)
+    a.llm_model = ""
+    db.session.commit()
+
+    cls.__new__(cls).upsert_agent(a, "prompt", [])
+
+    assert "llm" not in sent["body"]["conversation_config"]["agent"]["prompt"]

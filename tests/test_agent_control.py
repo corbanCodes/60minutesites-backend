@@ -31,17 +31,23 @@ def agent(ctx, client):
 
 
 # ------------------------------------------------------- who speaks first
-def test_waiting_leaves_the_opening_line_empty(agent):
-    """An empty first_message is how ElevenLabs is told to wait. Helpfully
-    filling it in is exactly what stopped the agent ever waiting."""
+def test_waiting_keeps_your_line_but_sends_the_vendor_an_empty_one(agent):
+    """Waiting and having an opening line were never in conflict, whatever
+    ElevenLabs' field implies. Their first_message fires the instant the
+    line opens, so it must be empty THERE; the line you wrote is carried
+    into the prompt as what to say once they have spoken."""
     owner, a, s, client = agent
     a.opening_mode = "wait"
-    a.first_message = "Hi, I'm an AI assistant calling from NapkinAds."
+    a.first_message = "Hi, can I speak with the manager or owner?"
     db.session.commit()
 
     sync_agent(a, s)
 
-    assert db.session.get(AiAgent, a.id).first_message == ""
+    kept = db.session.get(AiAgent, a.id).first_message
+    assert kept == "Hi, can I speak with the manager or owner?", \
+        "typing a line and watching it vanish is how this read as broken"
+    assert "manager or owner" in build_prompt(a, s)
+    assert "Once they have spoken" in build_prompt(a, s)
 
 
 def test_waiting_tells_the_agent_why_in_the_prompt(agent):
@@ -263,12 +269,7 @@ def test_an_invented_preset_is_not_sent_at_all(ctx, monkeypatch):
     assert "conversation" not in sent["body"]["conversation_config"]
 
 
-def test_the_opening_line_is_visibly_inert_while_waiting(agent):
-    """Waiting works by sending an empty opening line, so the sync clears
-    this field. Letting someone type a sentence into a box that is about to
-    be wiped is how "I keep hitting first thing it says and it's not
-    working" happens."""
+def test_the_page_says_when_the_opening_line_is_spoken(agent):
     owner, a, s, client = agent
     body = client.get(f"/dialer/agents/{a.id}").get_data(as_text=True)
-    assert "not used while it waits" in body
-    assert "first.disabled = waiting" in body
+    assert "said after they speak" in body
