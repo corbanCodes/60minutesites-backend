@@ -126,7 +126,8 @@
       <b>Business registration ID &rarr; your EIN.</b>
       <span class="wiz-note wiz-note-warn">If you have never hired anyone you may not have one. An EIN is free
         from the IRS, the application takes about ten minutes and issues the number during the session. Get it
-        before you start this form rather than halfway through.</span>
+        before you start this form rather than halfway through. Nothing else will do: Voice Integrity and CNAM
+        both reject any registration authority that is not an EIN or a DUNS number.</span>
     </li>
     <li><b>Industry, website and regions of operation.</b> A one-page site is fine.</li>
     <li>
@@ -139,6 +140,53 @@
   <p><b>Start this now, not later.</b> Twilio quotes up to 48 hours, and a rejected submission restarts the
     clock. Everything else in this setup can carry on while you wait &mdash; you can connect numbers, write your
     script and make test calls with the profile still pending.</p>
+</div>
+
+<div class="card wiz-callout danger">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <div>
+    <b>Proofread before you submit. You cannot edit it afterwards.</b>
+    <p style="margin:4px 0 0">A profile in review is locked, and an approved one is locked too. The only version
+      Twilio lets you change is a rejected one. Check the legal name, the registration number and the address
+      against the paperwork before you press the button, because the alternative is waiting for a rejection in
+      order to earn the right to fix a typo.</p>
+  </div>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>What actually gets profiles rejected</h3>
+  <p class="muted" style="margin:0 0 12px">Twilio publishes its rejection codes. Almost all of them are the same
+    mistake wearing different hats: something you typed does not match a record someone else holds.</p>
+  <ol class="wiz-ol wiz-ol-roomy">
+    <li>
+      <b>Your email is at a different domain than your website.</b>
+      <span class="wiz-note wiz-note-warn">This is the one that catches people, and a Gmail address next to a
+        business website is exactly the pattern it looks for. Use an address at the same domain as the site you
+        list.</span>
+    </li>
+    <li>
+      <b>Your business name does not match your website.</b>
+      <span class="wiz-note">Twilio compares the legal name against the site and its SSL certificate. If you are
+        registered under your own name but trade under a brand, those will not match on their own. Registering
+        the trading name with your state so both read the same is the clean fix.</span>
+    </li>
+    <li>
+      <b>Your legal name does not match your tax records.</b>
+      <span class="wiz-note">It is compared against the letter the IRS sent when it issued your EIN, character
+        for character. A W-9 is not a reliable copy of that name.</span>
+    </li>
+    <li>
+      <b>The registration number is formatted.</b>
+      <span class="wiz-note">Nine digits, nothing else. No dash, no spaces.</span>
+    </li>
+    <li>
+      <b>The address is not one a database recognises.</b>
+      <span class="wiz-note">A real US street address with the country set to US. Missing fields fail the same
+        way a wrong address does.</span>
+    </li>
+  </ol>
+  <p class="muted">Rejections tend to arrive one problem at a time rather than as a list, and each round restarts
+    the review clock. Getting it right once is worth the extra ten minutes.</p>
 </div>
 
 <div class="card wiz-steps-card">
