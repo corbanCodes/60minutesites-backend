@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}{{ pb.name }} | Playbooks | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>{{ pb.name }}</h1>
+    <p class="mg-sub">Write it the way you would actually say it out loud. Short sentences beat polished ones —
+      both you and the AI read this at speed, mid-call.</p>
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer/playbooks"><i class="bi bi-arrow-left"></i> Playbooks</a>
+  </div>
+</div>
+
+<form class="form" method="post" action="/dialer/playbooks/{{ pb.id }}" style="max-width:none">
+
+  <div class="mg-card">
+    <h3>Name and purpose</h3>
+    <div class="field-grid">
+      <div>
+        <label for="pb-name">Name</label>
+        <input type="text" id="pb-name" name="name" maxlength="120" value="{{ pb.name }}" required>
+      </div>
+      <div>
+        <label for="pb-desc">Description</label>
+        <input type="text" id="pb-desc" name="description" maxlength="300" value="{{ pb.description or '' }}"
+               placeholder="First call to restaurants, booking a 15-minute demo">
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------------------------------------------- steps #}
+  <div class="mg-section" data-section data-prefix="step">
+    <h2><i class="bi bi-signpost-2"></i> How the call goes</h2>
+    <p class="mg-note">The shape of the conversation, in order. Each step is a beat: what you are doing, roughly
+      what you say, and what the step is for.</p>
+    <div class="rowset" data-rows>
+      {% for s in pb.steps %}
+      <div class="rowcard" data-row>
+        <div class="rowcard-head">
+          <span class="rowcard-n" data-n>{{ loop.index }}</span>
+          <span class="rowcard-title">Step</span>
+          <button type="button" class="chip-btn danger" data-remove>Remove</button>
+        </div>
+        <div class="rowcard-grid">
+          <div>
+            <label>What this step is</label>
+            <input type="text" data-field="title" name="step-{{ loop.index0 }}-title" value="{{ s.get('title', '') }}"
+                   placeholder="Open">
+          </div>
+          <div>
+            <label>What it is for</label>
+            <input type="text" data-field="goal" name="step-{{ loop.index0 }}-goal" value="{{ s.get('goal', '') }}"
+                   placeholder="Earn thirty more seconds">
+          </div>
+        </div>
+        <div class="rowcard-full">
+          <label>Roughly what you say</label>
+          <textarea data-field="say" name="step-{{ loop.index0 }}-say"
+                    placeholder="Hi, it's Corban with 60 Minute Sites — I'll be quick.">{{ s.get('say', '') }}</textarea>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="rowset-empty" data-empty {{ 'hidden' if pb.steps }}>No steps yet. Add the opener first.</div>
+    <button type="button" class="btn ghost sm" data-add style="margin-top:10px"><i class="bi bi-plus-lg"></i> Add a step</button>
+
+    <template data-template>
+      <div class="rowcard" data-row>
+        <div class="rowcard-head">
+          <span class="rowcard-n" data-n>1</span>
+          <span class="rowcard-title">Step</span>
+          <button type="button" class="chip-btn danger" data-remove>Remove</button>
+        </div>
+        <div class="rowcard-grid">
+          <div>
+            <label>What this step is</label>
+            <input type="text" data-field="title" name="step-0-title" placeholder="Open">
+          </div>
+          <div>
+            <label>What it is for</label>
+            <input type="text" data-field="goal" name="step-0-goal" placeholder="Earn thirty more seconds">
+          </div>
+        </div>
+        <div class="rowcard-full">
+          <label>Roughly what you say</label>
+          <textarea data-field="say" name="step-0-say" placeholder="Hi, it's Corban with 60 Minute Sites — I'll be quick."></textarea>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  {# --------------------------------------------------------- questions #}
+  <div class="mg-section" data-section data-prefix="question">
+    <h2><i class="bi bi-patch-question"></i> Questions to get answered</h2>
+    <p class="mg-note">Put the cheapest disqualifying question first. The answer is saved against the lead under
+      the name you give it, so pick short names you will recognise in the CRM.</p>
+    <div class="rowset" data-rows>
+      {% for qn in pb.questions %}
+      <div class="rowcard" data-row>
+        <div class="rowcard-head">
+          <span class="rowcard-n" data-n>{{ loop.index }}</span>
+          <span class="rowcard-title">Question</span>
+          <button type="button" class="chip-btn danger" data-remove>Remove</button>
+        </div>
+        <div class="rowcard-full">
+          <label>The question</label>
+          <input type="text" data-field="question" name="question-{{ loop.index0 }}-question"
+                 value="{{ qn.get('question', '') }}" placeholder="Who handles the website today?">
+        </div>
+        <div class="rowcard-grid" style="margin-top:10px">
+          <div>
+            <label>Save the answer as</label>
+            <input type="text" data-field="collect_as" name="question-{{ loop.index0 }}-collect_as"
+                   value="{{ qn.get('collect_as', '') }}" placeholder="website_owner">
+          </div>
+          <div>
+            <label>End the call politely if</label>
+            <input type="text" data-field="disqualify_if" name="question-{{ loop.index0 }}-disqualify_if"
+                   value="{{ qn.get('disqualify_if', '') }}" placeholder="they already have an agency on contract">
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="rowset-empty" data-empty {{ 'hidden' if pb.questions }}>No questions yet.</div>
+    <button type="button" class="btn ghost sm" data-add style="margin-top:10px"><i class="bi bi-plus-lg"></i> Add a question</button>
+
+    <template data-template>
+      <div class="rowcard" data-row>
+        <div class="rowcard-head">
+          <span class="rowcard-n" data-n>1</span>
+          <span class="rowcard-title">Question</span>
+          <button type="button" class="chip-btn danger" data-remove>Remove</button>
+        </div>
+        <div class="rowcard-full">
+          <label>The question</label>
+          <input type="text" data-field="question" name="question-0-question" placeholder="Who handles the website today?">
+        </div>
+        <div class="rowcard-grid" style="margin-top:10px">
+          <div>
+            <label>Save the answer as</label>
+            <input type="text" data-field="collect_as" name="question-0-collect_as" placeholder="website_owner">
+          </div>
+          <div>
+            <label>End the call politely if</label>
+            <input type="text" data-field="disqualify_if" name="question-0-disqualify_if"
+                   placeholder="they already have an agency on contract">
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  {# -------------------------------------------------------- objections #}
+  <div class="mg-section" data-section data-prefix="objection">
+    <h2><i class="bi bi-hand-index"></i> When they push back</h2>
+    <p class="mg-note">List the phrases that signal each objection, separated by commas, then the answer. One
+      answer can cover several phrasings.</p>
+    <div class="rowset" data-rows>
+      {% for o in pb.objections %}
+      <div class="rowcard" data-row>
+        <div class="rowcard-head">
+          <span class="rowcard-n" data-n>{{ loop.index }}</span>
+          <span class="rowcard-title">Objection</span>
+          <button type="button" class="chip-btn danger" data-remove>Remove</button>
+        </div>
+        <div class="rowcard-full">
+          <label>They say something like</label>
+          <input type="text" data-field="trigger" name="objection-{{ loop.index0 }}-trigger"
+                 value="{{ o.get('trigger_phrases', []) | join(', ') if o.get('trigger_phrases') else o.get('trigger', '') }}"
+                 placeholder="not interested, we're all set, too busy">
+        </div>
+        <div class="rowcard-full">
+          <label>You answer</label>
+          <textarea data-field="response" name="objection-{{ loop.index0 }}-response"
+                    placeholder="Totally fair. The only reason I called…">{{ o.get('response', '') }}</textarea>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="rowset-empty" data-empty {{ 'hidden' if pb.objections }}>No objections yet.</div>
+    <button type="button" class="btn ghost sm" data-add style="margin-top:10px"><i class="bi bi-plus-lg"></i> Add an objection</button>
+
+    <template data-template>
+      <div class="rowcard" data-row>
+        <div class="rowcard-head">
+          <span class="rowcard-n" data-n>1</span>
+          <span class="rowcard-title">Objection</span>
+          <button type="button" class="chip-btn danger" data-remove>Remove</button>
+        </div>
+        <div class="rowcard-full">
+          <label>They say something like</label>
+          <input type="text" data-field="trigger" name="objection-0-trigger" placeholder="not interested, we're all set, too busy">
+        </div>
+        <div class="rowcard-full">
+          <label>You answer</label>
+          <textarea data-field="response" name="objection-0-response" placeholder="Totally fair. The only reason I called…"></textarea>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  {# ------------------------------------------------------------- rules #}
+  <div class="mg-card" style="margin-top:22px">
+    <h3>Rules</h3>
+    <div>
+      <label for="pb-transfer">When to hand the call to a person</label>
+      <textarea id="pb-transfer" name="transfer_criteria"
+                placeholder="They ask about price, or they want to book this week.">{{ pb.transfer_criteria or '' }}</textarea>
+      <span class="field-hint">An AI agent uses this to decide when to transfer. On your own calls it is a reminder.</span>
+    </div>
+    <div>
+      <label for="pb-never">Never</label>
+      <textarea id="pb-never" name="never_do"
+                placeholder="Never quote a price. Never claim to be a person. If they ask to be removed, record it and end the call politely.">{{ pb.never_do or '' }}</textarea>
+      <span class="field-hint">Hard limits. These go into the AI's instructions as rules it cannot talk its way around.</span>
+    </div>
+  </div>
+
+  <div class="savebar">
+    <button class="btn" type="submit"><i class="bi bi-check2"></i> Save playbook</button>
+    <a class="btn ghost" href="/dialer/playbooks">Back</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  function renumber(section) {
+    var prefix = section.getAttribute('data-prefix');
+    var rows = section.querySelectorAll('[data-rows] > [data-row]');
+    // The server reads step-0, step-1, ... and stops at the first gap, so the
+    // numbering has to stay contiguous after every add and every remove.
+    Array.prototype.forEach.call(rows, function (row, i) {
+      var n = row.querySelector('[data-n]');
+      if (n) n.textContent = i + 1;
+      Array.prototype.forEach.call(row.querySelectorAll('[data-field]'), function (f) {
+        f.name = prefix + '-' + i + '-' + f.getAttribute('data-field');
+      });
+    });
+    var empty = section.querySelector('[data-empty]');
+    if (empty) empty.hidden = rows.length > 0;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-section]'), function (section) {
+    var rowsBox = section.querySelector('[data-rows]');
+    var tpl = section.querySelector('[data-template]');
+    var addBtn = section.querySelector('[data-add]');
+
+    if (addBtn && tpl && rowsBox) {
+      addBtn.addEventListener('click', function () {
+        rowsBox.appendChild(tpl.content.cloneNode(true));
+        renumber(section);
+        var last = rowsBox.lastElementChild;
+        var first = last && last.querySelector('[data-field]');
+        if (first) first.focus();
+      });
+    }
+
+    section.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('[data-remove]') : null;
+      if (!btn || !rowsBox.contains(btn)) return;
+      var row = btn.closest('[data-row]');
+      if (row) row.remove();
+      renumber(section);
+    });
+
+    renumber(section);
+  });
+})();
+</script>
+{% endblock %}

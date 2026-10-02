@@ -123,6 +123,28 @@ class User(db.Model):
     monthly_price = db.Column(db.Float, nullable=True)  # what they pay per month
     setup_fee = db.Column(db.Float, nullable=True)      # one-time
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # --- teams: NULL account_id means "this user IS an account owner", which is
+    # every row that existed before the teams feature shipped.
+    account_id = db.Column(db.Integer, nullable=True, index=True)
+    role = db.Column(db.String(20), default="owner")
+    active = db.Column(db.Boolean, default=True)
+    seat_limit = db.Column(db.Integer, nullable=True)   # owners only; NULL = 1
+    feature_multi_user = db.Column(db.Boolean, default=False)
+    feature_dialer = db.Column(db.Boolean, default=False)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    job_title = db.Column(db.String(80), default="")
+
+    @property
+    def is_owner(self):
+        return self.account_id is None
+
+    @property
+    def owner_account_id(self):
+        return self.account_id or self.id
+
+    @property
+    def seats(self):
+        return self.seat_limit or 1
 
 
 class Lead(db.Model):
@@ -138,6 +160,31 @@ class Lead(db.Model):
     status = db.Column(db.String(20), default="New")
     deal_value = db.Column(db.Float, nullable=True)  # expected $/month if closed
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # --- dialer: all nullable, all default to today's behaviour
+    assignee_id = db.Column(db.Integer, nullable=True, index=True)
+    phone_e164 = db.Column(db.String(20), default="")
+    phone_key = db.Column(db.String(20), default="", index=True)
+    line_type = db.Column(db.String(16), default="")
+    line_type_checked_at = db.Column(db.DateTime, nullable=True)
+    line_type_raw = db.Column(db.Text, default="")
+    carrier = db.Column(db.String(120), default="")
+    timezone = db.Column(db.String(40), default="")
+    state_code = db.Column(db.String(2), default="")
+    consent_status = db.Column(db.String(20), default="none")
+    consent_source = db.Column(db.String(120), default="")
+    consent_at = db.Column(db.DateTime, nullable=True)
+    do_not_call = db.Column(db.Boolean, default=False)
+    opt_out_at = db.Column(db.DateTime, nullable=True)
+    opt_out_source = db.Column(db.String(60), default="")
+    last_called_at = db.Column(db.DateTime, nullable=True)
+    call_count = db.Column(db.Integer, default=0)
+    last_outcome = db.Column(db.String(30), default="")
+    tags = db.Column(db.String(500), default="")
+
+    @property
+    def tag_list(self):
+        return [t.strip() for t in (self.tags or "").split(",") if t.strip()]
+
     notes = db.relationship("Note", backref="lead", cascade="all, delete-orphan",
                             order_by="Note.created_at.desc()")
     tasks = db.relationship("Task", backref="lead", cascade="all, delete-orphan",
@@ -154,6 +201,8 @@ class Task(db.Model):
     done = db.Column(db.Boolean, default=False)
     done_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # NULL assignee = the account owner's own task (every pre-teams row)
+    assignee_id = db.Column(db.Integer, nullable=True, index=True)
 
 
 class EmailAccount(db.Model):
@@ -172,6 +221,8 @@ class Note(db.Model):
     lead_id = db.Column(db.Integer, db.ForeignKey("lead.id"), nullable=False)
     body = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    author_id = db.Column(db.Integer, nullable=True)        # NULL = system/legacy
+    kind = db.Column(db.String(20), default="note")         # note|system|call|ai_summary
 
 
 class Form(db.Model):
@@ -297,8 +348,39 @@ class ChatMessage(db.Model):
 
 
 def ensure_schema():
-    """create_all + additive column migration so existing DBs upgrade in place."""
-    db.create_all()
+    """create_all + additive column migration so existing DBs upgrade in place.
+
+    Gunicorn boots several workers at once and every one of them runs this.
+    Two workers can both see a column as missing and both try to add it, and
+    the loser crashes -- which on Railway is a boot loop, not a warning. A
+    Postgres advisory lock makes one worker do the work while the others wait,
+    and each statement is still wrapped individually so an unexpected race
+    degrades to a skipped statement rather than a dead deploy.
+    """
+    locked = False
+    if db.engine.dialect.name == "postgresql":
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text("SELECT pg_advisory_lock(60604060)"))
+            locked = True
+        except Exception:
+            locked = False
+    try:
+        _ensure_schema_inner()
+    finally:
+        if locked:
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(text("SELECT pg_advisory_unlock(60604060)"))
+            except Exception:
+                pass
+
+
+def _ensure_schema_inner():
+    try:
+        db.create_all()
+    except Exception as e:          # another worker won the race to CREATE
+        print(f"[schema] create_all: {type(e).__name__}: {e}")
     insp = inspect(db.engine)
     wanted = {
         "lead": {"owner_id": "INTEGER", "form_id": "INTEGER", "deal_value": "FLOAT"},
@@ -308,18 +390,68 @@ def ensure_schema():
                  "last_push_ok": "BOOLEAN", "last_push_msg": "VARCHAR(300)"},
         "form": {"notify_emails": "VARCHAR(500)"},
         "user": {"phone": "VARCHAR(40)", "monthly_price": "FLOAT",
-                 "setup_fee": "FLOAT"},
+                 "setup_fee": "FLOAT",
+                 # --- teams + dialer (additive; NULL/constant defaults only) ---
+                 "account_id": "INTEGER", "role": "VARCHAR(20)",
+                 "active": "BOOLEAN", "seat_limit": "INTEGER",
+                 "feature_multi_user": "BOOLEAN", "feature_dialer": "BOOLEAN",
+                 "last_login_at": "TIMESTAMP", "job_title": "VARCHAR(80)"},
         "flipbook": {"toc": "TEXT"},
         "flipbook_page": {"text": "TEXT"},
+        # --- dialer: columns on existing CRM tables ---
+        "task": {"assignee_id": "INTEGER"},
+        "note": {"author_id": "INTEGER", "kind": "VARCHAR(20)"},
+        "lead": {"assignee_id": "INTEGER", "phone_e164": "VARCHAR(20)",
+                 "phone_key": "VARCHAR(20)", "line_type": "VARCHAR(16)",
+                 "line_type_checked_at": "TIMESTAMP", "line_type_raw": "TEXT",
+                 "carrier": "VARCHAR(120)", "timezone": "VARCHAR(40)",
+                 "state_code": "VARCHAR(2)", "consent_status": "VARCHAR(20)",
+                 "consent_source": "VARCHAR(120)", "consent_at": "TIMESTAMP",
+                 "do_not_call": "BOOLEAN", "opt_out_at": "TIMESTAMP",
+                 "opt_out_source": "VARCHAR(60)", "last_called_at": "TIMESTAMP",
+                 "call_count": "INTEGER", "last_outcome": "VARCHAR(30)",
+                 "tags": "VARCHAR(500)"},
     }
-    with db.engine.begin() as conn:
-        for table, cols in wanted.items():
-            if table not in insp.get_table_names():
-                continue
+    added = {}
+    tables_now = set(insp.get_table_names())
+    for table, cols in wanted.items():
+        if table not in tables_now:
+            continue
+        with db.engine.begin() as conn:
             have = {c["name"] for c in insp.get_columns(table)}
             for col, ddl in cols.items():
-                if col not in have:
-                    conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN {col} {ddl}'))
+                if col in have:
+                    continue
+                try:
+                    conn.execute(text(
+                        f'ALTER TABLE "{table}" ADD COLUMN {col} {ddl}'))
+                    added.setdefault(table, []).append(col)
+                except Exception as e:
+                    # already there (a racing worker), or the DDL is wrong --
+                    # either way, never take the app down over one column
+                    print(f"[schema] {table}.{col}: {type(e).__name__}: {e}")
+    # Added columns arrive NULL. Give the ones with meaning a value so every
+    # EXISTING row keeps behaving exactly as it did before this deploy:
+    # every current user is an active owner with both new features OFF.
+    backfill = {
+        ("user", "role"): "'owner'", ("user", "active"): "TRUE",
+        ("user", "feature_multi_user"): "FALSE",
+        ("user", "feature_dialer"): "FALSE",
+        ("note", "kind"): "'note'",
+        ("lead", "do_not_call"): "FALSE", ("lead", "call_count"): "0",
+        ("lead", "consent_status"): "'none'", ("lead", "tags"): "''",
+    }
+    for (table, col), value in backfill.items():
+        if col not in added.get(table, []):
+            continue
+        try:
+            with db.engine.begin() as conn:
+                conn.execute(text(
+                    f'UPDATE "{table}" SET {col} = {value} WHERE {col} IS NULL'))
+        except Exception as e:
+            print(f"[schema] backfill {table}.{col}: {type(e).__name__}: {e}")
+    if added:
+        print(f"[schema] added columns: {added}")
 
 
 with app.app_context():
@@ -366,9 +498,18 @@ def demo_uid():
     return g._demo_uid
 
 
+def account_owner_id(user):
+    """The id that owns the DATA for this user. A team member reads and writes
+    the account owner's rows; an owner (every pre-teams user) is their own.
+    This single function is why adding seats changed no existing behaviour."""
+    if user is None:
+        return None
+    return getattr(user, "account_id", None) or user.id
+
+
 def owner_filter(query, model):
     """Admin sees everything EXCEPT the demo account's rows (those only exist
-    when you log in as the demo user); customers see their own rows."""
+    when you log in as the demo user); customers see their own account's rows."""
     role, user = current_user()
     if role == "admin":
         duid = demo_uid()
@@ -376,26 +517,34 @@ def owner_filter(query, model):
             return query.filter(db.or_(model.owner_id.is_(None),
                                        model.owner_id != duid))
         return query
-    return query.filter(model.owner_id == user.id)
+    return query.filter(model.owner_id == account_owner_id(user))
 
 
 def my_tasks_query():
     """Tasks are personal: the admin's day view shows the admin's own tasks,
-    not every customer's (oversight still exists via each lead's page)."""
+    not every customer's (oversight still exists via each lead's page).
+
+    On a team account the rows still belong to the OWNER (owner_id), and
+    assignee_id says whose day it lands on. A solo account has no members and
+    no assignees, so this returns exactly what it always did."""
     role, user = current_user()
     if role == "admin":
         return Task.query.filter(Task.owner_id.is_(None))
-    return Task.query.filter(Task.owner_id == user.id)
+    q = Task.query.filter(Task.owner_id == account_owner_id(user))
+    if user.account_id:                      # a member: only what's theirs
+        return q.filter(Task.assignee_id == user.id)
+    return q.filter(db.or_(Task.assignee_id.is_(None),
+                           Task.assignee_id == user.id))
 
 
 def my_owner_id():
     role, user = current_user()
-    return None if role == "admin" else user.id
+    return None if role == "admin" else account_owner_id(user)
 
 
 def can_touch(obj):
     role, user = current_user()
-    return role == "admin" or (user and obj.owner_id == user.id)
+    return role == "admin" or (user and obj.owner_id == account_owner_id(user))
 
 
 def slugify(txt):
@@ -650,7 +799,22 @@ def inject_globals():
     ctx = {"STATUSES": LEAD_STATUSES, "STATUS_COLORS": STATUS_COLORS,
            "STATUS_WEIGHTS": STATUS_WEIGHTS, "TASK_KINDS": TASK_KINDS,
            "TASK_ICONS": TASK_ICONS, "CSV_FIELDS": CSV_FIELDS,
-           "role": role, "me": user, "alerts": [], "alert_count": 0}
+           "role": role, "me": user, "alerts": [], "alert_count": 0,
+           "show_dialer": False, "show_team": False, "can": lambda p: False}
+    # Nav items for the two flagged features. An account without the flag never
+    # sees them, and the blueprints 404 anyway.
+    if role:
+        try:
+            from dialer import disabled as _dialer_off
+            from dialer.settings_store import dialer_enabled, teams_enabled
+            from teams import perms as _perms
+            ctx["show_dialer"] = bool(dialer_enabled()) and not _dialer_off()
+            ctx["show_team"] = bool(teams_enabled()) and _perms.can(user, "team.manage")
+            ctx["can"] = lambda p, _u=user: _perms.can(_u, p)
+            from dialer.models import DISPOSITION_LABELS
+            ctx["DISPOSITION_LABELS"] = DISPOSITION_LABELS
+        except Exception:
+            pass
     # alert badge only for admin pages (skip public pages -> no extra queries)
     if role == "admin" and request.path.startswith("/admin"):
         alerts = setup_alerts()
@@ -962,8 +1126,14 @@ def login():
             return redirect(request.args.get("next") or url_for("dashboard"))
         user = User.query.filter_by(email=email).first() if email else None
         if user and check_password_hash(user.password_hash, password):
+            if user.active is False:
+                flash("That account has been deactivated — ask your account "
+                      "admin to turn it back on.", "error")
+                return render_template("login.html")
             session.clear()
             session["uid"] = user.id
+            user.last_login_at = utcnow_naive()
+            db.session.commit()
             return redirect(request.args.get("next") or url_for("dashboard"))
         flash("No match — check your email and password.", "error")
     return render_template("login.html")
@@ -988,8 +1158,17 @@ def signup():
         elif User.query.filter_by(email=email).first():
             flash("That email already has an account — log in instead.", "error")
         else:
+            # Both features are off unless explicitly ticked. The access code
+            # has already been checked above, so only 60MS can set these.
+            want_team = bool(request.form.get("feature_multi_user"))
+            want_dialer = bool(request.form.get("feature_dialer"))
+            seats = request.form.get("seat_limit", type=int) or 5
             user = User(name=name, email=email,
-                        password_hash=generate_password_hash(password))
+                        password_hash=generate_password_hash(password),
+                        role="owner", active=True,
+                        feature_multi_user=want_team,
+                        feature_dialer=want_dialer,
+                        seat_limit=(max(1, min(seats, 200)) if want_team else 1))
             db.session.add(user)
             db.session.commit()
             send_email(email, "Welcome to 60 Minute Sites",
@@ -1054,7 +1233,7 @@ def scoped_leads(query):
     customer id to peek at one account without logging in as them."""
     role, user = current_user()
     if role != "admin":
-        return query.filter(Lead.owner_id == user.id)
+        return query.filter(Lead.owner_id == account_owner_id(user))
     s = request.args.get("scope", "mine")
     if s == "all":
         duid = demo_uid()
@@ -1170,8 +1349,16 @@ def lead_detail(lead_id):
         return redirect(url_for("lead_detail", lead_id=lead.id))
     open_tasks = [t for t in lead.tasks if not t.done]
     done_tasks = [t for t in lead.tasks if t.done]
+    lead_calls = []
+    try:
+        from dialer.models import Call
+        lead_calls = (Call.query.filter_by(lead_id=lead.id)
+                      .order_by(Call.started_at.desc()).limit(20).all())
+    except Exception:
+        pass
     return render_template("lead_detail.html", lead=lead, open_tasks=open_tasks,
-                           done_tasks=done_tasks, now=utcnow_naive())
+                           done_tasks=done_tasks, now=utcnow_naive(),
+                           lead_calls=lead_calls)
 
 
 @app.route("/admin/crm/<int:lead_id>/status", methods=["POST"])
@@ -1963,10 +2150,17 @@ def customers():
         elif User.query.filter_by(email=email).first():
             flash("That email already exists.", "error")
         else:
+            want_team = bool(request.form.get("feature_multi_user"))
+            want_dialer = bool(request.form.get("feature_dialer"))
+            seats = request.form.get("seat_limit", type=int) or 5
             db.session.add(User(name=name, email=email, phone=phone,
                                 monthly_price=parse_money(request.form.get("monthly_price")),
                                 setup_fee=parse_money(request.form.get("setup_fee")),
-                                password_hash=generate_password_hash(password)))
+                                password_hash=generate_password_hash(password),
+                                role="owner", active=True,
+                                feature_multi_user=want_team,
+                                feature_dialer=want_dialer,
+                                seat_limit=(max(1, min(seats, 200)) if want_team else 1)))
             db.session.commit()
             flash(f"Customer “{name}” created — password: {password}", "sticky")
         return redirect(url_for("customers"))
@@ -1989,6 +2183,27 @@ def customer_action(user_id, action):
         new_pw = secrets.token_urlsafe(8)
         user.password_hash = generate_password_hash(new_pw)
         flash(f"New password for {user.name}: {new_pw}", "sticky")
+    elif action == "features":
+        user.feature_multi_user = bool(request.form.get("feature_multi_user"))
+        user.feature_dialer = bool(request.form.get("feature_dialer"))
+        seats = request.form.get("seat_limit", type=int)
+        if seats:
+            user.seat_limit = max(1, min(seats, 200))
+        elif not user.feature_multi_user:
+            user.seat_limit = 1
+        bits = []
+        if user.feature_multi_user:
+            bits.append(f"multi-user ({user.seat_limit} seats)")
+        if user.feature_dialer:
+            bits.append("AI calling")
+        flash(f"{user.name}: " + (", ".join(bits) + " switched on."
+                                  if bits else "both add-ons switched off."))
+        try:
+            from teams.models import log as _audit
+            _audit("account.features", target=user.email,
+                   detail=", ".join(bits) or "none", account_id=user.id)
+        except Exception:
+            pass
     elif action == "billing":
         user.monthly_price = parse_money(request.form.get("monthly_price"))
         user.setup_fee = parse_money(request.form.get("setup_fee"))
@@ -3110,6 +3325,24 @@ def chat_contact(slug):
                 f"<tr><td style='padding:4px 12px 4px 0;color:#888'>Email</td><td><b>{email}</b></td></tr>"
                 f"</table><p style='font-family:sans-serif'>It's already in the CRM.</p>{transcript}")
     return _cors(jsonify(ok=True))
+
+
+# ---------------------------------------------------------------- blueprints
+# Imported LAST, after db and every core model exists: the packages do
+# `from app import db, Lead, ...` and this is the point where that resolves.
+import dialer  # noqa: E402
+import teams  # noqa: E402
+
+dialer.init_app(app)
+teams.init_app(app)
+
+with app.app_context():
+    ensure_schema()          # picks up the dialer/teams tables declared above
+    try:
+        from dialer.compliance import seed_state_rules
+        seed_state_rules()
+    except Exception:         # never let seeding stop the app from booting
+        pass
 
 
 if __name__ == "__main__":

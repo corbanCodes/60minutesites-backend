@@ -5,8 +5,30 @@
 <div class="topbar">
   <h1>{{ lead.name }} <span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}; vertical-align: middle;">{{ lead.status }}</span>
     {% if lead.deal_value %}<span class="count-chip">{{ lead.deal_value | money }}/mo</span>{% endif %}</h1>
-  <a class="btn ghost" href="/admin/crm">← Back to CRM</a>
+  <div class="topbar-actions">
+    {% if show_dialer and lead.phone %}
+    <a class="btn callnow-btn" href="#" data-lead="{{ lead.id }}"><i class="bi bi-telephone-outbound-fill"></i> Call now</a>
+    {% endif %}
+    <a class="btn ghost" href="/admin/crm">← Back to CRM</a>
+  </div>
 </div>
+{% if show_dialer and lead_calls %}
+<div class="card" style="margin-bottom:16px">
+  <h2 style="margin-top:0">Calls <span class="count-chip">{{ lead_calls | length }}</span></h2>
+  <table>
+    <tr><th>When</th><th>Outcome</th><th>Length</th><th>Score</th><th></th></tr>
+    {% for c in lead_calls %}
+    <tr>
+      <td class="muted" style="white-space:nowrap">{{ c.started_at | local }}</td>
+      <td>{% if c.disposition %}<span class="pill" style="background:#6B6259">{{ DISPOSITION_LABELS.get(c.disposition, c.disposition) }}</span>{% else %}<span class="muted">{{ c.system_outcome or '—' }}</span>{% endif %}</td>
+      <td>{{ c.duration_pretty if c.duration_s else '—' }}</td>
+      <td>{% if c.score %}<b>{{ c.score }}</b>/10{% else %}—{% endif %}</td>
+      <td style="text-align:right"><a class="chip-btn" href="/dialer/calls/{{ c.id }}">Open</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
 
 <div class="card" style="margin-bottom:16px">
   <form method="post" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">

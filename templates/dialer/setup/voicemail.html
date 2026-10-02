@@ -1,0 +1,263 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% if drops %}
+<h3 class="wiz-h3">Recorded messages <span class="count-chip">{{ drops | length }}</span></h3>
+<table>
+  <tr><th>Name</th><th>Length</th><th>Listen</th><th></th></tr>
+  {% for d in drops %}
+  <tr>
+    <td>
+      <span class="rowlink">{{ d.name }}</span>
+      {% if d.is_default %}<span class="pill" style="background:#2E7D4F">Default</span>{% endif %}
+      {% if d.transcript %}<div class="subtext">{{ d.transcript }}</div>{% endif %}
+    </td>
+    <td class="muted">
+      {% if d.duration_s %}{{ d.duration_s | round(0) | int }} sec{% else %}&mdash;{% endif %}
+    </td>
+    <td><audio controls preload="none" src="/dialer/vm/{{ d.id }}" class="vm-audio"></audio></td>
+    <td style="text-align:right">
+      <form method="post" action="/dialer/voicemail/{{ d.id }}/delete" class="inline-form"
+            onsubmit="return confirm('Delete the recording named {{ d.name }}? Any campaign set to drop it will stop dropping anything.')">
+        <button class="chip-btn danger" type="submit">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card empty">
+  <i class="bi bi-voicemail"></i>
+  <p><b>Nothing recorded yet.</b></p>
+  <p class="muted">Record one message below and a rep can leave it with one click for the rest of the year.</p>
+</div>
+{% endif %}
+
+<div class="card rec-widget">
+  <h3>Record a message</h3>
+  <form method="post" action="/dialer/voicemail/new" enctype="multipart/form-data" id="vm-form">
+    <div class="rec-stage">
+      <div class="rec-controls">
+        <button class="btn" type="button" id="rec-start"><i class="bi bi-record-circle"></i> Record</button>
+        <button class="btn ghost" type="button" id="rec-stop" disabled><i class="bi bi-stop-fill"></i> Stop</button>
+        <span class="rec-timer" id="rec-timer">0:00</span>
+        <span class="rec-dot" id="rec-dot" hidden></span>
+      </div>
+      <p class="muted" id="rec-status" style="margin:10px 0 0">Your browser will ask to use the microphone the
+        first time. Nothing is sent anywhere until you press Save.</p>
+      <div id="rec-playback" hidden>
+        <div class="rec-playback-label">What we captured</div>
+        <audio controls id="rec-audio" class="vm-audio wide"></audio>
+      </div>
+    </div>
+
+    <div class="row2" style="margin-top:16px">
+      <div>
+        <label for="vm-name">Name this message</label>
+        <input type="text" id="vm-name" name="name" maxlength="120" required
+               placeholder="Standard first-call voicemail">
+      </div>
+      <div>
+        <label for="vm-audio">Or upload a file you already have</label>
+        <input type="file" id="vm-audio" name="audio" accept="audio/*">
+        <p class="muted" style="margin:5px 0 0">WAV or MP3. Use this if recording in the browser does not work
+          on your machine.</p>
+      </div>
+    </div>
+
+    <button class="btn" type="submit" style="margin-top:14px"><i class="bi bi-cloud-upload"></i> Save this message</button>
+  </form>
+</div>
+
+<div class="card wiz-callout">
+  <i class="bi bi-stopwatch"></i>
+  <div>
+    <b>Keep it under 20 seconds.</b>
+    <p style="margin:4px 0 0">Say who you are in the first three seconds, say the one reason you called, give a
+      callback number slowly, and stop. Long voicemails are deleted at the point they become long, which is
+      about twenty seconds in.</p>
+  </div>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>A message that works</h3>
+  <blockquote class="vm-sample">
+    &ldquo;Hi, this is Corban with 60 Minute Sites, calling for Dana. I had one question about the booking page
+    on your site. You can reach me at four two three, five five five, zero one four seven. That's four two
+    three, five five five, zero one four seven. Thanks.&rdquo;
+  </blockquote>
+  <p class="muted" style="margin:0">Eighteen seconds. Name first, one reason, the number said twice and said
+    slowly, then silence. Most people hear a voicemail once and write the number down on the second pass.</p>
+</div>
+
+<script>
+  (function () {
+    var startBtn = document.getElementById('rec-start');
+    var stopBtn = document.getElementById('rec-stop');
+    var timerEl = document.getElementById('rec-timer');
+    var dotEl = document.getElementById('rec-dot');
+    var statusEl = document.getElementById('rec-status');
+    var playWrap = document.getElementById('rec-playback');
+    var audioEl = document.getElementById('rec-audio');
+    var fileInput = document.getElementById('vm-audio');
+    var form = document.getElementById('vm-form');
+    if (!startBtn || !form) return;
+
+    var rec = null, chunks = [], ticker = null, started = 0;
+    var recordedBlob = null, recordedName = 'voicemail.wav';
+
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      startBtn.disabled = true;
+      statusEl.textContent = 'This browser cannot record audio. Upload a file below instead. ' +
+        'Recording also needs a secure (https) address.';
+      return;
+    }
+
+    function fmt(ms) {
+      var t = Math.floor(ms / 1000);
+      return Math.floor(t / 60) + ':' + ('0' + (t % 60)).slice(-2);
+    }
+
+    function tick() {
+      var ms = Date.now() - started;
+      timerEl.textContent = fmt(ms);
+      timerEl.classList.toggle('over', ms > 20000);
+      if (ms > 60000 && rec && rec.state === 'recording') rec.stop();
+    }
+
+    // ---- minimal 16-bit PCM WAV encoder, so the server gets a format
+    // every phone network already understands.
+    function toWav(buffer) {
+      var ch = buffer.numberOfChannels, len = buffer.length, rate = buffer.sampleRate;
+      var mono = new Float32Array(len), i, c;
+      for (c = 0; c < ch; c++) {
+        var data = buffer.getChannelData(c);
+        for (i = 0; i < len; i++) mono[i] += data[i] / ch;
+      }
+      var out = new DataView(new ArrayBuffer(44 + len * 2));
+      function str(off, s) { for (var k = 0; k < s.length; k++) out.setUint8(off + k, s.charCodeAt(k)); }
+      str(0, 'RIFF'); out.setUint32(4, 36 + len * 2, true); str(8, 'WAVE');
+      str(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true);
+      out.setUint16(22, 1, true); out.setUint32(24, rate, true);
+      out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
+      str(36, 'data'); out.setUint32(40, len * 2, true);
+      for (i = 0; i < len; i++) {
+        var v = Math.max(-1, Math.min(1, mono[i]));
+        out.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
+      }
+      return new Blob([out.buffer], { type: 'audio/wav' });
+    }
+
+    function present(blob, name) {
+      recordedBlob = blob;
+      recordedName = name;
+      audioEl.src = URL.createObjectURL(blob);
+      playWrap.hidden = false;
+      try {
+        var dt = new DataTransfer();
+        dt.items.add(new File([blob], name, { type: blob.type }));
+        fileInput.files = dt.files;
+      } catch (e) { /* older browser: the submit handler posts the blob instead */ }
+      statusEl.textContent = 'Listen back. Record again to replace it, or name it and press Save.';
+    }
+
+    function finish(raw) {
+      var ctx = window.AudioContext || window.webkitAudioContext;
+      if (!ctx) { present(raw, 'voicemail.webm'); return; }
+      raw.arrayBuffer().then(function (buf) {
+        return new (ctx)().decodeAudioData(buf);
+      }).then(function (decoded) {
+        present(toWav(decoded), 'voicemail.wav');
+      }).catch(function () {
+        present(raw, 'voicemail.webm');
+      });
+    }
+
+    startBtn.addEventListener('click', function () {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        chunks = [];
+        rec = new MediaRecorder(stream);
+        rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+        rec.onstop = function () {
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          clearInterval(ticker);
+          dotEl.hidden = true;
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+          if (chunks.length) finish(new Blob(chunks, { type: chunks[0].type || 'audio/webm' }));
+        };
+        rec.start();
+        started = Date.now();
+        timerEl.textContent = '0:00';
+        timerEl.classList.remove('over');
+        ticker = setInterval(tick, 200);
+        dotEl.hidden = false;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        playWrap.hidden = true;
+        statusEl.textContent = 'Recording. Aim to finish inside twenty seconds.';
+      }).catch(function () {
+        statusEl.textContent = 'The microphone was blocked. Allow it in your browser settings, ' +
+          'or upload a file below.';
+      });
+    });
+
+    stopBtn.addEventListener('click', function () {
+      if (rec && rec.state === 'recording') rec.stop();
+    });
+
+    form.addEventListener('submit', function (ev) {
+      if (fileInput.files && fileInput.files.length) return;
+      if (!recordedBlob) {
+        ev.preventDefault();
+        statusEl.textContent = 'Record something first, or choose a file to upload.';
+        return;
+      }
+      ev.preventDefault();
+      var fd = new FormData(form);
+      fd.set('audio', recordedBlob, recordedName);
+      fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function (r) { window.location = r.url || '/dialer/setup/10'; })
+        .catch(function () { statusEl.textContent = 'That did not upload. Try again, or use the file upload.'; });
+    });
+  })();
+</script>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> What a voicemail drop is and why it changes a rep's day</summary>
+  <div class="guide-body">
+    <h4>What happens on the call</h4>
+    <p>The rep dials, hears the greeting, hears the beep, and clicks one button. The recording plays into the
+      voicemail by itself and the rep is already connected to the next number. They never speak.</p>
+    <p>Over a day that is the difference between 90 dials and 140. Over a week it is a working day.</p>
+
+    <h4>The rules</h4>
+    <ul>
+      <li><b>Say who you are at the start.</b> Not at the end. Most people stop listening at six seconds, and
+        a message from nobody is deleted.</li>
+      <li><b>One reason only.</b> The voicemail's job is to get the callback, not to sell.</li>
+      <li><b>Give a callback number, slowly, twice.</b> Digit by digit. Nobody can write down a number read at
+        conversation speed.</li>
+      <li><b>Under twenty seconds.</b> Watch the timer; it turns orange when you go past.</li>
+      <li><b>Record it yourself.</b> A real voice with a real room behind it beats a studio take.</li>
+    </ul>
+
+    <h4>Have two or three</h4>
+    <p>One for the first attempt, one for the third, one for a lead who went quiet after a meeting. The third
+      message should sound different from the first; the same thirty-second recording four times is what makes
+      someone block the number.</p>
+
+    <h4>If recording does not work</h4>
+    <p>Browser recording needs a secure address and permission to use the microphone. If the Record button is
+      switched off, or the browser refuses, record on your phone's voice memo app and upload the file with the
+      picker above. WAV or MP3 both work.</p>
+
+    <h4>Where it is stored</h4>
+    <p>In this app's own file store, against your account. It is converted to the format phone networks expect
+      when it is saved, so it sounds the same on every call.</p>
+  </div>
+</details>
+{% endblock %}

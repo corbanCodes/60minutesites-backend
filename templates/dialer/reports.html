@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Reports | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+{% set sm = summary | default({}, true) or {} %}
+{% set ab = abandon | default({}, true) or {} %}
+{% set cb = costs | default({}, true) or {} %}
+{% set vs = ai_vs_human | default({}, true) or {} %}
+{% set vs_ai = vs.get('ai', {}) if vs else {} %}
+{% set vs_hu = vs.get('human', {}) if vs else {} %}
+{% set disp_rows = dispositions | default([], true) or [] %}
+{% set hours = hourly | default([], true) or [] %}
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>Reports</h1>
+    <p class="mg-sub">Everything below counts calls that started inside the window you pick, on your own clock.</p>
+  </div>
+  <div class="mg-actions">
+    <div class="dayswitch">
+      <a href="/dialer/reports?days=1" class="{{ 'on' if days == 1 }}">Today</a>
+      <a href="/dialer/reports?days=7" class="{{ 'on' if days == 7 }}">7 days</a>
+      <a href="/dialer/reports?days=30" class="{{ 'on' if days == 30 }}">30 days</a>
+    </div>
+    <a class="btn ghost sm" href="/dialer/calls"><i class="bi bi-list-ul"></i> All calls</a>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card stat"><div class="num">{{ sm.get('dials', 0) | default(0) }}</div><div class="label">Dials</div></div>
+  <div class="card stat"><div class="num">{{ sm.get('connects', 0) | default(0) }}</div><div class="label">Connects ({{ sm.get('connect_rate', 0) | default(0) }}%)</div></div>
+  <div class="card stat"><div class="num">{{ sm.get('meetings', 0) | default(0) }}</div><div class="label">Meetings set</div></div>
+  <div class="card stat"><div class="num">{{ sm.get('talk_pretty', '0m 00s') | default('0m 00s', true) }}</div><div class="label">Talk time</div></div>
+  <div class="card stat"><div class="num">${{ '%.2f' | format(sm.get('cost', 0) | default(0) | float) }}</div><div class="label">Spend</div></div>
+</div>
+
+<div class="cards">
+  <div class="card stat"><div class="num">{{ sm.get('dm_reached', 0) | default(0) }}</div><div class="label">Decision makers reached</div></div>
+  <div class="card stat"><div class="num">{{ sm.get('qualified', 0) | default(0) }}</div><div class="label">Qualified</div></div>
+  <div class="card stat"><div class="num">{{ sm.get('voicemails_dropped', 0) | default(0) }}</div><div class="label">Voicemails left</div></div>
+  <div class="card stat"><div class="num">${{ '%.2f' | format(sm.get('cost_per_meeting', 0) | default(0) | float) }}</div><div class="label">Cost per meeting</div></div>
+  <div class="card stat"><div class="num">{{ sm.get('follow_ups_created', 0) | default(0) }}</div><div class="label">Follow-ups created</div></div>
+</div>
+
+{# ------------------------------------------------------------ outcomes #}
+<div class="mg-section">
+  <h2><i class="bi bi-bar-chart"></i> How calls ended</h2>
+  {% if disp_rows %}
+  {% set disp_max = (disp_rows | map(attribute='count') | max) or 0 %}
+  <div class="mg-card">
+    <div class="barchart">
+      {% for d in disp_rows %}
+      {% set w = ((d.get('count', 0) / disp_max) * 100) | round(0, 'floor') | int if disp_max else 0 %}
+      <div class="barchart-row">
+        <div class="barchart-label">{{ d.get('label', d.get('key', '')) }}</div>
+        <div class="barchart-track" role="img" aria-label="{{ d.get('count', 0) }} calls">
+          <span class="barchart-bar {{ 'zero' if not d.get('count') }}" style="width:{{ w if w else 0 }}%"></span>
+        </div>
+        <div class="barchart-val">{{ d.get('count', 0) }}<span>{{ d.get('pct', 0) }}%</span></div>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="mg-note" style="margin:12px 0 0">The gap up to 100% is dials nobody gave an outcome to.</p>
+  </div>
+  {% else %}
+  <p class="mg-note">Nothing dialed in this window.</p>
+  {% endif %}
+</div>
+
+{# ---------------------------------------------------------------- reps #}
+{% if reps %}
+<div class="mg-section">
+  <h2><i class="bi bi-people"></i> By rep</h2>
+  <table>
+    <tr><th>Rep</th><th class="mg-right">Dials</th><th class="mg-right">Connects</th><th class="mg-right">Meetings</th><th class="mg-right">Avg score</th><th class="mg-right">Spend</th></tr>
+    {% for r in reps %}
+    <tr>
+      <td><span class="rowlink">{{ r.get('name', 'Unnamed') }}</span></td>
+      <td class="mg-right mg-num">{{ r.get('dials', 0) }}</td>
+      <td class="mg-right mg-num">{{ r.get('connects', 0) }} <span class="muted">({{ r.get('connect_rate', 0) }}%)</span></td>
+      <td class="mg-right mg-num">{{ r.get('meetings', 0) }}</td>
+      <td class="mg-right mg-num">{{ r.get('avg_score', 0) }}</td>
+      <td class="mg-right mg-num">${{ '%.2f' | format(r.get('cost', 0) | float) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{# ----------------------------------------------------------- campaigns #}
+<div class="mg-section">
+  <h2><i class="bi bi-megaphone"></i> By campaign</h2>
+  {% if campaigns %}
+  <table>
+    <tr><th>Campaign</th><th>Status</th><th class="mg-right">Dials</th><th class="mg-right">Connects</th><th class="mg-right">Meetings</th><th class="mg-right">Still queued</th><th class="mg-right">Spend</th></tr>
+    {% for c in campaigns %}
+    <tr>
+      <td><a class="rowlink" href="/dialer/campaigns/{{ c.get('campaign_id') }}">{{ c.get('name', 'Campaign') }}</a>
+        <div class="subtext">{{ c.get('mode', '') }}</div></td>
+      <td><span class="pill st-{{ c.get('status', 'draft') }}">{{ c.get('status', 'draft') | capitalize }}</span></td>
+      <td class="mg-right mg-num">{{ c.get('dials', 0) }}</td>
+      <td class="mg-right mg-num">{{ c.get('connects', 0) }}</td>
+      <td class="mg-right mg-num">{{ c.get('meetings', 0) }}</td>
+      <td class="mg-right mg-num">{{ c.get('queued_remaining', 0) }}</td>
+      <td class="mg-right mg-num">${{ '%.2f' | format(c.get('cost', 0) | float) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="mg-note">No campaign activity in this window.</p>
+  {% endif %}
+</div>
+
+{# -------------------------------------------------------- AI vs human #}
+<div class="mg-section">
+  <h2><i class="bi bi-arrow-left-right"></i> AI against a person</h2>
+  <div class="mg-card">
+    <div class="vs-grid">
+      <div class="vs-col">
+        <h4><i class="bi bi-robot"></i> AI calls</h4>
+        <div class="vs-line"><span>Dials</span><b>{{ vs_ai.get('dials', 0) | default(0) }}</b></div>
+        <div class="vs-line"><span>Connects</span><b>{{ vs_ai.get('connects', 0) | default(0) }} ({{ vs_ai.get('connect_rate', 0) | default(0) }}%)</b></div>
+        <div class="vs-line"><span>Meetings</span><b>{{ vs_ai.get('meetings', 0) | default(0) }}</b></div>
+        <div class="vs-line"><span>Spend</span><b>${{ '%.2f' | format(vs_ai.get('cost', 0) | default(0) | float) }}</b></div>
+        <div class="vs-line"><span>Cost per meeting</span><b>${{ '%.2f' | format(vs_ai.get('cost_per_meeting', 0) | default(0) | float) }}</b></div>
+      </div>
+      <div class="vs-col">
+        <h4><i class="bi bi-person"></i> Calls by a person</h4>
+        <div class="vs-line"><span>Dials</span><b>{{ vs_hu.get('dials', 0) | default(0) }}</b></div>
+        <div class="vs-line"><span>Connects</span><b>{{ vs_hu.get('connects', 0) | default(0) }} ({{ vs_hu.get('connect_rate', 0) | default(0) }}%)</b></div>
+        <div class="vs-line"><span>Meetings</span><b>{{ vs_hu.get('meetings', 0) | default(0) }}</b></div>
+        <div class="vs-line"><span>Spend</span><b>${{ '%.2f' | format(vs_hu.get('cost', 0) | default(0) | float) }}</b></div>
+        <div class="vs-line"><span>Cost per meeting</span><b>${{ '%.2f' | format(vs_hu.get('cost_per_meeting', 0) | default(0) | float) }}</b></div>
+      </div>
+    </div>
+    <p class="mg-note" style="margin:12px 0 0">Same definitions on both sides. A meeting means a call
+      dispositioned as a meeting set or qualified.</p>
+  </div>
+</div>
+
+{# -------------------------------------------------------------- hourly #}
+<div class="mg-section">
+  <h2><i class="bi bi-clock"></i> Best hours to call</h2>
+  {% if hours %}
+  {% set hour_max = (hours | map(attribute='dials') | max) or 0 %}
+  {% set best = (hours | map(attribute='connect_rate') | max) or 0 %}
+  <div class="mg-card">
+    <div class="hourstrip">
+      {% for h in hours %}
+      {% set hh = ((h.get('dials', 0) / hour_max) * 100) | round(0, 'floor') | int if hour_max else 0 %}
+      <div class="hourcol {{ 'best' if best and h.get('connect_rate', 0) == best and h.get('dials', 0) }}"
+           title="{{ h.get('hour', 0) }}:00 — {{ h.get('dials', 0) }} dials, {{ h.get('connects', 0) }} connects ({{ h.get('connect_rate', 0) }}%)">
+        <span class="hourbar" style="height:{{ hh if hh else 1 }}%"></span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="hourlabels">
+      {% for h in hours %}
+      <div class="hourlabel">{{ h.get('hour', 0) if h.get('hour', 0) % 3 == 0 else '' }}</div>
+      {% endfor %}
+    </div>
+    <p class="mg-note" style="margin:12px 0 0">Last seven days, your clock, hour by hour. The highlighted bars
+      are the hours with your best connect rate.</p>
+  </div>
+  {% else %}
+  <p class="mg-note">Not enough calls yet to say when the phone gets answered.</p>
+  {% endif %}
+</div>
+
+{# ------------------------------------------------------------- numbers #}
+<div class="mg-section">
+  <h2><i class="bi bi-telephone"></i> Your numbers</h2>
+  {% if numbers %}
+  <table>
+    <tr><th>Number</th><th>Pool</th><th class="mg-right">Dials (7d)</th><th class="mg-right">Answered</th><th class="mg-right">Today</th><th></th></tr>
+    {% for n in numbers %}
+    <tr class="{{ 'flagged' if n.get('flagged') }}">
+      <td><span class="rowlink">{{ n.get('pretty', n.get('e164', '')) }}</span></td>
+      <td><span class="pill pool-{{ n.get('pool', 'rep') }}">{{ 'AI' if n.get('pool') == 'ai' else 'Reps' }}</span></td>
+      <td class="mg-right mg-num">{{ n.get('dials', 0) }}</td>
+      <td class="mg-right mg-num">{{ n.get('connects', 0) }} <span class="muted">({{ n.get('answer_rate', 0) }}%)</span></td>
+      <td class="mg-right mg-num">{{ n.get('calls_today', 0) }} / {{ n.get('daily_cap', 0) }}</td>
+      <td>{% if n.get('flagged') %}<span class="pill flag">Answer rate dropping</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="mg-note" style="margin-top:10px">
+    <i class="bi bi-exclamation-triangle"></i>
+    A flagged row is answering far less often than your other numbers in the same pool. Nobody tells you when
+    a carrier starts labelling a number as spam — this is usually the first sign. Park it, call from another,
+    and see whether the rate recovers.
+  </p>
+  {% else %}
+  <p class="mg-note">No numbers to report on yet.</p>
+  {% endif %}
+</div>
+
+{# ------------------------------------------------------------- abandon #}
+<div class="mg-section">
+  <h2><i class="bi bi-speedometer2"></i> Abandoned calls</h2>
+  {% set rate = ab.get('rate_pct', 0) | default(0) | float %}
+  {% set cap = ab.get('cap_pct', 3.0) | default(3.0) | float %}
+  <div class="mg-card">
+    <div class="gauge">
+      <div class="gauge-num {{ 'over' if ab.get('over_cap') }}">{{ rate }}%</div>
+      <div class="gauge-track">
+        <span class="gauge-fill {{ 'over' if ab.get('over_cap') }}"
+              style="width:{{ 100 if rate >= 10 else ((rate / 10) * 100) | round(0, 'floor') | int }}%"></span>
+        <span class="gauge-cap" style="left:{{ ((cap / 10) * 100) | round(0, 'floor') | int }}%"
+              title="The {{ cap }}% ceiling"></span>
+      </div>
+      <div class="gauge-meta">{{ ab.get('abandoned', 0) | default(0) }} of {{ ab.get('answered_live', 0) | default(0) }} answered calls</div>
+    </div>
+    <p class="mg-note" style="margin:12px 0 0">An abandoned call is one a person picked up and nobody was there
+      within two seconds; the regulator's safe-harbour ceiling is {{ cap }}%, and the way you go over it is by
+      raising "calls at once" on a campaign.</p>
+  </div>
+</div>
+
+{# --------------------------------------------------------------- costs #}
+<div class="mg-section">
+  <h2><i class="bi bi-cash-stack"></i> Where the money went</h2>
+  <table>
+    <tr><th>Line</th><th class="mg-right">Cost</th></tr>
+    <tr><td>Phone calls</td><td class="mg-right mg-num">${{ '%.2f' | format(cb.get('telephony', 0) | default(0) | float) }}</td></tr>
+    <tr><td>AI voice</td><td class="mg-right mg-num">${{ '%.2f' | format(cb.get('ai_voice', 0) | default(0) | float) }}</td></tr>
+    <tr><td>Transcription</td><td class="mg-right mg-num">${{ '%.2f' | format(cb.get('transcription', 0) | default(0) | float) }}</td></tr>
+    <tr><td>Summaries and scoring</td><td class="mg-right mg-num">${{ '%.2f' | format(cb.get('llm', 0) | default(0) | float) }}</td></tr>
+    <tr><td>Recording storage</td><td class="mg-right mg-num">${{ '%.2f' | format(cb.get('recording', 0) | default(0) | float) }}</td></tr>
+    <tr><td><b>Total</b></td><td class="mg-right mg-num"><b>${{ '%.2f' | format(cb.get('total', 0) | default(0) | float) }}</b></td></tr>
+  </table>
+  <p class="mg-note" style="margin-top:10px">Estimates from the published rate card, not a vendor invoice. The
+    real bill arrives from Twilio and ElevenLabs separately.</p>
+</div>
+{% endblock %}

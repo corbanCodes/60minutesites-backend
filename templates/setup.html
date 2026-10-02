@@ -165,6 +165,22 @@
   </div>
 </details>
 
+<details class="guide" id="calling">
+  <summary><i class="bi bi-telephone-outbound"></i> Teams &amp; AI calling — switching it on for a client <span class="guide-tag">new</span></summary>
+  <div class="guide-body">
+    <p>Two add-ons, both off by default. An account without them sees no change at all — no new menu, and the calling pages return “not found”.</p>
+    <ol>
+      <li><b>Customers</b> → tick <b>Multi-user support</b> (and set how many seats) and/or <b>AI calling system</b> on their row, then Save. You can also tick them when you first create the customer.</li>
+      <li>Log in as them. A <b>Calling</b> item appears under Work, and <b>Team</b> under Account.</li>
+      <li><b>Calling → Setup</b> walks them through it in eleven steps. The only two that genuinely block anything are Twilio (the phone company) and a phone number. Everything else can wait.</li>
+      <li>They pay Twilio, ElevenLabs and OpenAI directly with their own keys. You never hold a key and nothing is marked up.</li>
+    </ol>
+    <p><b>Practice mode</b> (Calling → Setup, or the switch on the Calling page) runs the entire system against a simulator: real screens, real call records, real transcripts and scores, no phone calls and no spend. Use it for demos and for training a new rep.</p>
+    <p><b>What it costs them, roughly:</b> a connected human call is about ten cents all in. An AI conversation of three minutes is about thirty-five cents, plus their ElevenLabs plan. Unanswered calls cost nothing.</p>
+    <p class="muted">A note worth passing on: calling a mobile number with an AI voice without the person's consent carries real legal exposure in the US. The system defaults to letting the AI call landlines only, and a rep can always dial anything by hand. An owner can switch that off, but they have to type a confirmation and it's recorded against every call it produces.</p>
+  </div>
+</details>
+
 <details class="guide" id="broke">
   <summary><i class="bi bi-wrench-adjustable"></i> If something breaks{{ gstat('broke') }} </summary>
   <div class="guide-body">

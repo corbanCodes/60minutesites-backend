@@ -1,0 +1,250 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% set days = s.window_weekdays %}
+
+<form class="form wiz-form" method="post" action="/dialer/setup/compliance/save">
+
+  <!-- ------------------------------------------------------- recording -->
+  <fieldset class="addons">
+    <legend>Recording</legend>
+    <label class="addon">
+      <input type="checkbox" name="recording_enabled" {{ 'checked' if s.recording_enabled }}>
+      <span>Record every call
+        <em>Recordings are what make coaching, transcripts and summaries possible. They are stored in your own
+          Twilio account and cost about half a cent per 1,000 minutes a month.</em></span>
+    </label>
+    <label class="addon">
+      <input type="checkbox" name="recording_announce" {{ 'checked' if s.recording_announce }}>
+      <span>Say out loud that the call is recorded
+        <em>Eleven states require every person on a call to agree before you may record. Leaving this off in
+          one of those states is a crime, not a fine. Keep it on.</em></span>
+    </label>
+    <div>
+      <label for="announce_text">What the announcement says</label>
+      <input type="text" id="announce_text" name="announce_text" maxlength="400"
+             value="{{ s.announce_text or 'This call may be recorded for quality and training.' }}">
+    </div>
+    <div>
+      <label for="announce_mode">After the announcement</label>
+      <select id="announce_mode" name="announce_mode">
+        <option value="proceed" {{ 'selected' if s.announce_mode != 'verbal_yes' }}>
+          Carry on with the call &mdash; the person stays on the line, which counts as agreement in most states</option>
+        <option value="verbal_yes" {{ 'selected' if s.announce_mode == 'verbal_yes' }}>
+          Wait for a spoken yes &mdash; slower, and the safest thing you can do in an all-party state</option>
+      </select>
+    </div>
+  </fieldset>
+
+  <!-- ------------------------------------------------------ disclosure -->
+  <fieldset class="addons">
+    <legend>What the AI says about itself</legend>
+    <label class="addon">
+      <input type="checkbox" name="ai_disclosure_enabled" {{ 'checked' if s.ai_disclosure_enabled }}>
+      <span>The AI tells people it is an AI, at the start of the call
+        <em>Several states require this within the first few seconds. Switching it off is a decision to take
+          legal risk on purpose.</em></span>
+    </label>
+    <div class="row2">
+      <div>
+        <label for="ai_disclosure_name">Who is calling</label>
+        <input type="text" id="ai_disclosure_name" name="ai_disclosure_name" maxlength="160"
+               value="{{ s.ai_disclosure_name or '' }}" placeholder="Acme Roofing">
+        <p class="muted" style="margin:5px 0 0">Your business name, said the way a customer would recognise
+          it.</p>
+      </div>
+      <div>
+        <label for="ai_callback_number">Number a person answers</label>
+        <input type="text" id="ai_callback_number" name="ai_callback_number" maxlength="32"
+               value="{{ s.ai_callback_number or '' }}" placeholder="(423) 555-0147">
+        <p class="muted" style="margin:5px 0 0">Has to reach a human being during business hours. Do not use a
+          number that only plays a menu.</p>
+      </div>
+    </div>
+    <div class="disclosure-preview">
+      <div class="disclosure-preview-label"><i class="bi bi-chat-quote"></i> What the AI will say</div>
+      <p id="disclosure-preview">&ldquo;{{ s.effective_disclosure }}&rdquo;</p>
+    </div>
+    {% if not s.ai_disclosure_text %}
+    <script>
+      (function () {
+        var who = document.getElementById('ai_disclosure_name');
+        var num = document.getElementById('ai_callback_number');
+        var out = document.getElementById('disclosure-preview');
+        if (!who || !num || !out) return;
+        function draw() {
+          var name = who.value.trim() || 'our company';
+          var line = 'Hi, this is an automated AI assistant calling on behalf of ' + name + '.';
+          if (num.value.trim()) {
+            line += ' You can reach a person any time at ' + num.value.trim() + '.';
+          }
+          out.textContent = '“' + line + '”';
+        }
+        who.addEventListener('input', draw);
+        num.addEventListener('input', draw);
+      })();
+    </script>
+    {% endif %}
+  </fieldset>
+
+  <div class="card wiz-callout">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>
+      <b>Disclosure is not consent.</b>
+      <p style="margin:4px 0 0">Telling someone they're speaking with AI satisfies state disclosure laws and
+        reduces deception risk. It does NOT create consent.</p>
+      <p class="muted" style="margin:6px 0 0">Consent is separate, it has to exist before you dial, and for an
+        AI voice calling a cell phone it has to be in writing. The system holds a consent record per lead and
+        will not let the AI dial a cell without one.</p>
+    </div>
+  </div>
+
+  <!-- --------------------------------------------------- calling hours -->
+  <fieldset class="addons">
+    <legend>Calling hours</legend>
+    <div class="row2">
+      <div>
+        <label for="window_start">Not before</label>
+        <input type="time" id="window_start" name="window_start" value="{{ s.window_start or '09:00' }}">
+      </div>
+      <div>
+        <label for="window_end">Not after</label>
+        <input type="time" id="window_end" name="window_end" value="{{ s.window_end or '19:00' }}">
+      </div>
+    </div>
+    <p class="muted" style="margin:0">These are read in the lead's own time zone, not yours. Nine in the morning
+      means nine where they are.</p>
+    <div>
+      <label>Days we may call</label>
+      <div class="daypick">
+        {% for d in [(1, 'Mon'), (2, 'Tue'), (3, 'Wed'), (4, 'Thu'), (5, 'Fri'), (6, 'Sat'), (7, 'Sun')] %}
+        <label class="daychip">
+          <input type="checkbox" name="window_days" value="{{ d[0] }}" {{ 'checked' if d[0] in days }}>
+          <span>{{ d[1] }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <p class="muted" style="margin:6px 0 0">Some states forbid Sunday calls outright. Those are enforced
+        separately in the state rules below, whatever you tick here.</p>
+    </div>
+    <label class="addon">
+      <input type="checkbox" name="enforce_window" {{ 'checked' if s.enforce_window }}>
+      <span>Refuse to place a call outside these hours
+        <em>With this off the hours are a suggestion and nothing stops a late dial. Federal law caps outbound
+          sales calls at 8am to 9pm in the person's local time, so leaving it off is a real exposure.</em></span>
+    </label>
+    <label class="addon">
+      <input type="checkbox" name="smart_window" {{ 'checked' if s.smart_window }}>
+      <span>Use the quiet hour for each trade
+        <em>Restaurants are useless at noon and reachable at 2pm. With this on, the system shifts the calling
+          window to the hour that trade actually answers, inside the hours above.</em></span>
+    </label>
+  </fieldset>
+
+  <!-- ------------------------------------------------------- the lists -->
+  <fieldset class="addons">
+    <legend>Lists and records</legend>
+    <label class="addon">
+      <input type="checkbox" name="honor_state_rules" {{ 'checked' if s.honor_state_rules }}>
+      <span>Follow the per-state rules in the table below
+        <em>Tighter calling hours, no-Sunday rules, and the states where an AI voice is blocked or needs a
+          lawyer's sign-off first.</em></span>
+    </label>
+    <label class="addon">
+      <input type="checkbox" name="honor_national_dnc" {{ 'checked' if s.honor_national_dnc }}>
+      <span>Check the National Do Not Call Registry before dialing
+        <em>You need your own subscription to the registry for this. It is free for up to five area codes and
+          it applies to consumer numbers, not business numbers. Your own do-not-call list is always honoured,
+          whatever this says.</em></span>
+    </label>
+    <div>
+      <label for="retention_days">Keep recordings and transcripts for</label>
+      <div class="inline-num">
+        <input type="number" id="retention_days" name="retention_days" min="1" max="3650"
+               value="{{ s.retention_days or 90 }}"> <span class="muted">days, then delete them</span>
+      </div>
+      <p class="muted" style="margin:5px 0 0">Ninety days covers a dispute and keeps your storage bill small.
+        Some industries have to keep records for years &mdash; if yours is one of them, you already know the
+        number.</p>
+    </div>
+  </fieldset>
+
+  <button class="btn" type="submit"><i class="bi bi-check-lg"></i> Save these rules</button>
+  <p class="muted" style="margin:0">Every change here is written to the activity log with your name and the
+    time. That log is the first thing anyone asks for in a complaint.</p>
+</form>
+
+{% if states %}
+<details class="guide" style="margin-top:18px">
+  <summary><i class="bi bi-map"></i> State by state <span class="count-chip">{{ states | length }}</span></summary>
+  <div class="guide-body">
+    <p>What the system will do in each state when the rules above are switched on. A lawyer can change this
+      table without us shipping new code.</p>
+    <table>
+      <tr><th>State</th><th>AI calling out</th><th>Hours</th><th>Recording</th><th>Notes</th></tr>
+      {% for st in states %}
+      <tr>
+        <td><b>{{ st.state_code }}</b>{% if st.name %}<div class="subtext">{{ st.name }}</div>{% endif %}</td>
+        <td>
+          {% if st.ai_outbound == 'block' %}<span class="pill" style="background:#B3362B">Blocked</span>
+          {% elif st.ai_outbound == 'counsel' %}<span class="pill" style="background:#B98A2B">Ask a lawyer</span>
+          {% else %}<span class="pill" style="background:#2E7D4F">Allowed</span>{% endif %}
+        </td>
+        <td class="muted">
+          {% if st.window_start or st.window_end %}{{ st.window_start or '—' }} to {{ st.window_end or '—' }}
+          {% else %}Use my hours{% endif %}
+          {% if st.no_sunday %}<div class="subtext">No Sunday calls</div>{% endif %}
+        </td>
+        <td class="muted">
+          {% if st.all_party_recording %}<b>Everyone must agree</b>{% else %}One person is enough{% endif %}
+        </td>
+        <td class="muted">{{ st.notes or '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</details>
+{% endif %}
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> The four rules in plain English</summary>
+  <div class="guide-body">
+    <h4>1. Recording</h4>
+    <p>Most states let you record a call if one person on it knows. Eleven states require everyone to know. The
+      announcement at the start covers you in all of them, costs you three seconds, and almost nobody hangs up
+      over it. If you are going to record at all, announce it.</p>
+
+    <h4>2. Disclosure</h4>
+    <p>If a machine is doing the talking, several states say the person has to be told in the first seconds of
+      the call. The sentence previewed above does that. It also makes the call go better: people who find out
+      halfway through get angry, and people told up front mostly carry on.</p>
+    <p><b>Read this twice:</b> disclosure and consent are different things. Telling someone they are speaking
+      with AI satisfies the disclosure laws. It does not give you permission to have called them. Permission
+      has to exist before you dial.</p>
+
+    <h4>3. Consent, and the cell phone line</h4>
+    <p>Calling a cell phone with an automated or AI voice needs written permission from that person,
+      beforehand. There is no version of this where you call cold cells with an AI and are fine. The penalty is
+      counted per call, and the people who sue over it do it professionally.</p>
+    <p>So the system checks what kind of line every number is before an AI dials it, and refuses the cells
+      unless there is a consent record on file. You can switch that check off; doing so is logged against your
+      name with the words you typed to justify it.</p>
+    <p>A human rep calling a cell phone is a different matter and is generally fine, subject to hours and
+      do-not-call lists.</p>
+
+    <h4>4. Hours and lists</h4>
+    <p>Eight in the morning to nine at night, in the time zone of the person you are calling. Several states
+      are tighter and some forbid Sundays. Keep your own do-not-call list, and honour it the first time
+      someone asks. The system adds anyone who asks to be left alone automatically, as soon as the transcript
+      is read.</p>
+
+    <h4>What this page does not do</h4>
+    <p>It is not legal advice and it does not make you compliant. It is a set of defaults, cautiously chosen,
+      and a log of what you changed. Before you point an AI at a cold list, pay a lawyer for an hour. One hour
+      costs less than one complaint.</p>
+  </div>
+</details>
+{% endblock %}

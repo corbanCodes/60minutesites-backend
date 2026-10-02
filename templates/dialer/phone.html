@@ -1,0 +1,402 @@
+{# DISPOSITIONS comes from dialer/models.py via the blueprint's context processor -- do not mirror it here #}
+{%- set pb_steps = (playbook.steps if playbook else []) or [] -%}
+{%- set pb_objections = (playbook.objections if playbook else []) or [] -%}
+{%- set max_call = (s.max_call_seconds if s else 600) or 600 -%}
+{%- set p_dials = (presence.dials_today if presence else 0) or 0 -%}
+{%- set p_conn = (presence.connects_today if presence else 0) or 0 -%}
+{%- set p_talk = (presence.talk_seconds_today if presence else 0) or 0 -%}
+{%- set CFG = {
+  'simulating': true if (ready and ready.simulating) else false,
+  'maxCallSeconds': max_call,
+  'dispositions': DISPOSITIONS,
+  'playbook': {'steps': pb_steps, 'objections': pb_objections},
+  'presence': {'dials': p_dials, 'connects': p_conn, 'talk': p_talk},
+  'available': true if (presence and presence.available_for_transfers) else false
+} -%}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phone | 60MS HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="/static-admin/admin.css">
+<link rel="stylesheet" href="/static-admin/dial.css">
+<link rel="icon" href="/favicon_io%20(4)/favicon-32x32.png" type="image/png">
+</head>
+<body class="ph-body">
+
+<header class="ph-head">
+  <div class="ph-head-top">
+    <span class="ph-brand"><span>60</span>MS Phone</span>
+    {% if ready and ready.simulating %}<span class="pill" style="background:#9A6B14">Practice</span>{% endif %}
+  </div>
+  <div class="ph-conn">
+    <span class="dl-dot" id="st-dot"></span>
+    <span id="st-conn">Connecting the phone…</span>
+  </div>
+  <div class="ph-strip">
+    <span><b id="st-dials">{{ p_dials }}</b> dials</span>
+    <span><b id="st-connects">{{ p_conn }}</b> connects</span>
+    <span class="dl-mono"><b id="st-talk">{{ p_talk // 60 }}m {{ p_talk % 60 }}s</b> talking</span>
+  </div>
+</header>
+
+<div id="dl-toasts" class="dl-toasts ph-toasts"></div>
+
+{% if ready and ready.blockers %}
+<div class="ph-block">
+  <i class="bi bi-exclamation-octagon-fill"></i>
+  <div>{{ ready.blockers[0].fix }}
+    <a href="/dialer/setup/{{ ready.blockers[0].step }}" target="_blank" rel="noopener">Open setup</a>
+  </div>
+</div>
+{% endif %}
+
+<main class="ph-main">
+
+  {# ------------------------------------------------------- current call #}
+  <section class="ph-card ph-call" id="ph-call">
+    <div id="ph-call-empty" class="ph-call-empty">
+      <div class="dl-timer dl-mono" id="dl-timer">0:00</div>
+      <p class="muted" id="dl-timer-sub">No call. Dial a number, or pull the next lead.</p>
+    </div>
+    <div id="ph-call-live" hidden>
+      <div class="dl-timer dl-mono" id="dl-timer-live">0:00</div>
+      <div class="ph-call-name" id="lead-name"></div>
+      <div class="ph-call-biz" id="lead-biz"></div>
+      <div class="ph-call-phone dl-mono" id="lead-phone"></div>
+      <a class="ph-call-link" id="lead-link" href="#" target="_blank" rel="noopener">Open the CRM record <i class="bi bi-box-arrow-up-right"></i></a>
+    </div>
+    <div class="dl-countdown" id="dl-countdown" hidden>
+      <span id="dl-countdown-text">Next lead in 3…</span>
+      <button class="dl-countdown-cancel" type="button" onclick="HQPhone.cancelAutoAdvance()">Cancel</button>
+    </div>
+  </section>
+
+  {# -------------------------------------------------------- the dialpad #}
+  <section class="ph-card">
+    <input class="ph-number dl-mono" id="ph-number" type="tel" inputmode="tel"
+           placeholder="+1 555 010 0000" autocomplete="off" aria-label="Number to call">
+    <div class="keypad ph-keypad">
+      {% for k in ['1','2','3','4','5','6','7','8','9','*','0','#'] %}
+      <button class="key" type="button" data-pad="{{ k }}">{{ k }}</button>
+      {% endfor %}
+    </div>
+    <div class="ph-dial-row">
+      <button class="dl-big-btn call" id="ph-call-btn" type="button"><i class="bi bi-telephone-fill"></i> Call</button>
+      <button class="chip-btn" id="ph-number-clear" type="button">Clear</button>
+    </div>
+    {% if campaigns %}
+    <div class="ph-next-row">
+      <select id="dl-campaign" class="dl-select sm">
+        <option value="">Pick a campaign</option>
+        {% for c in campaigns %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+      <button class="chip-btn" id="ph-next" type="button">Next lead</button>
+    </div>
+    {% endif %}
+  </section>
+
+  {# --------------------------------------------------------- dispositions #}
+  <section class="ph-card">
+    <div class="dl-sec-label">Outcome <span class="dl-sec-note">press the number</span></div>
+    <div class="disp-grid compact" id="disp-grid">
+      {% for d in DISPOSITIONS %}
+      <button class="disp-btn" type="button" data-disp="{{ d[0] }}" disabled>
+        <span class="disp-key">{{ d[3] }}</span>
+        <i class="bi {{ d[2] }} disp-ico"></i>
+        <span class="disp-label">{{ d[1] }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    <textarea class="dl-notes compact" id="dl-notes" rows="3" placeholder="Notes — saved on their own."></textarea>
+    <div class="dl-sec-note" id="notes-state">saved automatically</div>
+    <div class="ph-actions">
+      <button class="dl-big-btn vm" id="dl-vm" type="button" disabled><i class="bi bi-voicemail"></i> Voicemail</button>
+      <button class="dl-big-btn hang" id="dl-hangup" type="button" disabled><i class="bi bi-telephone-x-fill"></i> Hang up</button>
+    </div>
+  </section>
+
+  {# ----------------------------------------------------------- DTMF pad #}
+  <details class="ph-card dl-keypad-wrap">
+    <summary><i class="bi bi-grid-3x3-gap"></i> Send tones</summary>
+    <div class="dl-keypad-display dl-mono" id="dl-digits" aria-live="polite">—</div>
+    <div class="keypad">
+      {% for k in ['1','2','3','4','5','6','7','8','9','*','0','#'] %}
+      <button class="key" type="button" data-digit="{{ k }}">{{ k }}</button>
+      {% endfor %}
+    </div>
+    <button class="dl-keypad-clear" type="button" id="dl-digits-clear">Clear what is shown</button>
+  </details>
+
+  {# ---------------------------------------------------- search + recents #}
+  <section class="ph-card">
+    <div class="dl-sec-label">Recent in this window</div>
+    <input class="ph-search" id="ph-search" type="search" placeholder="Search a name or number…" autocomplete="off" aria-label="Search leads">
+    <a class="ph-crm-link" id="ph-crm-link" href="/admin/crm" target="_blank" rel="noopener">Search the whole CRM <i class="bi bi-box-arrow-up-right"></i></a>
+    <div class="ph-recent" id="ph-recent">
+      {% for c in recent or [] %}
+      <a class="ph-recent-row" href="/dialer/calls/{{ c.id }}" target="_blank" rel="noopener"
+         data-hay="{{ c.to_number }}">
+        <span class="dl-mono">{{ c.to_number }}</span>
+        <span class="muted">{{ c.duration_pretty }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    <p class="muted ph-recent-empty" id="ph-recent-empty">Calls you make from this window are listed here.</p>
+  </section>
+
+  {# --------------------------------------------------------- the playbook #}
+  {% if pb_steps or pb_objections %}
+  <details class="ph-card ph-rail">
+    <summary><i class="bi bi-journal-text"></i> Script &amp; objections</summary>
+    {% if pb_steps %}
+    <div class="pb-stepcount" id="pb-count">Step 1 of {{ pb_steps | length }}</div>
+    <div class="pb-title" id="pb-title"></div>
+    <p class="pb-say" id="pb-say"></p>
+    <div class="pb-nav">
+      <button class="btn ghost sm" type="button" id="pb-prev"><i class="bi bi-chevron-left"></i></button>
+      <button class="btn sm" type="button" id="pb-next">Next <i class="bi bi-chevron-right"></i></button>
+    </div>
+    {% endif %}
+    {% if pb_objections %}
+    <input class="pb-search" id="pb-search" type="search" placeholder="What did they say?" autocomplete="off">
+    <div class="pb-objs" id="pb-objs">
+      {% for o in pb_objections %}
+      <details class="pb-obj" data-hay="{{ ((o.trigger_phrases or []) | join(' ')) ~ ' ' ~ (o.response or '') }}">
+        <summary>{{ (o.trigger_phrases or ['Objection'])[0] }}</summary>
+        <p class="pb-obj-answer">{{ o.response }}</p>
+      </details>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </details>
+  {% endif %}
+
+  {# ---------------------------------------------------------- transfers #}
+  <section class="ph-card ph-avail">
+    <label class="ph-toggle">
+      <input type="checkbox" id="ph-available" {{ 'checked' if presence and presence.available_for_transfers }}>
+      <span>Available for transfers</span>
+    </label>
+    <p class="muted">While this is on, the AI can hand a hot lead straight to you.</p>
+  </section>
+
+  <p class="ph-foot">Keep this window open and the call survives anything you do in HQ.<br>
+    <b>1–9</b> outcome · <b>V</b> voicemail · <b>Space</b> next lead · <b>Esc</b> cancel</p>
+</main>
+
+<script type="application/json" id="hq-config">{{ CFG | tojson }}</script>
+<script src="/static-admin/softphone.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var CFG = {};
+  try { CFG = JSON.parse(document.getElementById('hq-config').textContent || '{}'); } catch (e) { CFG = {}; }
+  var PB = CFG.playbook || {};
+  var $ = function (id) { return document.getElementById(id); };
+
+  function toast(m) {
+    var box = $('dl-toasts');
+    var el = document.createElement('div');
+    el.className = 'flash' + (m.level === 'error' ? ' flash-error' : (m.level === 'warn' ? ' flash-sticky' : ''));
+    el.innerHTML = '<i class="bi ' + (m.level === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle') + '"></i><span></span>';
+    el.querySelector('span').textContent = m.text;
+    box.appendChild(el);
+    if (m.level !== 'error') setTimeout(function () { el.remove(); }, 6000);
+  }
+
+  var CONN = {
+    offline: ['Phone not started', '#8A7E72'],
+    connecting: ['Connecting the phone…', '#9A6B14'],
+    idle: ['Ready', '#2E7D4F'],
+    dialing: ['Dialing…', '#9A6B14'],
+    live: ['On a call', '#2E7D4F'],
+    wrapup: ['Wrapping up', '#1E6F8E'],
+    error: ['Needs attention', '#B3362B']
+  };
+
+  function render(st) {
+    var c = CONN[st.status] || CONN.offline;
+    $('st-conn').textContent = st.error || c[0];
+    $('st-dot').style.background = st.error ? '#B3362B' : c[1];
+    $('st-dials').textContent = st.dials;
+    $('st-connects').textContent = st.connects;
+    $('st-talk').textContent = Math.floor(st.talk / 60) + 'm ' + (st.talk % 60) + 's';
+
+    var busy = st.status === 'live' || st.status === 'dialing';
+    var haveCall = !!(st.callId || st.lastCallId);
+    $('dl-hangup').disabled = !busy;
+    $('dl-vm').disabled = !st.callId;
+    $('ph-call-btn').disabled = busy;
+    document.querySelectorAll('#disp-grid .disp-btn').forEach(function (b) { b.disabled = !haveCall; });
+    $('dl-digits').textContent = st.digits || '—';
+    document.body.classList.toggle('is-live', st.status === 'live');
+
+    if (st.lead) {
+      $('ph-call-empty').hidden = true;
+      $('ph-call-live').hidden = false;
+      $('lead-name').textContent = st.lead.name || '';
+      $('lead-biz').textContent = [st.lead.business, st.lead.business_type].filter(Boolean).join(' · ');
+      $('lead-phone').textContent = st.lead.phone || st.to || '';
+      $('lead-link').href = st.lead.url || '#';
+    } else if (!busy) {
+      $('ph-call-empty').hidden = false;
+      $('ph-call-live').hidden = true;
+    }
+  }
+
+  function setTimerText(v) {
+    $('dl-timer').textContent = v;
+    $('dl-timer-live').textContent = v;
+  }
+
+  HQPhone.on('state', render);
+  HQPhone.on('message', toast);
+  HQPhone.on('mic', function (m) { toast({ level: 'error', text: m.message }); });
+
+  HQPhone.on('tick', function (t) {
+    setTimerText(HQPhone.fmt(t.seconds));
+    $('dl-timer-live').classList.toggle('over', !!t.over);
+  });
+
+  HQPhone.on('countdown', function (n) {
+    $('dl-countdown').hidden = n <= 0;
+    if (n > 0) $('dl-countdown-text').textContent = 'Next lead in ' + n + '…';
+  });
+
+  HQPhone.on('lead', function (lead) { if (lead) addRecent(lead); });
+
+  HQPhone.on('logged', function () {
+    $('dl-notes').value = '';
+    setTimerText('0:00');
+    $('dl-timer-live').classList.remove('over');
+  });
+
+  HQPhone.on('notes-saved', function (r) {
+    $('notes-state').textContent = r.ok ? 'saved' : 'not saved — check your connection';
+  });
+
+  HQPhone.init({
+    simulating: !!CFG.simulating,
+    isPhone: true,                       // this window obeys dial commands
+    dispositions: CFG.dispositions || [],
+    maxCallSeconds: CFG.maxCallSeconds,
+    available: !!CFG.available,
+    dials: (CFG.presence || {}).dials || 0,
+    connects: (CFG.presence || {}).connects || 0,
+    talk: (CFG.presence || {}).talk || 0
+  });
+
+  // ------------------------------------------------------------- dialpad
+  var num = $('ph-number');
+  document.querySelectorAll('.ph-keypad .key').forEach(function (k) {
+    k.addEventListener('click', function () { num.value += k.dataset.pad; num.focus(); });
+  });
+  $('ph-number-clear').addEventListener('click', function () { num.value = ''; num.focus(); });
+  $('ph-call-btn').addEventListener('click', function () { HQPhone.dialManual(num.value); });
+  num.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); HQPhone.dialManual(num.value); }
+  });
+
+  var campSel = $('dl-campaign');
+  if (campSel) {
+    campSel.addEventListener('change', function () {
+      HQPhone.setCampaign(this.value ? parseInt(this.value, 10) : null);
+    });
+    $('ph-next').addEventListener('click', function () {
+      HQPhone.dialNext(campSel.value ? parseInt(campSel.value, 10) : null);
+    });
+  }
+
+  // -------------------------------------------------------------- actions
+  document.querySelectorAll('#disp-grid .disp-btn').forEach(function (b) {
+    b.addEventListener('click', function () { HQPhone.disposition(b.dataset.disp); });
+  });
+  $('dl-vm').addEventListener('click', function () { HQPhone.dropVoicemail(); });
+  $('dl-hangup').addEventListener('click', function () { HQPhone.hangup(); });
+  $('dl-notes').addEventListener('input', function () {
+    $('notes-state').textContent = 'saving…';
+    HQPhone.setNotes(this.value);
+  });
+  document.querySelectorAll('.dl-keypad-wrap .key').forEach(function (k) {
+    k.addEventListener('click', function () { HQPhone.sendDigit(k.dataset.digit); });
+  });
+  $('dl-digits-clear').addEventListener('click', function () { HQPhone.clearDigits(); });
+  $('ph-available').addEventListener('change', function () { HQPhone.setAvailable(this.checked); });
+
+  // ------------------------------------------------------ recents + search
+  function addRecent(lead) {
+    var box = $('ph-recent');
+    var a = document.createElement('a');
+    a.className = 'ph-recent-row';
+    a.href = lead.url || '#';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.dataset.hay = (lead.name || '') + ' ' + (lead.business || '') + ' ' + (lead.phone || '');
+    a.innerHTML = '<span></span><span class="dl-mono muted"></span>';
+    a.children[0].textContent = lead.name || lead.phone || 'Lead';
+    a.children[1].textContent = lead.phone || '';
+    box.prepend(a);
+    while (box.children.length > 12) box.removeChild(box.lastChild);
+    $('ph-recent-empty').hidden = true;
+  }
+  $('ph-recent-empty').hidden = $('ph-recent').children.length > 0;
+
+  $('ph-search').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    $('ph-crm-link').href = '/admin/crm' + (q ? '?q=' + encodeURIComponent(q) : '');
+    Array.prototype.forEach.call($('ph-recent').children, function (r) {
+      r.hidden = !!q && (r.dataset.hay || '').toLowerCase().indexOf(q) === -1;
+    });
+  });
+
+  // --------------------------------------------------------- script steps
+  var steps = PB.steps || [];
+  var stepIdx = 0;
+  function showStep() {
+    if (!steps.length) return;
+    stepIdx = Math.max(0, Math.min(stepIdx, steps.length - 1));
+    var s = steps[stepIdx] || {};
+    $('pb-count').textContent = 'Step ' + (stepIdx + 1) + ' of ' + steps.length;
+    $('pb-title').textContent = s.title || '';
+    $('pb-say').textContent = s.say || '';
+    $('pb-prev').disabled = stepIdx === 0;
+    $('pb-next').disabled = stepIdx >= steps.length - 1;
+  }
+  if (steps.length) {
+    $('pb-next').addEventListener('click', function () { stepIdx += 1; showStep(); });
+    $('pb-prev').addEventListener('click', function () { stepIdx -= 1; showStep(); });
+    showStep();
+  }
+
+  var pbSearch = $('pb-search');
+  if (pbSearch) {
+    var objs = Array.prototype.slice.call(document.querySelectorAll('#pb-objs .pb-obj'));
+    pbSearch.addEventListener('input', function () {
+      var q = this.value.trim().toLowerCase();
+      objs.forEach(function (o) { o.hidden = !!q && (o.dataset.hay || '').toLowerCase().indexOf(q) === -1; });
+    });
+    pbSearch.addEventListener('keydown', function (e) {
+      if (e.key < '1' || e.key > '9') return;
+      var t = objs.filter(function (o) { return !o.hidden; })[parseInt(e.key, 10) - 1];
+      if (!t) return;
+      e.preventDefault();
+      objs.forEach(function (o) { o.open = false; });
+      t.open = true;
+    });
+  }
+
+  // A live call must not vanish because someone clicked the window's X.
+  window.addEventListener('beforeunload', function (e) {
+    var st = HQPhone.state();
+    if (st.status === 'live' || st.status === 'dialing') {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+});
+</script>
+</body>
+</html>

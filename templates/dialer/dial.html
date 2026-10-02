@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Live session | Calling | 60MS HQ{% endblock %}
+
+{# Mirrors dialer/models.py DISPOSITIONS: key, label, icon, hotkey.
+   If a view ever passes DISPOSITIONS into the context, that wins. #}
+{# DISPOSITIONS comes from dialer/models.py via the blueprint's context processor -- do not mirror it here #}
+{% set pb_steps = (playbook.steps if playbook else []) or [] %}
+{% set pb_questions = (playbook.questions if playbook else []) or [] %}
+{% set pb_objections = (playbook.objections if playbook else []) or [] %}
+{% set max_call = (s.max_call_seconds if s else 600) or 600 %}
+{% set p_dials = (presence.dials_today if presence else 0) or 0 %}
+{% set p_conn = (presence.connects_today if presence else 0) or 0 %}
+{% set p_talk = (presence.talk_seconds_today if presence else 0) or 0 %}
+{% set CFG = {
+  'simulating': true if (ready and ready.simulating) else false,
+  'maxCallSeconds': max_call,
+  'campaignId': campaign.id if campaign else none,
+  'dispositions': DISPOSITIONS,
+  'playbook': {'name': (playbook.name if playbook else ''),
+               'steps': pb_steps, 'questions': pb_questions,
+               'objections': pb_objections},
+  'presence': {'dials': p_dials, 'connects': p_conn, 'talk': p_talk}
+} %}
+
+{% block content %}
+<link rel="stylesheet" href="/static-admin/dial.css">
+
+<div class="topbar">
+  <h1>Live session</h1>
+  <div class="topbar-actions">
+    {% if ready and ready.simulating %}<span class="pill" style="background:#9A6B14">Practice mode</span>{% endif %}
+    <button class="btn ghost sm" type="button" onclick="HQPhone.popOut()"><i class="bi bi-box-arrow-up-right"></i> Pop the phone out</button>
+    <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Back to Calling</a>
+  </div>
+</div>
+
+{% if ready and ready.blockers %}
+<div class="alert-list" style="margin-bottom:16px">
+  {% for b in ready.blockers %}
+  <a class="alert-card critical" href="/dialer/setup/{{ b.step }}">
+    <i class="bi bi-exclamation-octagon-fill"></i>
+    <div>
+      <div class="alert-title">{{ b.feature }}{% if b.needs %} needs {{ b.needs }}{% endif %}</div>
+      <div class="alert-body">{{ b.fix }}</div>
+    </div>
+    <span class="alert-cta">Fix this <i class="bi bi-chevron-right"></i></span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ------------------------------------------------------------ top strip #}
+<div class="dl-strip">
+  <div class="dl-strip-item"><span class="dl-strip-num" id="st-dials">{{ p_dials }}</span><span class="dl-strip-label">Dials</span></div>
+  <div class="dl-strip-item"><span class="dl-strip-num" id="st-connects">{{ p_conn }}</span><span class="dl-strip-label">Connects</span></div>
+  <div class="dl-strip-item"><span class="dl-strip-num dl-mono" id="st-talk">{{ p_talk // 60 }}m {{ p_talk % 60 }}s</span><span class="dl-strip-label">Talk time</span></div>
+  <div class="dl-strip-conn">
+    <span class="dl-dot" id="st-dot"></span>
+    <span id="st-conn">Connecting the phone…</span>
+  </div>
+</div>
+
+<div id="dl-toasts" class="dl-toasts"></div>
+
+<div class="dl-grid">
+
+  {# ------------------------------------------------------------- LEFT #}
+  <section class="dl-col dl-left">
+    <div class="dl-card" id="lead-card">
+      <div class="dl-card-head"><i class="bi bi-person-vcard"></i> Who you are calling</div>
+
+      <div id="lead-empty" class="dl-empty">
+        <i class="bi bi-person-dash"></i>
+        <p class="muted">No lead yet. Start the session and the first name from the queue lands here before it rings.</p>
+      </div>
+
+      <div id="lead-body" hidden>
+        <div class="lead-name" id="lead-name"></div>
+        <div class="lead-biz" id="lead-biz"></div>
+        <div class="lead-pills" id="lead-pills"></div>
+        <div class="lead-facts">
+          <div class="lead-fact"><span class="lead-fact-k">Phone</span><span class="lead-fact-v dl-mono" id="lead-phone"></span></div>
+          <div class="lead-fact"><span class="lead-fact-k">Type</span><span class="lead-fact-v" id="lead-type"></span></div>
+          <div class="lead-fact"><span class="lead-fact-k">Calls so far</span><span class="lead-fact-v" id="lead-calls"></span></div>
+          <div class="lead-fact"><span class="lead-fact-k">State</span><span class="lead-fact-v" id="lead-state"></span></div>
+        </div>
+        <div class="lead-tags" id="lead-tags"></div>
+        <a class="btn ghost sm" id="lead-link" href="#" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Full CRM record</a>
+
+        <div class="lead-sec">
+          <div class="lead-sec-head">Recent notes</div>
+          <div id="lead-notes"><p class="muted">Nothing written down yet.</p></div>
+        </div>
+
+        <div class="lead-sec">
+          <div class="lead-sec-head">Open tasks</div>
+          <div id="lead-tasks"><p class="muted">No open tasks.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# ----------------------------------------------------------- CENTRE #}
+  <section class="dl-col dl-centre">
+
+    <div class="dl-centre-top">
+      <label class="dl-field">
+        <span class="dl-field-label">Campaign</span>
+        <select id="dl-campaign" class="dl-select">
+          <option value="">No campaign — manual dialing</option>
+          {% for c in campaigns or [] %}
+          <option value="{{ c.id }}" {{ 'selected' if campaign and c.id == campaign.id }}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% if not campaigns %}
+      <p class="dl-hint">No power-dial campaign is running. <a href="/dialer/campaigns/new">Build one</a> and the queue feeds this screen.</p>
+      {% endif %}
+    </div>
+
+    <button class="dl-session" id="dl-session" type="button">
+      <i class="bi bi-play-circle-fill"></i> <span id="dl-session-text">Start session</span>
+    </button>
+
+    <div class="dl-timer-wrap">
+      <div class="dl-timer dl-mono" id="dl-timer">0:00</div>
+      <div class="dl-timer-sub" id="dl-timer-sub">Idle</div>
+    </div>
+
+    <div class="dl-countdown" id="dl-countdown" hidden>
+      <span id="dl-countdown-text">Next lead in 3…</span>
+      <button class="dl-countdown-cancel" type="button" onclick="HQPhone.cancelAutoAdvance()">Cancel (Esc)</button>
+    </div>
+
+    <div class="dl-sec-label">Outcome <span class="dl-sec-note">press the number</span></div>
+    <div class="disp-grid" id="disp-grid">
+      {% for d in DISPOSITIONS %}
+      <button class="disp-btn" type="button" data-disp="{{ d[0] }}" disabled>
+        <span class="disp-key">{{ d[3] }}</span>
+        <i class="bi {{ d[2] }} disp-ico"></i>
+        <span class="disp-label">{{ d[1] }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="dl-sec-label">Notes <span class="dl-sec-note" id="notes-state">saved automatically</span></div>
+    <textarea class="dl-notes" id="dl-notes" rows="4" placeholder="What they said, in their words. This saves on its own and lands on the call record."></textarea>
+
+    <div class="dl-centre-actions">
+      <button class="dl-big-btn vm" id="dl-vm" type="button" disabled>
+        <i class="bi bi-voicemail"></i> Drop voicemail <span class="dl-key-badge">V</span>
+      </button>
+      <button class="dl-big-btn hang" id="dl-hangup" type="button" disabled>
+        <i class="bi bi-telephone-x-fill"></i> Hang up
+      </button>
+    </div>
+
+    <details class="dl-keypad-wrap">
+      <summary><i class="bi bi-grid-3x3-gap"></i> Keypad <span class="dl-sec-note">for "press 0 for the operator"</span></summary>
+      <div class="dl-keypad-display dl-mono" id="dl-digits" aria-live="polite">—</div>
+      <div class="keypad">
+        {% for k in ['1','2','3','4','5','6','7','8','9','*','0','#'] %}
+        <button class="key" type="button" data-digit="{{ k }}">{{ k }}</button>
+        {% endfor %}
+      </div>
+      <button class="dl-keypad-clear" type="button" id="dl-digits-clear">Clear what is shown</button>
+    </details>
+
+    <p class="dl-shortcuts">
+      <b>1–9</b> set the outcome · <b>V</b> drops voicemail · <b>Space</b> dials the next lead · <b>Esc</b> stops the countdown
+    </p>
+  </section>
+
+  {# ------------------------------------------------------------ RIGHT #}
+  <aside class="dl-col dl-right">
+
+    <div class="dl-card">
+      <div class="dl-card-head"><i class="bi bi-journal-text"></i> Script{% if playbook %} <span class="dl-card-sub">{{ playbook.name }}</span>{% endif %}</div>
+      {% if pb_steps %}
+      <div class="pb-stepcount" id="pb-count">Step 1 of {{ pb_steps | length }}</div>
+      <div class="pb-title" id="pb-title"></div>
+      <p class="pb-say" id="pb-say"></p>
+      <p class="pb-goal" id="pb-goal"></p>
+      <div class="pb-nav">
+        <button class="btn ghost sm" type="button" id="pb-prev"><i class="bi bi-chevron-left"></i> Back</button>
+        <button class="btn sm" type="button" id="pb-next">Next <i class="bi bi-chevron-right"></i></button>
+      </div>
+      {% else %}
+      <div class="dl-empty">
+        <i class="bi bi-journal"></i>
+        <p class="muted">No playbook yet, so there is no rail to read from.</p>
+        <p style="margin-top:10px"><a class="btn sm" href="/dialer/setup/9">Write your script</a></p>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if pb_questions %}
+    <div class="dl-card">
+      <div class="dl-card-head"><i class="bi bi-check2-square"></i> Qualify</div>
+      <div class="pb-qs" id="pb-qs">
+        {% for q in pb_questions %}
+        <label class="pb-q">
+          <input type="checkbox" data-key="{{ q.collect_as or ('q' ~ loop.index0) }}">
+          <span>{{ q.question }}{% if q.disqualify_if %}<em class="pb-q-dq">Disqualify if {{ q.disqualify_if }}</em>{% endif %}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if pb_objections %}
+    <div class="dl-card">
+      <div class="dl-card-head"><i class="bi bi-chat-left-quote"></i> Objections</div>
+      <input class="pb-search" id="pb-search" type="search" placeholder="Type what they said…" autocomplete="off">
+      <p class="dl-hint">With this box focused, press a number to open that answer.</p>
+      <div class="pb-objs" id="pb-objs">
+        {% for o in pb_objections %}
+        <details class="pb-obj" data-n="{{ loop.index }}"
+                 data-hay="{{ ((o.trigger_phrases or []) | join(' ')) ~ ' ' ~ (o.response or '') }}">
+          <summary>
+            {% if loop.index < 10 %}<span class="pb-obj-key">{{ loop.index }}</span>{% endif %}
+            {{ (o.trigger_phrases or ['Objection'])[0] }}
+          </summary>
+          <p class="pb-obj-answer">{{ o.response }}</p>
+          {% if (o.trigger_phrases or []) | length > 1 %}
+          <p class="pb-obj-also">Also: {{ (o.trigger_phrases[1:]) | join(' · ') }}</p>
+          {% endif %}
+        </details>
+        {% endfor %}
+      </div>
+      <p class="pb-noresults muted" id="pb-noresults" hidden>Nothing in the playbook matches that yet.</p>
+    </div>
+    {% endif %}
+
+    <div class="dl-card">
+      <div class="dl-card-head"><i class="bi bi-broadcast"></i> Live coaching</div>
+      <div id="dl-coach" class="coach-list">
+        <p class="muted">Suggestions appear here while a call is running.</p>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<script type="application/json" id="hq-config">{{ CFG | tojson }}</script>
+<script src="/static-admin/softphone.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var CFG = {};
+  try { CFG = JSON.parse(document.getElementById('hq-config').textContent || '{}'); } catch (e) { CFG = {}; }
+  var PB = CFG.playbook || {};
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------------------------------------------------------------- toasts
+  function toast(m) {
+    var box = $('dl-toasts');
+    if (!box) return;
+    var el = document.createElement('div');
+    el.className = 'flash' + (m.level === 'error' ? ' flash-error' : (m.level === 'warn' ? ' flash-sticky' : ''));
+    el.innerHTML = '<i class="bi ' + (m.level === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle') + '"></i><span></span>';
+    el.querySelector('span').textContent = m.text;
+    box.appendChild(el);
+    if (m.level !== 'error') setTimeout(function () { el.remove(); }, 7000);
+  }
+
+  // ------------------------------------------------------------ lead card
+  function text(id, v) { var el = $(id); if (el) el.textContent = v || '—'; }
+
+  function fillLead(lead) {
+    if (!lead) { $('lead-body').hidden = true; $('lead-empty').hidden = false; return; }
+    $('lead-empty').hidden = true;
+    $('lead-body').hidden = false;
+    text('lead-name', lead.name);
+    text('lead-biz', [lead.business, lead.business_type].filter(Boolean).join(' · '));
+    text('lead-phone', lead.phone);
+    text('lead-type', (lead.line_type || 'unchecked').replace(/([A-Z])/g, ' $1'));
+    text('lead-calls', String(lead.call_count || 0));
+    text('lead-state', lead.state || '—');
+    $('lead-link').href = lead.url || '#';
+
+    var pills = $('lead-pills');
+    pills.innerHTML = '';
+    if (lead.status) pills.appendChild(pill(lead.status, '#1E6F8E'));
+    if (lead.line_type) pills.appendChild(pill(lead.line_type, lead.line_type === 'landline' ? '#2E7D4F' : '#9A6B14'));
+
+    var tags = $('lead-tags');
+    tags.innerHTML = '';
+    (lead.tags || []).forEach(function (t) {
+      var s = document.createElement('span');
+      s.className = 'lead-tag';
+      s.textContent = t;
+      tags.appendChild(s);
+    });
+
+    var notes = $('lead-notes');
+    notes.innerHTML = '';
+    if (!(lead.notes || []).length) notes.innerHTML = '<p class="muted">Nothing written down yet.</p>';
+    (lead.notes || []).forEach(function (n) {
+      var d = document.createElement('div');
+      d.className = 'note';
+      d.textContent = n.body;
+      notes.appendChild(d);
+    });
+
+    var tasks = $('lead-tasks');
+    tasks.innerHTML = '';
+    if (!(lead.tasks || []).length) tasks.innerHTML = '<p class="muted">No open tasks.</p>';
+    (lead.tasks || []).forEach(function (t) {
+      var d = document.createElement('div');
+      d.className = 'lead-task';
+      d.innerHTML = '<i class="bi bi-check2-square"></i><span></span>';
+      d.querySelector('span').textContent = t.title + (t.due ? ' — due ' + t.due.slice(0, 10) : '');
+      tasks.appendChild(d);
+    });
+  }
+
+  function pill(label, colour) {
+    var s = document.createElement('span');
+    s.className = 'pill';
+    s.style.background = colour;
+    s.textContent = label;
+    return s;
+  }
+
+  // ------------------------------------------------------------- rendering
+  var CONN = {
+    offline: ['Phone not started', '#8A7E72'],
+    connecting: ['Connecting the phone…', '#9A6B14'],
+    idle: ['Ready', '#2E7D4F'],
+    dialing: ['Dialing…', '#9A6B14'],
+    live: ['On a call', '#2E7D4F'],
+    wrapup: ['Wrapping up', '#1E6F8E'],
+    error: ['Needs attention', '#B3362B']
+  };
+
+  function render(st) {
+    var c = CONN[st.status] || CONN.offline;
+    $('st-conn').textContent = st.error || c[0];
+    $('st-dot').style.background = st.error ? '#B3362B' : c[1];
+    $('st-dials').textContent = st.dials;
+    $('st-connects').textContent = st.connects;
+    $('st-talk').textContent = Math.floor(st.talk / 60) + 'm ' + (st.talk % 60) + 's';
+
+    var live = st.status === 'live';
+    var haveCall = !!(st.callId || st.lastCallId);
+    $('dl-hangup').disabled = !(live || st.status === 'dialing');
+    $('dl-vm').disabled = !st.callId;
+    document.querySelectorAll('#disp-grid .disp-btn').forEach(function (b) { b.disabled = !haveCall; });
+
+    $('dl-session-text').textContent = st.sessionOn ? 'Stop session' : 'Start session';
+    $('dl-session').classList.toggle('on', !!st.sessionOn);
+    $('dl-session').querySelector('i').className = st.sessionOn ? 'bi bi-stop-circle-fill' : 'bi bi-play-circle-fill';
+
+    $('dl-timer-sub').textContent = live ? 'On the call' : (st.status === 'dialing' ? 'Ringing' : 'Idle');
+    $('dl-digits').textContent = st.digits || '—';
+    document.querySelector('.dl-centre').classList.toggle('is-live', live);
+
+    if (!st.lead) fillLead(null);
+  }
+
+  // ----------------------------------------------------------------- boot
+  HQPhone.on('state', render);
+  HQPhone.on('message', toast);
+  HQPhone.on('lead', fillLead);
+  HQPhone.on('mic', function (m) { toast({ level: 'error', text: m.message }); });
+
+  HQPhone.on('tick', function (t) {
+    var el = $('dl-timer');
+    el.textContent = HQPhone.fmt(t.seconds);
+    el.classList.toggle('over', !!t.over);
+    if (t.over) $('dl-timer-sub').textContent = 'Past your ' + Math.round((CFG.maxCallSeconds || 600) / 60) + '-minute cap';
+  });
+
+  HQPhone.on('ended', function () { $('dl-timer').classList.remove('over'); });
+
+  HQPhone.on('countdown', function (n) {
+    var box = $('dl-countdown');
+    box.hidden = n <= 0;
+    if (n > 0) $('dl-countdown-text').textContent = 'Next lead in ' + n + '…';
+  });
+
+  HQPhone.on('logged', function () {
+    $('dl-notes').value = '';
+    $('dl-timer').textContent = '0:00';
+    document.querySelectorAll('#pb-qs input').forEach(function (i) { i.checked = false; });
+    pushQualification();
+    stepIdx = 0;
+    showStep();
+  });
+
+  HQPhone.on('coach', function (t) {
+    var box = $('dl-coach');
+    if (box.querySelector('.muted')) box.innerHTML = '';
+    var d = document.createElement('div');
+    d.className = 'coach-tick ' + (t.kind || 'suggestion');
+    d.innerHTML = '<span class="coach-kind"></span><span class="coach-body"></span>';
+    d.querySelector('.coach-kind').textContent = t.objection || t.step || t.kind || 'Suggestion';
+    d.querySelector('.coach-body').textContent = t.body || '';
+    box.prepend(d);
+  });
+
+  HQPhone.on('notes-saved', function (r) {
+    $('notes-state').textContent = r.ok ? 'saved' : 'not saved — check your connection';
+  });
+
+  HQPhone.init({
+    simulating: !!CFG.simulating,
+    isPhone: false,
+    campaignId: CFG.campaignId,
+    dispositions: CFG.dispositions || [],
+    maxCallSeconds: CFG.maxCallSeconds,
+    dials: (CFG.presence || {}).dials || 0,
+    connects: (CFG.presence || {}).connects || 0,
+    talk: (CFG.presence || {}).talk || 0
+  });
+
+  // ------------------------------------------------------------- controls
+  $('dl-campaign').addEventListener('change', function () {
+    HQPhone.setCampaign(this.value ? parseInt(this.value, 10) : null);
+  });
+
+  $('dl-session').addEventListener('click', function () {
+    var st = HQPhone.state();
+    if (st.sessionOn) { HQPhone.stopSession(); return; }
+    var sel = $('dl-campaign').value;
+    HQPhone.startSession(sel ? parseInt(sel, 10) : null);
+  });
+
+  document.querySelectorAll('#disp-grid .disp-btn').forEach(function (b) {
+    b.addEventListener('click', function () { HQPhone.disposition(b.dataset.disp); });
+  });
+
+  $('dl-vm').addEventListener('click', function () { HQPhone.dropVoicemail(); });
+  $('dl-hangup').addEventListener('click', function () { HQPhone.hangup(); });
+
+  $('dl-notes').addEventListener('input', function () {
+    $('notes-state').textContent = 'saving…';
+    HQPhone.setNotes(this.value);
+  });
+
+  document.querySelectorAll('.keypad .key').forEach(function (k) {
+    k.addEventListener('click', function () { HQPhone.sendDigit(k.dataset.digit); });
+  });
+  $('dl-digits-clear').addEventListener('click', function () { HQPhone.clearDigits(); });
+
+  // --------------------------------------------------------- script steps
+  var steps = PB.steps || [];
+  var stepIdx = 0;
+
+  function showStep() {
+    if (!steps.length) return;
+    stepIdx = Math.max(0, Math.min(stepIdx, steps.length - 1));
+    var s = steps[stepIdx] || {};
+    $('pb-count').textContent = 'Step ' + (stepIdx + 1) + ' of ' + steps.length;
+    $('pb-title').textContent = s.title || '';
+    $('pb-say').textContent = s.say || '';
+    $('pb-goal').textContent = s.goal ? 'Goal: ' + s.goal : '';
+    $('pb-prev').disabled = stepIdx === 0;
+    $('pb-next').disabled = stepIdx >= steps.length - 1;
+  }
+
+  if (steps.length) {
+    $('pb-next').addEventListener('click', function () { stepIdx += 1; showStep(); });
+    $('pb-prev').addEventListener('click', function () { stepIdx -= 1; showStep(); });
+    showStep();
+  }
+
+  // ------------------------------------------------------- qualification
+  function pushQualification() {
+    var out = {};
+    document.querySelectorAll('#pb-qs input').forEach(function (i) { out[i.dataset.key] = i.checked; });
+    HQPhone.setQualification(out);
+  }
+  document.querySelectorAll('#pb-qs input').forEach(function (i) {
+    i.addEventListener('change', pushQualification);
+  });
+
+  // ----------------------------------------------------------- objections
+  var search = $('pb-search');
+  if (search) {
+    var objs = Array.prototype.slice.call(document.querySelectorAll('#pb-objs .pb-obj'));
+    search.addEventListener('input', function () {
+      var q = this.value.trim().toLowerCase();
+      var shown = 0;
+      objs.forEach(function (o) {
+        var hit = !q || (o.dataset.hay || '').toLowerCase().indexOf(q) > -1;
+        o.hidden = !hit;
+        if (hit) shown += 1;
+      });
+      $('pb-noresults').hidden = shown > 0;
+    });
+    // Number hotkeys live inside the search box, so they never fight the
+    // disposition shortcuts that own 1-9 everywhere else on the page.
+    search.addEventListener('keydown', function (e) {
+      if (e.key < '1' || e.key > '9') return;
+      var target = objs.filter(function (o) { return !o.hidden; })[parseInt(e.key, 10) - 1];
+      if (!target) return;
+      e.preventDefault();
+      objs.forEach(function (o) { o.open = false; });
+      target.open = true;
+      target.scrollIntoView({ block: 'nearest' });
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}{{ step.title }} | Calling setup | 60MS HQ{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Calling setup</h1>
+  <div class="topbar-actions">
+    {% if ready and ready.simulating %}<span class="pill" style="background:#9A6B14">Practice mode</span>{% endif %}
+    <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Back to Calling</a>
+  </div>
+</div>
+
+<div class="wizard">
+
+  <aside class="wiz-rail">
+    <div class="wiz-meter-head">
+      <span class="wiz-meter-label">Setup {{ prog.done }} of {{ prog.total }}</span>
+      <span class="wiz-meter-pct">{{ prog.pct }}%</span>
+    </div>
+    <div class="wiz-meter" role="img" aria-label="{{ prog.done }} of {{ prog.total }} steps done">
+      <span class="wiz-meter-fill" style="width:{{ prog.pct }}%"></span>
+    </div>
+    {% if prog.required_left %}
+      <p class="wiz-meter-note">{{ prog.required_left | length }} required step{{ '' if prog.required_left | length == 1 else 's' }} left before you can dial.</p>
+    {% else %}
+      <p class="wiz-meter-note done"><i class="bi bi-check-circle-fill"></i> Every required step is done.</p>
+    {% endif %}
+
+    <nav class="wiz-steps">
+      {% for w in steps %}
+      {% set state = (status.get(w.key, 'todo') if status else 'todo') %}
+      <a class="wiz-step {{ state }}{{ ' current' if w.n == step.n }}"
+         href="/dialer/setup/{{ w.n }}"
+         {{ 'aria-current=step' if w.n == step.n }}>
+        <span class="wiz-dot">
+          {% if state == 'done' %}<i class="bi bi-check-lg"></i>
+          {% elif state == 'stale' %}<i class="bi bi-exclamation-lg"></i>
+          {% elif state == 'skipped' %}<i class="bi bi-dash-lg"></i>
+          {% endif %}
+        </span>
+        <span class="wiz-num">{{ w.n }}</span>
+        <i class="bi {{ w.icon }} wiz-ico"></i>
+        <span class="wiz-name">{{ w.title }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+  </aside>
+
+  <section class="wiz-body">
+    <div class="wiz-head">
+      <div class="wiz-head-icon"><i class="bi {{ step.icon }}"></i></div>
+      <div class="wiz-head-text">
+        <div class="wiz-kicker">Step {{ step.n }} of {{ steps | length }}
+          <span class="wiz-mins"><i class="bi bi-clock"></i> about {{ step.mins }} min</span></div>
+        <h2 class="wiz-title">{{ step.title }}</h2>
+      </div>
+    </div>
+
+    <div class="wiz-why">
+      <i class="bi bi-info-circle"></i>
+      <p>{{ step.why }}</p>
+    </div>
+
+    {% block step %}{% endblock %}
+
+    <div class="wiz-foot">
+      <div class="wiz-foot-left">
+        {% if step.n > 1 %}
+        <a class="btn ghost sm" href="/dialer/setup/{{ step.n - 1 }}"><i class="bi bi-chevron-left"></i> Back</a>
+        {% endif %}
+      </div>
+      <div class="wiz-foot-right">
+        {% if step.skippable %}
+        <form method="post" action="/dialer/setup/skip/save" class="inline-form">
+          <input type="hidden" name="step" value="{{ step.key }}">
+          <button class="btn ghost sm" type="submit">Skip for now</button>
+        </form>
+        {% endif %}
+        {% if step.n < steps | length %}
+        <a class="btn sm" href="/dialer/setup/{{ step.n + 1 }}">Next step <i class="bi bi-chevron-right"></i></a>
+        {% else %}
+        <a class="btn sm" href="/dialer">Done <i class="bi bi-chevron-right"></i></a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% block help %}{% endblock %}
+  </section>
+
+</div>
+{% endblock %}

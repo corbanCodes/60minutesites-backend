@@ -37,15 +37,26 @@
 <p class="muted" style="margin:-8px 0 14px"><i class="bi bi-eye"></i> Viewing {{ 'everyone&#39;s leads' | safe if scope == 'all' else 'a customer&#39;s leads' | safe }} — <a href="/admin/crm">back to my leads</a></p>
 {% endif %}
 {% if rows %}
+{% if show_dialer %}
+<form id="bulkform" method="get" action="/dialer/campaigns/new">
+<div class="bulkbar" id="bulkbar" hidden>
+  <span><b id="bulkcount">0</b> selected</span>
+  <button class="btn sm" type="submit"><i class="bi bi-telephone-outbound"></i> Add to a calling campaign</button>
+  <button class="btn ghost sm" type="button" id="bulkclear">Clear</button>
+</div>
+{% endif %}
 <table>
-  <tr><th>Name</th><th>Business</th><th>Phone</th><th>$/mo</th><th>Status</th><th>Next step</th><th>Added</th></tr>
+  <tr>{% if show_dialer %}<th class="chkcol"><input type="checkbox" id="chkall" title="Select all"></th>{% endif %}<th>Name</th><th>Business</th><th>Phone</th><th>$/mo</th><th>Status</th><th>Next step</th><th>Added</th></tr>
   {% for lead in rows %}
   {% set nxt = next_steps.get(lead.id) %}
   <tr>
+    {% if show_dialer %}<td class="chkcol"><input type="checkbox" class="leadchk" name="lead_id" value="{{ lead.id }}" form="bulkform"></td>{% endif %}
     <td><a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a>
         {% if lead.source and lead.source != 'manual' %}<div class="subtext">{{ lead.source }}</div>{% endif %}</td>
     <td>{{ lead.business or "—" }}{% if lead.business_type %}<div class="subtext">{{ lead.business_type }}</div>{% endif %}</td>
-    <td>{{ lead.phone or "—" }}</td>
+    <td>{{ lead.phone or "—" }}
+        {% if show_dialer and lead.phone %}<a class="callnow" href="#" data-lead="{{ lead.id }}" title="Call {{ lead.name }} now"><i class="bi bi-telephone-outbound-fill"></i></a>{% endif %}
+        {% if lead.do_not_call %}<div class="subtext dnc"><i class="bi bi-slash-circle"></i> do not call</div>{% endif %}</td>
     <td>{{ lead.deal_value | money if lead.deal_value else "—" }}</td>
     <td><span class="pill" style="background: {{ STATUS_COLORS[lead.status] }}">{{ lead.status }}</span></td>
     <td>
@@ -62,6 +73,9 @@
   </tr>
   {% endfor %}
 </table>
+{% if show_dialer %}</form>
+<script src="/static-admin/crmdial.js" defer></script>
+{% endif %}
 {% else %}
 <div class="empty card">
   <i class="bi bi-person-plus"></i>

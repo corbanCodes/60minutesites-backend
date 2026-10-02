@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}{{ c.name }} | Campaigns | 60MS HQ{% endblock %}
+
+{#- The same words as dialer/compliance.py REASONS, so a skipped row reads the
+    same here as it does on the call record. -#}
+{% set reason_copy = {
+  'ok': 'Cleared to dial.',
+  'no_phone': 'No usable phone number on this lead.',
+  'bad_phone': "That phone number isn't dialable.",
+  'do_not_call': 'This lead is marked do-not-call.',
+  'do-not-call': 'This lead is marked do-not-call.',
+  'suppressed': 'This number is on your do-not-call list.',
+  'outside_window': "Outside the calling window in the lead's local time.",
+  'state_blocked': 'AI calling is switched off for this state.',
+  'state_window': "Outside this state's calling hours.",
+  'line_type_restricted': "AI calling is limited to landlines, and this number isn't one. A human can still dial it.",
+  'line_type_unknown': "We haven't checked whether this is a mobile number yet.",
+  'line_type_stale': 'The line-type check on this number is out of date.',
+  'no_disclosure': 'Set the AI disclosure name and callback number first.',
+  'daily_cap': 'This lead has already been called the maximum times today.',
+  'no_number': 'No phone number available to dial from.',
+  'lead deleted': 'The lead was deleted out of the CRM.',
+  'campaign stopped': 'You stopped the campaign, so the rest of the queue was cleared.'
+} %}
+
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+{% set st = c.stats or {} %}
+{% set total = st.get('total', 0) or 0 %}
+{% set worked = (st.get('done', 0) or 0) + (st.get('skipped', 0) or 0) %}
+{% set pct = ((worked / total) * 100) | round(0, 'floor') | int if total else 0 %}
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>{{ c.name }}</h1>
+    <div class="mg-wrap" style="margin-top:8px">
+      <span class="pill st-{{ c.status or 'draft' }}">{{ (c.status or 'draft') | capitalize }}</span>
+      <span class="pill mode-{{ c.mode or 'power' }}">
+        {% if c.mode == 'ai' %}AI dials{% elif c.mode == 'voicemail' %}Voicemail drop{% else %}You dial{% endif %}
+      </span>
+      {% if agent %}<span class="pill-soft">Agent: {{ agent.name }}</span>{% endif %}
+      {% if c.max_concurrent %}<span class="pill-soft">{{ c.max_concurrent }} at once</span>{% endif %}
+      {% if c.amd_enabled %}<span class="pill-soft">Machine detection on</span>{% endif %}
+    </div>
+    {% if c.paused_reason %}<p class="mg-sub">{{ c.paused_reason }}</p>{% endif %}
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer/campaigns"><i class="bi bi-arrow-left"></i> Campaigns</a>
+  </div>
+</div>
+
+<div class="camp-tiles">
+  <div class="camp-tile"><b class="mg-num">{{ st.get('queued', 0) | default(0) }}</b><span>Waiting</span></div>
+  <div class="camp-tile"><b class="mg-num">{{ st.get('done', 0) | default(0) }}</b><span>Done</span></div>
+  <div class="camp-tile"><b class="mg-num">{{ st.get('skipped', 0) | default(0) }}</b><span>Skipped</span></div>
+  <div class="camp-tile"><b class="mg-num">{{ st.get('dials', 0) | default(0) }}</b><span>Dials</span></div>
+  <div class="camp-tile"><b class="mg-num">{{ st.get('connects', 0) | default(0) }}</b><span>Connects</span></div>
+  <div class="camp-tile"><b class="mg-num">{{ st.get('meetings', 0) | default(0) }}</b><span>Meetings</span></div>
+</div>
+
+{% if total %}
+<div class="mg-progress" style="max-width:420px;margin-bottom:16px">
+  <div class="mg-progress-track" role="img" aria-label="{{ worked }} of {{ total }} leads worked through">
+    <span class="mg-progress-fill" style="width:{{ pct }}%"></span>
+  </div>
+  <div class="mg-progress-text">{{ worked }} of {{ total }} worked through</div>
+</div>
+{% endif %}
+
+<div class="camp-bar">
+  {% if c.status != 'running' %}
+  <form method="post" action="/dialer/campaigns/{{ c.id }}/start">
+    <button class="btn" type="submit"><i class="bi bi-play-fill"></i> Start</button>
+  </form>
+  {% else %}
+  <form method="post" action="/dialer/campaigns/{{ c.id }}/pause">
+    <button class="btn ghost" type="submit"><i class="bi bi-pause-fill"></i> Pause</button>
+  </form>
+  {% endif %}
+  <form method="post" action="/dialer/campaigns/{{ c.id }}/stop"
+        onsubmit="return confirm('Stop “{{ c.name }}”? Everything still waiting in the queue is cleared. This cannot be undone.')">
+    <button class="btn ghost" type="submit"><i class="bi bi-stop-fill"></i> Stop</button>
+  </form>
+  <form method="post" action="/dialer/campaigns/{{ c.id }}/rebuild">
+    <button class="btn ghost" type="submit"><i class="bi bi-arrow-repeat"></i> Rebuild</button>
+  </form>
+  <span class="mg-note" style="margin:0">Rebuild pulls in any new CRM leads that now match. It never re-queues someone already called.</span>
+</div>
+
+{% if c.mode == 'power' %}
+<a class="open-phone" href="/dialer/dial?campaign_id={{ c.id }}">
+  <i class="bi bi-telephone-outbound lead-ico"></i>
+  <span>
+    <b>Open the phone and start calling</b>
+    <span>The queue feeds you one lead at a time with the script beside it. Start the campaign first if it is not running.</span>
+  </span>
+  <span class="go">Open the phone <i class="bi bi-arrow-right"></i></span>
+</a>
+{% endif %}
+
+<div class="mg-section">
+  <h2><i class="bi bi-list-ol"></i> The queue <span class="count-chip">{{ rows | length }}</span></h2>
+  {% if rows %}
+  <p class="mg-note">The first 500 rows, in dialing order. A skipped row is one the gate would not let this
+    campaign call — the reason is spelled out beside it.</p>
+  <table class="queue-table">
+    <tr><th>#</th><th>Lead</th><th>Number</th><th>State</th><th class="mg-right">Attempts</th><th>Next attempt</th></tr>
+    {% for r in rows %}
+    {% set lead = leads.get(r.lead_id) if leads else None %}
+    <tr class="{{ 'is-skipped' if r.state == 'skipped' }}{{ ' is-done' if r.state == 'done' }}">
+      <td class="mg-num">{{ loop.index }}</td>
+      <td>
+        {% if lead %}
+          <a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a>
+          {% if lead.business %}<div class="subtext">{{ lead.business }}</div>{% endif %}
+        {% else %}
+          <span class="muted">Lead {{ r.lead_id }}</span>
+        {% endif %}
+      </td>
+      <td class="mg-nowrap">
+        {{ lead.phone_e164 or lead.phone if lead else '—' }}
+        {% if r.lead_tz %}<div class="subtext">{{ r.lead_tz }}</div>{% endif %}
+      </td>
+      <td>
+        <span class="pill st-{{ r.state if r.state in ['queued','deferred','skipped'] else 'neutral' }}">{{ (r.state or 'queued') | capitalize }}</span>
+        {% if r.state == 'skipped' and r.skip_reason %}
+          <div class="skipwhy">{{ reason_copy.get(r.skip_reason, r.skip_reason) }}</div>
+        {% elif r.outcome %}
+          <div class="subtext">{{ r.outcome | replace('_', ' ') }}</div>
+        {% endif %}
+      </td>
+      <td class="mg-right attempts">{{ r.attempts | default(0) }}</td>
+      <td class="muted mg-nowrap">{{ r.next_attempt_at | local if r.next_attempt_at else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="mg-empty">
+    <i class="bi bi-inbox"></i>
+    <h3>Nothing in the queue</h3>
+    <p>No lead in your CRM matched this campaign's filters, or every match was missing a phone number.
+      Press Rebuild after you have added or edited leads.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="mg-section">
+  <h2><i class="bi bi-clock-history"></i> Recent calls <span class="count-chip">{{ calls | length }}</span></h2>
+  {% if calls %}
+  <table>
+    <tr><th>When</th><th>Number</th><th>Outcome</th><th>Disposition</th><th class="mg-right">Length</th><th></th></tr>
+    {% for call in calls %}
+    <tr>
+      <td class="mg-nowrap">{{ call.started_at | local if call.started_at else '—' }}</td>
+      <td class="mg-nowrap">{{ call.to_number or '—' }}</td>
+      <td class="muted">{{ (call.system_outcome or 'unknown') | replace('_', ' ') }}</td>
+      <td>
+        {% if call.disposition %}<span class="pill disp disp-{{ call.disposition }}">{{ call.disposition | replace('_', ' ') | capitalize }}</span>
+        {% else %}<span class="muted">not set</span>{% endif %}
+      </td>
+      <td class="mg-right mg-num">{{ call.duration_pretty }}</td>
+      <td class="mg-right"><a class="chip-btn" href="/dialer/calls/{{ call.id }}">Open</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="mg-note">No calls from this campaign yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

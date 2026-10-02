@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Calling | 60MS HQ{% endblock %}
+
+{# Disposition labels and colours mirror dialer/models.py DISPOSITIONS. #}
+{% set DISP_LABEL = {
+  'dm_reached': 'Decision maker', 'gatekeeper': 'Gatekeeper', 'callback': 'Call back later',
+  'meeting_set': 'Meeting set', 'qualified': 'Qualified', 'not_interested': 'Not interested',
+  'voicemail_left': 'Voicemail left', 'wrong_number': 'Wrong number', 'dnc': 'Do not call'
+} %}
+{% set DISP_COLOR = {
+  'dm_reached': '#2E7D4F', 'gatekeeper': '#6B6259', 'callback': '#9A6B14',
+  'meeting_set': '#1E6F8E', 'qualified': '#2E7D4F', 'not_interested': '#8A7E72',
+  'voicemail_left': '#7A5CA8', 'wrong_number': '#8A7E72', 'dnc': '#B3362B'
+} %}
+{% set LANES = [
+  ['manual',      'Desk phone',    'bi-telephone',           4],
+  ['power',       'Power dialer',  'bi-lightning-charge',    4],
+  ['ai_outbound', 'AI outbound',   'bi-robot',               6],
+  ['ai_inbound',  'AI inbound',    'bi-telephone-inbound',   6],
+  ['voicemail',   'Voicemail drop','bi-voicemail',          10]
+] %}
+{% set talk_s = (stats.talk if stats else 0) or 0 %}
+
+{% block content %}
+<link rel="stylesheet" href="/static-admin/dial.css">
+
+<div class="topbar">
+  <h1>Calling</h1>
+  <div class="topbar-actions">
+    {% if ready and not ready.simulating and can('dialer.settings') %}
+    <form method="post" action="/dialer/practice" class="inline-form">
+      <button class="btn ghost sm" type="submit"><i class="bi bi-easel"></i> Turn on practice mode</button>
+    </form>
+    {% endif %}
+    <a class="btn ghost sm" href="/dialer/calls"><i class="bi bi-clock-history"></i> Call history</a>
+    <a class="btn ghost sm" href="/dialer/setup"><i class="bi bi-gear"></i> Setup</a>
+  </div>
+</div>
+
+{# 1 ------------------------------------------------------- practice mode #}
+{% if ready and ready.simulating %}
+<div class="card dl-practice">
+  <i class="bi bi-easel"></i>
+  <div class="dl-practice-text">
+    <b>Practice mode — nothing dials for real and nothing is charged.</b>
+    <p class="muted">Every screen, shortcut and outcome behaves exactly as it will on a live list. Calls run through the same pipeline with a stand-in carrier.</p>
+  </div>
+  {% if can('dialer.settings') %}
+  <form method="post" action="/dialer/practice" class="inline-form">
+    <button class="btn sm" type="submit">Turn practice mode off</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+{# 2 --------------------------------------------------- blockers / warnings #}
+{% if ready and ready.blockers %}
+<div class="alert-list">
+  {% for b in ready.blockers %}
+  <a class="alert-card critical" href="/dialer/setup/{{ b.step }}">
+    <i class="bi bi-exclamation-octagon-fill"></i>
+    <div>
+      <div class="alert-title">{{ b.feature }}{% if b.needs %} needs {{ b.needs }}{% endif %}</div>
+      <div class="alert-body">{{ b.fix }}</div>
+    </div>
+    <span class="alert-cta">Fix this <i class="bi bi-chevron-right"></i></span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if ready and ready.warnings %}
+<div class="alert-list" style="margin-top:10px">
+  {% for w in ready.warnings %}
+  <a class="alert-card warn" href="/dialer/setup/{{ w.step }}">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>
+      <div class="alert-title">{{ w.feature }}{% if w.needs %} needs {{ w.needs }}{% endif %}</div>
+      <div class="alert-body">{{ w.fix }}</div>
+    </div>
+    <span class="alert-cta">Open step {{ w.step }} <i class="bi bi-chevron-right"></i></span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if ready and ready.ok and not ready.warnings %}
+<p class="dl-allclear"><i class="bi bi-check-circle-fill"></i> Everything the dialer needs is connected. Nothing is waiting on you.</p>
+{% endif %}
+
+{# 3 ------------------------------------------------------------ setup meter #}
+{% if prog and not prog.complete %}
+<div class="card dl-setup">
+  <div class="dl-setup-text">
+    <div class="wiz-meter-head">
+      <span class="wiz-meter-label">Setup {{ prog.done }} of {{ prog.total }}</span>
+      <span class="wiz-meter-pct">{{ prog.pct }}%</span>
+    </div>
+    <div class="wiz-meter" role="img" aria-label="{{ prog.done }} of {{ prog.total }} steps done">
+      <span class="wiz-meter-fill" style="width:{{ prog.pct }}%"></span>
+    </div>
+    <p class="muted" style="margin:9px 0 0">
+      {% if prog.required_left %}
+        {{ prog.required_left | length }} required step{{ '' if prog.required_left | length == 1 else 's' }} left
+        — next up: {{ prog.required_left[0].title }}.
+      {% else %}
+        The required steps are done. The rest sharpen results.
+      {% endif %}
+    </p>
+  </div>
+  <a class="btn" href="/dialer/setup">Continue setup <i class="bi bi-chevron-right"></i></a>
+</div>
+{% endif %}
+
+{# 4 ---------------------------------------------------------- today's numbers #}
+<h2 class="dl-h2">Today</h2>
+<div class="cards">
+  <div class="card stat">
+    <div class="num">{{ stats.dials if stats else 0 }}</div>
+    <div class="label">Dials</div>
+  </div>
+  <div class="card stat">
+    <div class="num">{{ stats.connects if stats else 0 }}</div>
+    <div class="label">Connects</div>
+  </div>
+  <div class="card stat">
+    <div class="num">{{ talk_s // 60 }}m {{ talk_s % 60 }}s</div>
+    <div class="label">Talk time</div>
+  </div>
+  <div class="card stat">
+    <div class="num">{{ stats.meetings if stats else 0 }}</div>
+    <div class="label">Meetings &amp; qualified</div>
+  </div>
+</div>
+
+{# 5 ------------------------------------------------------------- big actions #}
+<div class="dl-actions">
+  <button class="dl-action primary" type="button" onclick="HQPhone.popOut()">
+    <i class="bi bi-telephone-outbound-fill"></i>
+    <span class="dl-action-name">Open the phone</span>
+    <span class="dl-action-sub">A small window that keeps the call alive while you move around HQ</span>
+  </button>
+  <a class="dl-action" href="/dialer/dial">
+    <i class="bi bi-lightning-charge-fill"></i>
+    <span class="dl-action-name">Start a session</span>
+    <span class="dl-action-sub">Full screen, script rail, one lead after another</span>
+  </a>
+  <a class="dl-action" href="/dialer/campaigns/new">
+    <i class="bi bi-plus-square"></i>
+    <span class="dl-action-name">New campaign</span>
+    <span class="dl-action-sub">Pick a slice of the CRM and build a queue from it</span>
+  </a>
+</div>
+
+{# 6 -------------------------------------------------------- running campaigns #}
+<h2 class="dl-h2">Campaigns running now
+  <span class="count-chip">{{ campaigns | length if campaigns else 0 }}</span></h2>
+{% if campaigns %}
+<table>
+  <tr><th>Campaign</th><th>Mode</th><th>Left in queue</th><th>Dials</th><th>Connects</th><th></th></tr>
+  {% for c in campaigns %}
+  {% set cs = c.stats or {} %}
+  <tr>
+    <td>
+      <a class="rowlink" href="/dialer/campaigns/{{ c.id }}">{{ c.name }}</a>
+      {% if c.status == 'paused' %}<div class="subtext">Paused{% if c.paused_reason %} — {{ c.paused_reason }}{% endif %}</div>{% endif %}
+    </td>
+    <td><span class="pill" style="background:{{ '#1E6F8E' if c.mode == 'ai' else ('#7A5CA8' if c.mode == 'voicemail' else '#2E7D4F') }}">{{ c.mode | replace('_', ' ') }}</span></td>
+    <td><b>{{ cs.get('queued', 0) }}</b> <span class="muted">of {{ cs.get('total', 0) }}</span></td>
+    <td>{{ cs.get('dials', 0) }}</td>
+    <td>{{ cs.get('connects', 0) }}</td>
+    <td style="white-space:nowrap;text-align:right">
+      {% if c.status == 'running' and can('campaigns.manage') %}
+      <form method="post" action="/dialer/campaigns/{{ c.id }}/pause" class="inline-form"><button class="chip-btn">Pause</button></form>
+      {% elif c.status == 'paused' and can('campaigns.manage') %}
+      <form method="post" action="/dialer/campaigns/{{ c.id }}/start" class="inline-form"><button class="chip-btn">Resume</button></form>
+      {% endif %}
+      <a class="chip-btn" href="/dialer/campaigns/{{ c.id }}">Open</a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card empty">
+  <i class="bi bi-list-task"></i>
+  <p class="muted">No campaign is running. Build one from a slice of your CRM and the queue feeds the phone automatically.</p>
+  <p style="margin-top:12px"><a class="btn sm" href="/dialer/campaigns/new">Build a campaign</a></p>
+</div>
+{% endif %}
+
+{# 7 ------------------------------------------------------------ recent calls #}
+<h2 class="dl-h2">Recent calls</h2>
+{% if recent %}
+<table>
+  <tr><th>When</th><th>Number</th><th>Outcome</th><th>Length</th><th>Score</th><th></th></tr>
+  {% for c in recent %}
+  <tr>
+    <td class="muted">{{ c.started_at | local if c.started_at else '—' }}</td>
+    <td><a class="rowlink" href="/dialer/calls/{{ c.id }}">{{ c.to_number or '—' }}</a></td>
+    <td>
+      {% if c.disposition %}
+        <span class="pill" style="background:{{ DISP_COLOR.get(c.disposition, '#6B6259') }}">{{ DISP_LABEL.get(c.disposition, c.disposition | replace('_', ' ') | capitalize) }}</span>
+      {% else %}
+        <span class="muted">No outcome yet</span>
+      {% endif %}
+    </td>
+    <td class="dl-mono">{{ c.duration_pretty }}</td>
+    <td>{% if c.score is not none %}{{ c.score }}{% else %}<span class="muted">—</span>{% endif %}</td>
+    <td style="text-align:right"><a class="chip-btn" href="/dialer/calls/{{ c.id }}">Open</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card empty">
+  <i class="bi bi-telephone"></i>
+  <p class="muted">No calls yet. The first one you make shows up here with its recording, transcript and outcome.</p>
+</div>
+{% endif %}
+
+{# 8 ------------------------------------------------------------ lanes strip #}
+<h2 class="dl-h2">What can dial right now</h2>
+<div class="dl-lanes">
+  {% for lane in LANES %}
+  {% set on = (ready.lanes.get(lane[0]) if ready and ready.lanes else false) %}
+  <div class="dl-lane {{ 'on' if on else 'off' }}">
+    <i class="bi {{ lane[2] }}"></i>
+    <span class="dl-lane-name">{{ lane[1] }}</span>
+    {% if on %}
+      <span class="dl-lane-state"><i class="bi bi-check-circle-fill"></i> Ready</span>
+    {% else %}
+      <a class="dl-lane-fix" href="/dialer/setup/{{ lane[3] }}">Finish step {{ lane[3] }}</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<script src="/static-admin/softphone.js" defer></script>
+{% endblock %}

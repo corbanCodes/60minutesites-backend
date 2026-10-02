@@ -1,0 +1,160 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% if numbers %}
+<h3 class="wiz-h3">Your numbers <span class="count-chip">{{ numbers | length }}</span></h3>
+<table>
+  <tr><th>Number</th><th>Pool</th><th>Used for</th><th>Calls a day</th><th>Status</th><th></th></tr>
+  {% for nr in numbers %}
+  <tr>
+    <td>
+      <span class="rowlink">{{ nr.pretty or nr.e164 }}</span>
+      {% if nr.friendly_name %}<div class="subtext">{{ nr.friendly_name }}</div>{% endif %}
+    </td>
+    <td>
+      {% if nr.pool == 'ai' %}<span class="pill" style="background:#5B4B9E">AI</span>
+      {% else %}<span class="pill" style="background:#2E7D4F">Rep</span>{% endif %}
+    </td>
+    <td class="muted">
+      {% if nr.purpose == 'outbound' %}Outbound only
+      {% elif nr.purpose == 'inbound' %}Inbound only
+      {% else %}Outbound and inbound{% endif %}
+    </td>
+    <td>{{ nr.daily_cap or 120 }}</td>
+    <td>
+      {% if nr.state == 'active' %}<span class="pill" style="background:#2E7D4F">Active</span>
+      {% elif nr.state == 'parked' %}<span class="pill" style="background:#B98A2B">Resting</span>
+      {% else %}<span class="pill" style="background:#888">Released</span>{% endif %}
+    </td>
+    <td style="white-space:nowrap;text-align:right">
+      {% if nr.state != 'released' %}
+      <form method="post" action="/dialer/numbers/{{ nr.id }}/release" class="inline-form"
+            onsubmit="return confirm('Release {{ nr.pretty or nr.e164 }}? Twilio gives the number to someone else and you can never get it back. Anyone who calls it later reaches a stranger. Stop paying the $1.15 a month only if this number has never been used to call out.')">
+        <button class="chip-btn danger" type="submit">Release</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card empty">
+  <i class="bi bi-123"></i>
+  <p><b>No phone numbers yet.</b></p>
+  <p class="muted">You need at least one before anything can dial. Search for an area code below.</p>
+</div>
+{% endif %}
+
+<div class="card wiz-steps-card">
+  <h3>Find a number</h3>
+  <form class="searchbar" method="get" action="/dialer/numbers/search">
+    <div class="search-wrap">
+      <i class="bi bi-search"></i>
+      <input type="text" name="area_code" inputmode="numeric" maxlength="3" placeholder="Area code, for example 423"
+             value="{{ request.args.get('area_code', '') if request else '' }}">
+    </div>
+    <button class="btn" type="submit">Search Twilio</button>
+  </form>
+  <p class="muted" style="margin:0">Use the area code your leads are in, not the one you live in. A number that
+    looks local to the person being called is answered noticeably more often.</p>
+
+  {% if results %}
+  <table style="margin-top:14px">
+    <tr><th>Number</th><th>Area</th><th></th></tr>
+    {% for f in results %}
+    <tr>
+      <td><span class="rowlink">{{ f.friendly_name or f.e164 or f }}</span></td>
+      <td class="muted">{{ f.region or '' }}</td>
+      <td style="text-align:right">
+        <form method="post" action="/dialer/numbers/buy" class="inline-form">
+          <input type="hidden" name="e164" value="{{ f.e164 or f }}">
+          <select name="pool" class="scope-select">
+            <option value="rep">Rep pool</option>
+            <option value="ai">AI pool</option>
+          </select>
+          <button class="btn sm" type="submit">Buy $1.15/mo</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>Buy a number you already picked</h3>
+  <form class="form wiz-form" method="post" action="/dialer/numbers/buy">
+    <div class="row2">
+      <div>
+        <label for="e164">Number</label>
+        <input type="text" id="e164" name="e164" placeholder="+14235550147" autocomplete="off">
+        <p class="muted" style="margin:5px 0 0">Write it as +1 and then ten digits, with no spaces or dashes.</p>
+      </div>
+      <div>
+        <label for="pool">Which pool?</label>
+        <select id="pool" name="pool">
+          <option value="rep">Rep pool &mdash; people dial from it</option>
+          <option value="ai">AI pool &mdash; the AI voice dials from it</option>
+        </select>
+        <p class="muted" style="margin:5px 0 0">A number can only be in one pool. Changing it later means
+          re-pointing it, which takes a minute.</p>
+      </div>
+    </div>
+    <button class="btn" type="submit"><i class="bi bi-bag-plus"></i> Buy this number</button>
+  </form>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>Already own numbers in Twilio?</h3>
+  <p class="muted" style="margin:0 0 12px">If you bought numbers in the Twilio console before today, pull them in
+    here instead of buying more. Nothing is charged and nothing is changed on Twilio's side except the address
+    calls are delivered to.</p>
+  <form method="post" action="/dialer/numbers/import">
+    <button class="btn ghost" type="submit"><i class="bi bi-download"></i> Import my Twilio numbers</button>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> How many numbers you need, and why we never release one you have called from</summary>
+  <div class="guide-body">
+    <h4>Local presence</h4>
+    <p>People answer numbers that look like they are from nearby. If your leads are in the 423 area code, call
+      them from a 423 number. The lift is real and it is large &mdash; often the difference between a one in ten
+      answer rate and a one in five.</p>
+    <p>If you call several areas, hold one number per area and let the system pick the matching one. A number
+      costs $1.15 a month, so four areas is $4.60 a month.</p>
+    <h4>How many you need</h4>
+    <p>Plan on <b>one number for every 100 to 150 outbound calls a day</b>. Carriers watch call volume per
+      number. Push 400 dials a day through a single number and it gets labelled inside a week, no matter how
+      polite your reps are.</p>
+    <table>
+      <tr><th>Dials a day</th><th>Numbers to hold</th><th>Cost a month</th></tr>
+      <tr><td>100</td><td>1</td><td>$1.15</td></tr>
+      <tr><td>300</td><td>2 or 3</td><td>$2.30 to $3.45</td></tr>
+      <tr><td>750</td><td>5 or 6</td><td>$5.75 to $6.90</td></tr>
+    </table>
+    <p>Each number has a <b>daily cap</b> on its row above. The system stops using a number once it hits the cap
+      and moves to the next one, so the limit is enforced for you.</p>
+    <h4>Rep pool and AI pool</h4>
+    <p>A number handed to ElevenLabs for the AI has its call delivery owned by ElevenLabs. It cannot also serve
+      the rep dialer at the same time. That is why the pool is a choice, not a toggle.</p>
+    <h4>Why releasing is nearly always a mistake</h4>
+    <p>Once a number has made an outbound call, people will call it back &mdash; sometimes weeks later, often
+      the ones most likely to buy. If you release it, Twilio gives it to another customer, and that callback
+      reaches a stranger. The number is gone for good; there is no way to buy it back.</p>
+    <p>You are saving $1.15 a month. Keep the number. If you want to stop using it, let it rest instead: the
+      system can park a number so it stops dialing out but still receives calls.</p>
+    <h4>If a number starts showing as &ldquo;Spam Likely&rdquo;</h4>
+    <ol>
+      <li>Stop dialing from it. More calls make the label stick harder.</li>
+      <li>Finish the business verification on step 3 if you have not.</li>
+      <li>Register the number with Voice Integrity, which is free once you are verified. It takes 24 to 48
+        hours.</li>
+      <li>Buy a replacement number in the meantime and keep your daily volume per number down.</li>
+    </ol>
+  </div>
+</details>
+{% endblock %}

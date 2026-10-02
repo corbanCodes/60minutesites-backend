@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Playbooks | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>Playbooks <span class="count-chip">{{ playbooks | length }}</span></h1>
+    <p class="mg-sub">A playbook is what gets said on the call: the steps, the questions you need answered,
+      and what to say when someone pushes back. The phone screen shows it to you; an AI agent follows it.</p>
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Calling</a>
+    <form method="post" action="/dialer/playbooks/new" style="display:inline-flex">
+      <button class="btn" type="submit"><i class="bi bi-plus-lg"></i> Create from the cold-call template</button>
+    </form>
+  </div>
+</div>
+
+{% if playbooks %}
+<table>
+  <tr><th>Playbook</th><th class="mg-right">Steps</th><th class="mg-right">Questions</th><th class="mg-right">Objections</th><th></th></tr>
+  {% for p in playbooks %}
+  <tr>
+    <td>
+      <a class="rowlink" href="/dialer/playbooks/{{ p.id }}">{{ p.name }}</a>
+      {% if p.is_default %}<span class="pill ok-pill">Default</span>{% endif %}
+      {% if p.description %}<div class="subtext">{{ p.description }}</div>{% endif %}
+    </td>
+    <td class="mg-right mg-num">{{ p.steps | length }}</td>
+    <td class="mg-right mg-num">{{ p.questions | length }}</td>
+    <td class="mg-right mg-num">{{ p.objections | length }}</td>
+    <td class="mg-right mg-nowrap">
+      <a class="chip-btn" href="/dialer/playbooks/{{ p.id }}">Edit</a>
+      <form method="post" action="/dialer/playbooks/{{ p.id }}/delete" class="inline-form"
+            onsubmit="return confirm('Delete “{{ p.name }}”? Any campaign or agent pointing at it loses its script.')">
+        <button class="chip-btn danger" type="submit">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="mg-empty">
+  <i class="bi bi-journal-text"></i>
+  <h3>No playbooks yet</h3>
+  <p>Start from the cold-call template — it already has the opener, the three questions that disqualify a bad
+    fit in under a minute, and answers to the objections you will hear most. Then edit it so it sounds like you.</p>
+  <form method="post" action="/dialer/playbooks/new">
+    <button class="btn" type="submit"><i class="bi bi-plus-lg"></i> Create from the cold-call template</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

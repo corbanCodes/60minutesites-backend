@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Call {{ call.id }} | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+{% set gate = call.gate or {} %}
+{% set coach = call.coaching or {} %}
+{% set qual = call.qualification or {} %}
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>{% if lead %}{{ lead.name }}{% else %}{{ call.to_number or 'Call' }}{% endif %}</h1>
+    <div class="mg-wrap" style="margin-top:8px">
+      {% if call.disposition %}
+        <span class="pill disp disp-{{ call.disposition }}">{{ call.disposition | replace('_', ' ') | capitalize }}</span>
+      {% else %}
+        <span class="pill st-neutral">{{ (call.system_outcome or 'no outcome') | replace('_', ' ') }}</span>
+      {% endif %}
+      <span class="pill-soft">{{ (call.mode or 'manual') | replace('_', ' ') }}</span>
+      <span class="pill-soft">{{ call.direction or 'outbound' }}</span>
+      <span class="pill-soft">{{ call.duration_pretty }} long</span>
+      {% if call.revocation_detected %}<span class="pill flag">Asked to be removed</span>{% endif %}
+    </div>
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer/calls"><i class="bi bi-arrow-left"></i> All calls</a>
+    {% if lead %}<a class="btn ghost sm" href="/admin/crm/{{ lead.id }}"><i class="bi bi-person-lines-fill"></i> CRM record</a>{% endif %}
+  </div>
+</div>
+
+<div class="call-grid">
+  <div>
+    {# ---------------------------------------------------- recording #}
+    <div class="mg-card">
+      <h3><i class="bi bi-soundwave"></i> Recording</h3>
+      {% if call.recording_sid and not call.recording_deleted_at %}
+      <div class="audio-panel">
+        <p class="audio-gone" style="margin-bottom:0">Streamed from your Twilio account. Nobody outside this login can reach the file.</p>
+        <audio controls preload="none" src="/dialer/calls/{{ call.id }}/recording">
+          Your browser cannot play audio. Download the call from the calls list instead.
+        </audio>
+      </div>
+      {% elif call.recording_deleted_at %}
+      <p class="audio-gone">The recording was deleted on {{ call.recording_deleted_at | local }}, in line with your retention setting. The transcript below is kept.</p>
+      {% else %}
+      <p class="audio-gone">No recording for this call.</p>
+      {% endif %}
+    </div>
+
+    {# ---------------------------------------------------- summary #}
+    {% if call.summary %}
+    <div class="mg-card">
+      <h3><i class="bi bi-card-text"></i> What happened</h3>
+      <p style="margin:0;font-size:14px;line-height:1.75">{{ call.summary }}</p>
+    </div>
+    {% endif %}
+
+    {# ---------------------------------------------------- score #}
+    {% if call.score is not none or coach.get('reasons') or coach.get('coaching') %}
+    <div class="mg-card">
+      <h3><i class="bi bi-clipboard-check"></i> How the call went</h3>
+      {% if call.score is not none %}
+      <div class="scorebig"><b>{{ call.score }}</b><span>out of 10</span></div>
+      {% endif %}
+      {% if coach.get('reasons') %}
+      <ul class="reasonlist">
+        {% for r in coach.get('reasons') %}<li>{{ r }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% if coach.get('coaching') %}
+      <p class="mg-note" style="margin:12px 0 0"><b>Next time:</b> {{ coach.get('coaching') }}</p>
+      {% endif %}
+      {% if coach.get('asked') or coach.get('missed') %}
+      <div class="two-up" style="margin-top:14px">
+        <div class="two-up-col">
+          <div class="two-up-head"><i class="bi bi-check2"></i> Asked</div>
+          <p class="muted">{{ coach.get('asked') | join(' · ') if coach.get('asked') else 'Nothing recorded.' }}</p>
+        </div>
+        <div class="two-up-col">
+          <div class="two-up-head"><i class="bi bi-dash-lg"></i> Missed</div>
+          <p class="muted">{{ coach.get('missed') | join(' · ') if coach.get('missed') else 'Nothing missed.' }}</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ---------------------------------------------------- qualification #}
+    {% if qual %}
+    <div class="mg-card">
+      <h3><i class="bi bi-patch-question"></i> What they told us</h3>
+      <div class="qa-grid">
+        {% for k, v in qual.items() %}
+        <div class="qa-box">
+          <div class="qa-label">{{ k | replace('_', ' ') }}</div>
+          <div class="qa-val">{{ v if v not in (None, '') else '—' }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ---------------------------------------------------- objections #}
+    {% if call.objections_json %}
+    <div class="mg-card" id="objcard" hidden>
+      <h3><i class="bi bi-hand-index"></i> What they pushed back on</h3>
+      <ul class="reasonlist" id="objlist"></ul>
+    </div>
+    <script>
+      (function () {
+        var raw = {{ call.objections_json | tojson }};
+        var list = null;
+        try { list = JSON.parse(raw); } catch (e) { list = null; }
+        if (!Array.isArray(list) || !list.length) return;
+        var ul = document.getElementById('objlist');
+        list.forEach(function (o) {
+          var li = document.createElement('li');
+          li.textContent = (typeof o === 'string') ? o : (o && (o.objection || o.text) || JSON.stringify(o));
+          ul.appendChild(li);
+        });
+        document.getElementById('objcard').hidden = false;
+      })();
+    </script>
+    {% endif %}
+
+    {# ---------------------------------------------------- transcript #}
+    <div class="mg-card">
+      <h3><i class="bi bi-chat-left-text"></i> Transcript</h3>
+      {% if call.transcript %}
+      <div class="transcript" tabindex="0">
+        {% for raw_line in call.transcript.split('\n') %}
+          {% set line = raw_line | trim %}
+          {% if line %}
+            {% set low = line | lower %}
+            {% if low.startswith('rep:') or low.startswith('agent:') %}
+              <div class="turn rep">
+                <div class="turn-who">{{ 'Agent' if low.startswith('agent:') else 'Rep' }}</div>
+                <div class="turn-text">{{ line.split(':', 1)[1] | trim }}</div>
+              </div>
+            {% elif low.startswith('user:') or low.startswith('prospect:') %}
+              <div class="turn prospect">
+                <div class="turn-who">Them</div>
+                <div class="turn-text">{{ line.split(':', 1)[1] | trim }}</div>
+              </div>
+            {% else %}
+              <div class="turn plain">
+                <div class="turn-who">·</div>
+                <div class="turn-text">{{ line }}</div>
+              </div>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="audio-gone">No transcript. One is written after the call is finalized, when there is a
+        recording or a conversation to read.</p>
+      {% endif %}
+    </div>
+
+    {# ---------------------------------------------------- raw events #}
+    <details class="guide" style="margin-top:14px">
+      <summary><i class="bi bi-list-nested"></i> Raw event timeline
+        <span class="guide-status ref">{{ events | length }} event{{ '' if events | length == 1 else 's' }}</span>
+      </summary>
+      <div class="guide-body">
+        {% if events %}
+        <div class="timeline">
+          {% for e in events %}
+          <div class="tl-row">
+            <div class="tl-when">{{ e.at | local('%b %-d, %-I:%M:%S %p') if e.at else '—' }}</div>
+            <div class="tl-kind">{{ e.kind or 'event' }}</div>
+            <div class="tl-detail">{{ e.detail or '' }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted" style="margin:0">Nothing logged for this call.</p>
+        {% endif %}
+      </div>
+    </details>
+  </div>
+
+  {# ====================================================== right column #}
+  <div>
+    <div class="mg-card">
+      <h3><i class="bi bi-info-circle"></i> The record</h3>
+      <dl class="factlist">
+        <div class="fact"><dt>Lead</dt><dd>{% if lead %}<a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a>{% if lead.business %} — {{ lead.business }}{% endif %}{% else %}No CRM record{% endif %}</dd></div>
+        <div class="fact"><dt>Called</dt><dd>{{ call.to_number or '—' }}</dd></div>
+        <div class="fact"><dt>Called from</dt><dd>{{ call.from_number or '—' }}</dd></div>
+        <div class="fact"><dt>Started</dt><dd>{{ call.started_at | local if call.started_at else '—' }}</dd></div>
+        <div class="fact"><dt>Answered</dt><dd>{{ call.answered_at | local if call.answered_at else 'never picked up' }}</dd></div>
+        <div class="fact"><dt>Ended</dt><dd>{{ call.ended_at | local if call.ended_at else '—' }}</dd></div>
+        <div class="fact"><dt>Length</dt><dd>{{ call.duration_pretty }}</dd></div>
+        <div class="fact"><dt>What the carrier saw</dt><dd>{{ (call.system_outcome or 'unknown') | replace('_', ' ') }}</dd></div>
+        <div class="fact"><dt>Outcome you set</dt><dd>{{ call.disposition | replace('_', ' ') | capitalize if call.disposition else 'not set' }}</dd></div>
+        {% if call.transferred_to %}<div class="fact"><dt>Transferred to</dt><dd>{{ call.transferred_to }}</dd></div>{% endif %}
+        {% if call.voicemail_dropped %}<div class="fact"><dt>Voicemail</dt><dd>A recorded message was dropped.</dd></div>{% endif %}
+        <div class="fact"><dt>Estimated cost</dt><dd>{{ '$%.2f' | format(call.cost_estimate | default(0) | float) }}{% if call.vendor_cost %} <span class="muted">(vendor: {{ '$%.2f' | format(call.vendor_cost | float) }})</span>{% endif %}</dd></div>
+        {% if call.error %}<div class="fact"><dt>Error</dt><dd style="color:#8E2A20">{{ call.error }}</dd></div>{% endif %}
+      </dl>
+    </div>
+
+    {# ---------------------------------------------- compliance evidence #}
+    <div class="evidence" style="margin-top:14px">
+      <h3><i class="bi bi-shield-check"></i> Why this call was allowed</h3>
+      <p>Frozen at the moment of dialing. This is the record you would hand over if anyone ever asked why
+        this number was called.</p>
+      <dl class="evidence-list">
+        <div class="evidence-row">
+          <dt>Line type at dial</dt>
+          <dd>{{ (call.line_type_at_dial or gate.get('line_type') or 'not checked') | replace('fixedVoip', 'fixed VoIP') | replace('nonFixedVoip', 'non-fixed VoIP') | replace('tollFree', 'toll free') }}</dd>
+        </div>
+        <div class="evidence-row">
+          <dt>Consent on file</dt>
+          <dd>{{ (call.consent_at_dial or gate.get('consent') or 'none') | replace('_', ' ') }}</dd>
+        </div>
+        <div class="evidence-row">
+          <dt>How it was dialed</dt>
+          <dd>{{ (gate.get('mode') or call.mode or 'manual') | replace('_', ' ') }}</dd>
+        </div>
+        <div class="evidence-row">
+          <dt>Their time zone</dt>
+          <dd>{{ gate.get('tz') or 'not recorded' }}</dd>
+        </div>
+        <div class="evidence-row">
+          <dt>Calling window</dt>
+          <dd>{{ gate.get('window') or 'not recorded' }}{% if gate.get('local_time') %} · their clock read {{ gate.get('local_time') }}{% endif %}</dd>
+        </div>
+        {% if gate.get('state') %}
+        <div class="evidence-row"><dt>State rule applied</dt><dd>{{ gate.get('state') }}{% if gate.get('posture') %} ({{ gate.get('posture') }}){% endif %}</dd></div>
+        {% endif %}
+        {% if gate.get('line_type_age_days') is not none %}
+        <div class="evidence-row"><dt>Line check age</dt><dd>{{ gate.get('line_type_age_days') }} day(s) old at dial</dd></div>
+        {% endif %}
+        <div class="evidence-row">
+          <dt>Gate decision</dt>
+          <dd>{% if gate.get('ok') %}Cleared to dial.{% elif gate.get('reason') %}Held back: {{ gate.get('reason') | replace('_', ' ') }}{% else %}Not recorded.{% endif %}</dd>
+        </div>
+        <div class="evidence-row">
+          <dt>Mobile gate override</dt>
+          <dd>{% if gate.get('gate_override') %}Yes — the account owner switched the mobile gate off before this call.{% else %}No. The gate was on.{% endif %}</dd>
+        </div>
+        {% if call.disclosure_text %}
+        <div class="evidence-row"><dt>Disclosure said</dt><dd>{{ call.disclosure_text }}</dd></div>
+        {% endif %}
+        {% if call.announce_played_at %}
+        <div class="evidence-row"><dt>Recording notice</dt><dd>Played at {{ call.announce_played_at | local }}</dd></div>
+        {% endif %}
+      </dl>
+      {% if gate.get('gate_override') %}
+      <div class="evidence-flag">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>The mobile gate was off when this call was placed. The attestation recorded at the time:
+          {% if gate.get('attestation') %}
+            <span class="evidence-quote">{{ gate.get('attestation') }}</span>
+          {% else %}
+            no text was stored.
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+      {% if not gate %}
+      <p class="mg-note" style="margin:11px 0 0">No gate record on this call — it predates the evidence trail,
+        or it was placed by hand outside a campaign.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

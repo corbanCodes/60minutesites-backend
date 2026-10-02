@@ -1,0 +1,90 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+<form class="form wiz-form" method="post" action="/dialer/setup/intent/save">
+  <div>
+    <label>Which of these do you want first?</label>
+    <div class="rolepick">
+
+      <label class="rolecard">
+        <input type="radio" name="intent" value="human" {{ 'checked' if s.intent == 'human' or not s.intent }}>
+        <span class="rolecard-body">
+          <span class="rolecard-name"><i class="bi bi-headset"></i> My reps make the calls</span>
+          <span class="rolecard-blurb">A person dials from a screen in this app. The system queues the list,
+            records the call, writes the notes and moves the lead. About 1.4 cents a minute, plus $1.15 a month
+            per phone number. No AI voice needed.</span>
+        </span>
+      </label>
+
+      <label class="rolecard">
+        <input type="radio" name="intent" value="ai_inbound" {{ 'checked' if s.intent == 'ai_inbound' }}>
+        <span class="rolecard-body">
+          <span class="rolecard-name"><i class="bi bi-telephone-inbound"></i> AI answers my incoming calls</span>
+          <span class="rolecard-blurb">Someone calls you, an AI voice picks up, asks your questions and hands a
+            hot caller to a rep. The person on the line chose to call you, so this is the simplest lane to turn
+            on. Adds 8 cents a minute for the AI voice.</span>
+        </span>
+      </label>
+
+      <label class="rolecard">
+        <input type="radio" name="intent" value="ai_outbound" {{ 'checked' if s.intent == 'ai_outbound' }}>
+        <span class="rolecard-body">
+          <span class="rolecard-name"><i class="bi bi-telephone-outbound"></i> AI calls my list</span>
+          <span class="rolecard-blurb">An AI voice dials out on its own. This is the most regulated lane: by
+            default the system will not let the AI dial a cell phone without recorded consent, and some states
+            are blocked outright. Talk to a lawyer before you run it on a cold list.</span>
+        </span>
+      </label>
+
+      <label class="rolecard">
+        <input type="radio" name="intent" value="both" {{ 'checked' if s.intent == 'both' }}>
+        <span class="rolecard-body">
+          <span class="rolecard-name"><i class="bi bi-diagram-3"></i> People and AI together</span>
+          <span class="rolecard-blurb">Reps dial, the AI covers the overflow and the after-hours calls, and hot
+            AI calls transfer to whoever is on shift. Pick this if you already know you want both. It turns on
+            every step below.</span>
+        </span>
+      </label>
+
+    </div>
+  </div>
+
+  <button class="btn" type="submit"><i class="bi bi-check-lg"></i> Save and continue</button>
+  <p class="muted" style="margin:0">This changes nothing permanently. It decides which steps are highlighted as
+    you go, and you can switch any lane on later from this same page.</p>
+</form>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> What the three lanes actually cost and what is gated</summary>
+  <div class="guide-body">
+    <table>
+      <tr><th>Lane</th><th>Per minute</th><th>What it needs</th><th>Gate</th></tr>
+      <tr>
+        <td><b>Reps dial</b></td>
+        <td>about 1.4&cent;</td>
+        <td>Twilio, one phone number, a playbook</td>
+        <td>None beyond normal calling hours and do-not-call lists.</td>
+      </tr>
+      <tr>
+        <td><b>AI answers</b></td>
+        <td>about 1.4&cent; + 8&cent;</td>
+        <td>Twilio, a number, ElevenLabs, an AI agent</td>
+        <td>The AI has to say it is an AI. That is on by default.</td>
+      </tr>
+      <tr>
+        <td><b>AI dials out</b></td>
+        <td>about 1.4&cent; + 8&cent;</td>
+        <td>All of the above, plus consent records</td>
+        <td>Blocked to cell phones without consent on file. Some states are blocked entirely.</td>
+      </tr>
+    </table>
+    <p>The phone minutes are billed by Twilio on your own card. The AI voice minutes are billed by ElevenLabs on
+      your own card. Nothing runs through us and nothing is marked up.</p>
+    <p class="muted">Most people start with reps dialing, get the script right on real calls, and only then point
+      an AI at it. A script that does not work when a person reads it will not work when a machine reads it.</p>
+  </div>
+</details>
+{% endblock %}

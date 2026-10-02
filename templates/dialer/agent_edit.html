@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}{{ a.name }} | AI agents | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>{{ a.name }}</h1>
+    <div class="mg-wrap" style="margin-top:8px">
+      <span class="pill dir-{{ a.direction or 'outbound' }}">{{ (a.direction or 'outbound') | capitalize }}</span>
+      {% if a.last_sync_error %}
+        <span class="sync-state bad"><i class="bi bi-exclamation-triangle-fill"></i> ElevenLabs rejected the last sync</span>
+      {% elif a.synced_at %}
+        <span class="sync-state ok"><i class="bi bi-check-circle-fill"></i> Synced {{ a.synced_at | local }}</span>
+      {% else %}
+        <span class="sync-state never"><i class="bi bi-dash-circle"></i> Never sent to ElevenLabs</span>
+      {% endif %}
+    </div>
+    {% if a.last_sync_error %}<p class="mg-sub" style="color:#8E2A20">{{ a.last_sync_error }}</p>{% endif %}
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer/agents"><i class="bi bi-arrow-left"></i> Agents</a>
+  </div>
+</div>
+
+<div class="agent-grid">
+  <form class="form" id="agentform" method="post" action="/dialer/agents/{{ a.id }}" style="max-width:none">
+
+    <div class="mg-card">
+      <h3>Basics</h3>
+      <div class="field-grid">
+        <div>
+          <label for="ag-name">Name</label>
+          <input type="text" id="ag-name" name="name" maxlength="120" value="{{ a.name }}" required>
+          <span class="field-hint">Only you see this.</span>
+        </div>
+        <div>
+          <label for="ag-model">Thinking model</label>
+          <input type="text" id="ag-model" name="llm_model" list="modellist" value="{{ a.llm_model or '' }}"
+                 placeholder="gemini-2.0-flash">
+          <datalist id="modellist">
+            <option value="gemini-2.0-flash"></option>
+            <option value="gpt-4o-mini"></option>
+            <option value="gpt-4o"></option>
+            <option value="claude-3-5-haiku"></option>
+          </datalist>
+          <span class="field-hint">A faster model interrupts less. Leave it alone unless the agent sounds slow.</span>
+        </div>
+        <div>
+          <label for="ag-playbook">Playbook</label>
+          <select id="ag-playbook" name="playbook_id">
+            <option value="">None</option>
+            {% for p in playbooks | default([]) %}
+            <option value="{{ p.id }}" {{ 'selected' if a.playbook_id == p.id }}>{{ p.name }}</option>
+            {% endfor %}
+          </select>
+          <span class="field-hint">{% if not playbooks %}No playbooks yet — build one first.{% else %}The steps, questions and objection answers it follows.{% endif %}</span>
+        </div>
+        <div>
+          <label for="ag-maxdur">Hang up after</label>
+          <input type="number" id="ag-maxdur" name="max_duration_seconds" min="30" max="3600"
+                 value="{{ a.max_duration_seconds | default(420) }}">
+          <span class="field-hint">Seconds. A hard ceiling so a stuck call cannot run up a bill.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mg-card">
+      <h3>Voice</h3>
+      <input type="hidden" name="voice_name" id="ag-voicename" value="{{ a.voice_name or '' }}">
+      {% if voices %}
+      <div class="voicegrid">
+        {% for v in voices %}
+        <label class="voicecard">
+          <input type="radio" name="voice_id" value="{{ v.voice_id }}" data-voicename="{{ v.name }}"
+                 {{ 'checked' if a.voice_id == v.voice_id }}>
+          <span class="voicecard-body">
+            <span class="voicecard-name"><i class="bi bi-soundwave"></i>{{ v.name }}</span>
+            <span class="voicecard-labels">{{ v.labels or 'no description' }}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="mg-note" style="margin:0">No voices to choose from yet. Connect ElevenLabs in setup and the list
+        fills in here.</p>
+      <input type="hidden" name="voice_id" value="{{ a.voice_id or '' }}">
+      {% endif %}
+      <div style="margin-top:14px">
+        <label for="ag-bg">Background sound</label>
+        <select id="ag-bg" name="background_preset">
+          {% set bgs = [('', 'Silent'), ('office1', 'Quiet office'), ('office2', 'Busier office'), ('street', 'Street')] %}
+          {% for key, label in bgs %}
+          <option value="{{ key }}" {{ 'selected' if (a.background_preset or '') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <span class="field-hint">A little room tone makes a call sound less like a recording. Silence is safest.</span>
+      </div>
+    </div>
+
+    <div class="mg-card">
+      <h3>What it says</h3>
+      <div>
+        <label for="ag-first">First thing it says</label>
+        <textarea id="ag-first" name="first_message"
+                  placeholder="Hi, this is an automated assistant calling on behalf of…">{{ a.first_message or '' }}</textarea>
+        <span class="field-hint">Leave it empty to use the disclosure line from your compliance settings.</span>
+      </div>
+      <div>
+        <label for="ag-persona">How it comes across</label>
+        <textarea id="ag-persona" name="persona"
+                  placeholder="Warm, brief and unbothered. Short sentences. Lets them talk.">{{ a.persona or '' }}</textarea>
+      </div>
+      <div>
+        <label for="ag-facts">What your company does</label>
+        <textarea id="ag-facts" name="company_facts"
+                  placeholder="We build small business websites in a day for $100 a month.">{{ a.company_facts or '' }}</textarea>
+      </div>
+      <div>
+        <label for="ag-knowledge">Background it can draw on</label>
+        <textarea id="ag-knowledge" name="knowledge_text"
+                  placeholder="Pricing tiers, service area, what you do not do.">{{ a.knowledge_text or '' }}</textarea>
+        <span class="field-hint">Facts it may use if asked. It will not read this out unprompted.</span>
+      </div>
+      <div>
+        <label for="ag-transfer">Extra transfer rules</label>
+        <textarea id="ag-transfer" name="transfer_rules"
+                  placeholder="Transfer straight away if they ask to speak to a person.">{{ a.transfer_rules or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="mg-card">
+      <h3>Voicemail and keypresses</h3>
+      <div class="field-grid">
+        <div>
+          <label for="ag-vmb">If it reaches a mailbox</label>
+          <select id="ag-vmb" name="voicemail_behavior">
+            {% set vmb = [('hangup', 'Hang up without leaving anything'),
+                          ('leave_tts', 'Speak the message below'),
+                          ('drop', 'Play your recorded voicemail')] %}
+            {% for key, label in vmb %}
+            <option value="{{ key }}" {{ 'selected' if (a.voicemail_behavior or 'leave_tts') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <label for="ag-vmm">The voicemail message</label>
+        <textarea id="ag-vmm" name="voicemail_message"
+                  placeholder="Hi, this is an automated assistant calling for… no need to call back, we'll try again.">{{ a.voicemail_message or '' }}</textarea>
+      </div>
+      <label class="checkline" style="margin-top:14px">
+        <input type="checkbox" name="dtmf_enabled" value="1" {{ 'checked' if a.dtmf_enabled }}>
+        <span>Let it press keys
+          <em>For phone menus — "press 2 for the manager". Leave off if you only call direct lines.</em></span>
+      </label>
+      <label class="checkline" style="margin-top:10px">
+        <input type="checkbox" name="active" value="1" {{ 'checked' if a.active }}>
+        <span>Agent is on
+          <em>Only agents that are on can be picked by a campaign.</em></span>
+      </label>
+    </div>
+
+    <div class="savebar">
+      <button class="btn ghost" type="submit"><i class="bi bi-check2"></i> Save</button>
+      <button class="btn" type="submit" name="sync" value="1">
+        <i class="bi bi-cloud-arrow-up"></i> Save and sync to ElevenLabs
+      </button>
+      <span class="mg-note" style="margin:0">Saving keeps the changes here. Syncing pushes them to ElevenLabs,
+        which is what the agent actually reads on a live call.</span>
+    </div>
+  </form>
+
+  <aside class="promptbox">
+    <div class="promptbox-head">
+      <h2><i class="bi bi-file-earmark-code"></i> Exactly what the AI is told</h2>
+      <p>Read-only. This is the complete instruction set the agent is given, assembled from the fields on the
+        left and your compliance settings. It updates when you save.</p>
+    </div>
+    <pre>{{ prompt_preview | default('Nothing to show yet. Save the agent and the instructions appear here.', true) }}</pre>
+    <div class="promptbox-foot">
+      <i class="bi bi-lock-fill"></i>
+      <span>The disclosure block cannot be removed. You can change your company name and callback number, but
+        the sentence saying a machine is calling always goes out first.</span>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function () {
+  // The voice name is stored alongside the id so the list reads properly even
+  // when ElevenLabs is unreachable.
+  var hidden = document.getElementById('ag-voicename');
+  if (!hidden) return;
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=voice_id]'), function (r) {
+    r.addEventListener('change', function () {
+      if (r.checked) hidden.value = r.getAttribute('data-voicename') || '';
+    });
+  });
+})();
+</script>
+{% endblock %}

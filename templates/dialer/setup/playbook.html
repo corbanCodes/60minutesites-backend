@@ -1,0 +1,117 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% if playbooks %}
+<h3 class="wiz-h3">Your playbooks <span class="count-chip">{{ playbooks | length }}</span></h3>
+<table>
+  <tr><th>Name</th><th>Steps</th><th>Questions</th><th>Objections</th><th></th></tr>
+  {% for p in playbooks %}
+  <tr>
+    <td>
+      <a class="rowlink" href="/dialer/playbooks/{{ p.id }}">{{ p.name }}</a>
+      {% if p.is_default %}<span class="pill" style="background:#2E7D4F">Default</span>{% endif %}
+      {% if p.description %}<div class="subtext">{{ p.description }}</div>{% endif %}
+    </td>
+    <td>{{ p.steps | length }}</td>
+    <td>{{ p.questions | length }}</td>
+    <td>{{ p.objections | length }}</td>
+    <td style="text-align:right">
+      <a class="chip-btn" href="/dialer/playbooks/{{ p.id }}">Edit</a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card empty">
+  <i class="bi bi-journal-text"></i>
+  <p><b>No playbook yet.</b></p>
+  <p class="muted">Reps get no script on screen and the AI has nothing to ask until there is one. This is a
+    required step.</p>
+</div>
+{% endif %}
+
+<div class="card wiz-steps-card">
+  <h3>{{ 'Add another playbook' if playbooks else 'Build your first playbook' }}</h3>
+  <p class="muted" style="margin:0 0 14px">A playbook holds four things: the steps of the call, the questions
+    that decide whether a lead is worth your time, the objections you already know you will hear, and the line
+    that says when to hand the call to a person.</p>
+  <form method="post" action="/dialer/playbooks/new">
+    <button class="btn" type="submit"><i class="bi bi-plus-lg"></i> Create a playbook</button>
+  </form>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>One playbook, two readers</h3>
+  <div class="two-up">
+    <div class="two-up-col">
+      <div class="two-up-head"><i class="bi bi-headset"></i> What a rep sees</div>
+      <p class="muted">While the call is live, the right-hand rail shows the current step and the next one. They
+        type an objection into a box and the answer appears. The qualification questions sit there as a
+        checklist, and ticking one files the answer against the lead.</p>
+    </div>
+    <div class="two-up-col">
+      <div class="two-up-head"><i class="bi bi-robot"></i> What the AI is told</div>
+      <p class="muted">The same steps become the AI's instructions, the same questions become the things it
+        has to find out before the call can end, and the same objection answers become what it says back. The
+        transfer line becomes the rule for when it hands over.</p>
+    </div>
+  </div>
+  <p style="margin:14px 0 0"><b>Write it once and both sides stay in step.</b> This matters later: when you
+    change a line because it is not working on live calls, the AI changes with it the same day, instead of
+    drifting a month behind your best rep.</p>
+</div>
+
+<div class="card wiz-callout">
+  <i class="bi bi-lightbulb"></i>
+  <div>
+    <b>Ask the cheapest disqualifying question first.</b>
+    <p style="margin:4px 0 0">The best scripts find out in the first thirty seconds whether this call can
+      possibly end in a sale. If you only sell to people who own the building, ask whether they own the
+      building before you say anything about the product. A no at thirty seconds costs you a cent. A no at
+      eight minutes costs you the next three calls you did not make.</p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> How to write a playbook that survives a real call</summary>
+  <div class="guide-body">
+    <h4>The steps</h4>
+    <p>Five or six, no more. Each one is a sentence a person could actually say out loud. A script nobody can
+      read at speed gets abandoned on call four and then you have no data about whether it worked.</p>
+    <ol>
+      <li><b>Who you are and why you called.</b> One sentence. Name, company, the reason.</li>
+      <li><b>The disqualifying question.</b> The cheapest one, first. See above.</li>
+      <li><b>The problem.</b> One question that gets them talking about the thing you fix.</li>
+      <li><b>What you do about it.</b> Two sentences, tied to what they said.</li>
+      <li><b>The ask.</b> A specific time, not &ldquo;sometime next week&rdquo;.</li>
+    </ol>
+
+    <h4>The questions</h4>
+    <p>These are the facts you need before a lead is worth a meeting: budget, who decides, when they are
+      buying, whatever matters in your trade. Keep it to three or four. Each answer is saved onto the lead, so
+      nobody has to re-ask it later and your reports can count them.</p>
+
+    <h4>The objections</h4>
+    <p>Write down the five you hear every week and the answer that works. Not the clever answer &mdash; the one
+      that works. This is the part reps use most and the part that improves fastest, because you can see in
+      the transcripts which answers end the call.</p>
+
+    <h4>Transfer criteria</h4>
+    <p>One plain sentence describing who is worth interrupting a rep for. &ldquo;They own the building, they
+      have had a leak in the last year, and they want someone out this month.&rdquo; The AI uses this
+      literally, so vague wording produces vague transfers.</p>
+
+    <h4>What never to do</h4>
+    <p>There is a field for this. Put the promises you cannot keep in it: prices you will not quote on a first
+      call, guarantees you do not offer, claims a regulator would object to. The AI is told not to say them
+      under any circumstances, and the post-call scoring flags a rep who did.</p>
+
+    <h4>Start from a real call</h4>
+    <p>The fastest way to write the first one is to make ten calls yourself with nothing but a notepad, then
+      write down what you actually said. A playbook invented at a desk reads like it was invented at a desk.</p>
+  </div>
+</details>
+{% endblock %}
