@@ -261,3 +261,14 @@ def test_an_invented_preset_is_not_sent_at_all(ctx, monkeypatch):
     cls.__new__(cls).upsert_agent(a, "prompt", [])
 
     assert "conversation" not in sent["body"]["conversation_config"]
+
+
+def test_the_opening_line_is_visibly_inert_while_waiting(agent):
+    """Waiting works by sending an empty opening line, so the sync clears
+    this field. Letting someone type a sentence into a box that is about to
+    be wiped is how "I keep hitting first thing it says and it's not
+    working" happens."""
+    owner, a, s, client = agent
+    body = client.get(f"/dialer/agents/{a.id}").get_data(as_text=True)
+    assert "not used while it waits" in body
+    assert "first.disabled = waiting" in body
