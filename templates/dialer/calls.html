@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Calls | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>Calls <span class="count-chip">{{ calls | length }}</span></h1>
+    <p class="mg-sub">Every call this account has placed or taken, newest first. Open one to read the
+      transcript, hear the recording and see why the call was allowed.</p>
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Calling</a>
+    <a class="btn ghost sm" href="/dialer/reports"><i class="bi bi-graph-up-arrow"></i> Reports</a>
+  </div>
+</div>
+
+<form class="filterbar" method="get" action="/dialer/calls">
+  <div class="search-wrap grow">
+    <i class="bi bi-search"></i>
+    <input type="text" name="q" value="{{ q | default('', true) }}"
+           placeholder="Search a number, a summary or a transcript">
+  </div>
+  <select name="disposition" aria-label="Outcome">
+    <option value="">Any outcome</option>
+    {% for d in dispositions | default([]) %}
+    <option value="{{ d[0] }}" {{ 'selected' if disposition == d[0] }}>{{ d[1] }}</option>
+    {% endfor %}
+  </select>
+  <select name="campaign_id" aria-label="Campaign">
+    <option value="">Any campaign</option>
+    {% for c in campaigns | default([]) %}
+    <option value="{{ c.id }}" {{ 'selected' if request.args.get('campaign_id') == c.id | string }}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn sm" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+  {% if q or disposition or request.args.get('campaign_id') %}
+  <a class="chip-btn" href="/dialer/calls">Clear</a>
+  {% endif %}
+</form>
+
+{% if calls %}
+<form method="get" action="/dialer/calls/export.zip" id="exportform">
+  <div class="bulkrow">
+    <button class="btn sm" type="submit"><i class="bi bi-download"></i> Download selected</button>
+    <span class="mg-note">Tick the rows you want. Hold Shift to tick a whole run at once. You get a zip with
+      the recordings and a spreadsheet of the transcripts.</span>
+  </div>
+
+  <table>
+    <tr>
+      <th class="chkcol"><input type="checkbox" id="chkall" aria-label="Select every call on this page"></th>
+      <th>When</th><th>Lead</th><th>Number</th><th>Outcome</th>
+      <th class="mg-right">Length</th><th class="mg-right">Score</th><th class="mg-right">Cost</th><th></th>
+    </tr>
+    {% for call in calls %}
+    {% set lead = leads.get(call.lead_id) if leads else None %}
+    <tr>
+      <td class="chkcol">
+        <input type="checkbox" name="call_id" value="{{ call.id }}" class="callchk"
+               aria-label="Select the call on {{ call.started_at | local if call.started_at else 'this row' }}">
+      </td>
+      <td>
+        <div class="callrow-when">{{ call.started_at | localdate if call.started_at else '—' }}
+          <span>{{ call.started_at | local('%-I:%M %p') if call.started_at else '' }}</span></div>
+      </td>
+      <td>
+        {% if lead %}
+          <a class="rowlink" href="/admin/crm/{{ lead.id }}">{{ lead.name }}</a>
+          {% if lead.business %}<div class="subtext">{{ lead.business }}</div>{% endif %}
+        {% else %}
+          <span class="muted">No CRM record</span>
+        {% endif %}
+      </td>
+      <td class="mg-nowrap">{{ call.to_number or '—' }}
+        {% if call.direction == 'inbound' %}<div class="subtext">inbound</div>{% endif %}
+      </td>
+      <td>
+        {% if call.disposition %}
+          <span class="pill disp disp-{{ call.disposition }}">{{ call.disposition | replace('_', ' ') | capitalize }}</span>
+        {% else %}
+          <span class="muted">{{ (call.system_outcome or 'not set') | replace('_', ' ') }}</span>
+        {% endif %}
+      </td>
+      <td class="mg-right mg-num">{{ call.duration_pretty }}</td>
+      <td class="mg-right">
+        {% if call.score is not none %}
+          <span class="score-chip {{ 'hi' if call.score >= 7 else ('lo' if call.score <= 4 else '') }}">{{ call.score }}/10</span>
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td class="mg-right mg-num">{{ '$%.2f' | format(call.cost_estimate | default(0) | float) }}</td>
+      <td class="mg-right"><a class="chip-btn" href="/dialer/calls/{{ call.id }}">Open</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</form>
+
+<script>
+(function () {
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.callchk'));
+  var all = document.getElementById('chkall');
+  var last = null;
+  boxes.forEach(function (b, i) {
+    b.addEventListener('click', function (e) {
+      if (e.shiftKey && last !== null) {
+        var a = Math.min(last, i), z = Math.max(last, i);
+        for (var k = a; k <= z; k++) { boxes[k].checked = b.checked; }
+      }
+      last = i;
+    });
+  });
+  if (all) {
+    all.addEventListener('change', function () {
+      boxes.forEach(function (b) { b.checked = all.checked; });
+      last = null;
+    });
+  }
+})();
+</script>
+{% else %}
+<div class="mg-empty">
+  <i class="bi bi-telephone"></i>
+  <h3>{% if q or disposition or request.args.get('campaign_id') %}Nothing matches those filters{% else %}No calls yet{% endif %}</h3>
+  <p>{% if q or disposition or request.args.get('campaign_id') %}
+      Widen the search or clear the filters to see everything.
+    {% else %}
+      Once you or an AI agent places a call, it lands here with its recording, transcript and the record of
+      why it was allowed to be placed.
+    {% endif %}</p>
+  {% if q or disposition or request.args.get('campaign_id') %}
+  <a class="btn ghost" href="/dialer/calls">Clear filters</a>
+  {% else %}
+  <a class="btn" href="/dialer/campaigns"><i class="bi bi-megaphone"></i> Campaigns</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -75,6 +75,12 @@ def _money(part, whole):
     return round(float(part) / float(whole), 2)
 
 
+def _plural(n, word):
+    """"1 dial", "2 dials". A subject line is the one string a manager reads
+    every morning; getting the grammar wrong there reads as a broken tool."""
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
 def _pretty_seconds(total):
     s = int(total or 0)
     h, rem = divmod(s, 3600)
@@ -467,8 +473,9 @@ def daily_digest(account_id, day=None):
         "by_rep": reps,
         "top_leads": moved,
         "subject": (f"Calling recap for {target.strftime('%b %-d')} — "
-                    f"{head['dials']} dials, {head['connects']} connects, "
-                    f"{head['meetings']} meetings"),
+                    f"{_plural(head['dials'], 'dial')}, "
+                    f"{_plural(head['connects'], 'connect')}, "
+                    f"{_plural(head['booked'], 'booked outcome')}"),
     }
     digest["html"] = _digest_html(digest)
     return digest

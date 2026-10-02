@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Phone numbers | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>Phone numbers <span class="count-chip">{{ numbers | length }}</span></h1>
+    <p class="mg-sub">The numbers people see when you call them, and the ones they ring back. A number in the
+      rep pool carries your own calls; a number in the AI pool is handed to ElevenLabs and cannot do both.</p>
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer"><i class="bi bi-arrow-left"></i> Calling</a>
+    <form method="post" action="/dialer/numbers/import" style="display:inline-flex">
+      <button class="btn ghost sm" type="submit"><i class="bi bi-box-arrow-in-down"></i> Import from Twilio</button>
+    </form>
+  </div>
+</div>
+
+{% if numbers %}
+<table>
+  <tr>
+    <th>Number</th><th>Pool</th><th>Purpose</th><th>Daily cap</th><th>Today</th><th>State</th><th></th>
+  </tr>
+  {% for n in numbers %}
+  <tr>
+    <td>
+      <span class="rowlink">{{ n.pretty }}</span>
+      <div class="subtext">{{ n.region or n.area_code or '' }}{% if n.friendly_name and n.friendly_name != n.e164 %} · {{ n.friendly_name }}{% endif %}</div>
+    </td>
+    <td>
+      <form method="post" action="/dialer/numbers/{{ n.id }}/pool" class="inline-form">
+        <select name="pool" class="scope-select" onchange="this.form.submit()" aria-label="Pool for {{ n.pretty }}">
+          <option value="rep" {{ 'selected' if n.pool != 'ai' }}>You and your reps</option>
+          <option value="ai" {{ 'selected' if n.pool == 'ai' }}>AI agents</option>
+        </select>
+      </form>
+    </td>
+    <td class="muted">{{ (n.purpose or 'both') | capitalize }}</td>
+    <td>
+      <form method="post" action="/dialer/numbers/{{ n.id }}/cap" class="inline-cap">
+        <input type="number" name="daily_cap" min="1" max="1000" value="{{ n.daily_cap | default(120) }}"
+               aria-label="Daily call cap for {{ n.pretty }}">
+        <button class="chip-btn" type="submit">Save</button>
+      </form>
+    </td>
+    <td>
+      {% set cap = n.daily_cap | default(120) or 120 %}
+      {% set used = n.calls_today | default(0) or 0 %}
+      {% set share = ((used / cap) * 100) | round(0, 'floor') | int if cap else 0 %}
+      <div class="meter">
+        <div class="meter-track" role="img" aria-label="{{ used }} of {{ cap }} calls used today">
+          <span class="meter-fill {{ 'over' if share >= 100 else ('warn' if share >= 80 else '') }}"
+                style="width:{{ 100 if share > 100 else share }}%"></span>
+        </div>
+        <span class="meter-text">{{ used }} / {{ cap }}</span>
+      </div>
+    </td>
+    <td><span class="pill st-{{ n.state or 'active' }}">{{ (n.state or 'active') | capitalize }}</span></td>
+    <td class="mg-right mg-nowrap">
+      {% if n.state != 'released' %}
+        {% if n.state == 'parked' %}
+        <form method="post" action="/dialer/numbers/{{ n.id }}/unpark" class="inline-form">
+          <button class="chip-btn" type="submit">Unpark</button>
+        </form>
+        {% else %}
+        <form method="post" action="/dialer/numbers/{{ n.id }}/park" class="inline-form">
+          <button class="chip-btn" type="submit">Park</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/dialer/numbers/{{ n.id }}/release" class="release-form"
+              onsubmit="return confirm('Release {{ n.pretty }}? Twilio gives it to someone else. Anyone who calls it back — including people you have already spoken to — reaches a stranger. Parking keeps it answering.')">
+          <label class="chk"><input type="checkbox" name="confirm" value="yes"> I understand</label>
+          <button class="chip-btn danger" type="submit">Release</button>
+        </form>
+      {% else %}
+        <span class="muted">released</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+<p class="mg-note" style="margin-top:10px">
+  <i class="bi bi-exclamation-triangle"></i>
+  Releasing a number that has already dialed out sends your callbacks to a stranger. Park it instead — a
+  parked number still answers, it only stops dialing out. Release needs both the warning box ticked and the
+  confirmation.
+</p>
+{% else %}
+<div class="mg-empty">
+  <i class="bi bi-telephone-plus"></i>
+  <h3>No numbers yet</h3>
+  <p>You need at least one number before anything can dial. Search below for one in the area code you want,
+    or import numbers you already own on Twilio. A US local number costs about $1.15 a month.</p>
+</div>
+{% endif %}
+
+<div class="mg-section">
+  <h2><i class="bi bi-search"></i> Buy a number</h2>
+  <p class="mg-note">A local area code to the people you call gets answered more often than a toll-free one.</p>
+  <form class="filterbar" method="get" action="/dialer/numbers/search">
+    <input type="text" name="area_code" value="{{ q | default('', true) }}" maxlength="3" inputmode="numeric"
+           placeholder="Area code, e.g. 865" aria-label="Area code">
+    <button class="btn sm" type="submit"><i class="bi bi-search"></i> Search Twilio</button>
+  </form>
+
+  {% if results %}
+  <p class="mg-note">{{ results | length }} available. Pick which pool it joins before you buy — moving it later
+    re-registers it with the vendor.</p>
+  {% for r in results %}
+  <div class="buyrow">
+    <div>
+      <b>{{ r.friendly_name or r.e164 }}</b>
+      <div class="buymeta">{{ r.region or '' }}{% if r.monthly %} · about ${{ '%.2f' | format(r.monthly | float) }} a month{% endif %}</div>
+    </div>
+    <form method="post" action="/dialer/numbers/buy">
+      <input type="hidden" name="e164" value="{{ r.e164 }}">
+      <select name="pool" class="scope-select" aria-label="Pool for {{ r.e164 }}">
+        <option value="rep">You and your reps</option>
+        <option value="ai">AI agents</option>
+      </select>
+      <button class="btn sm" type="submit"><i class="bi bi-bag-plus"></i> Buy</button>
+    </form>
+  </div>
+  {% endfor %}
+  {% elif q %}
+  <p class="mg-note">Nothing available in {{ q }} right now. Try a neighbouring area code.</p>
+  {% endif %}
+</div>
+{% endblock %}

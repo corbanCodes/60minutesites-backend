@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}New campaign | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>New campaign</h1>
+    <p class="mg-sub">Pick who gets called and how. The panel on the right updates as you type and shows
+      exactly which of those leads the compliance gate will let this kind of campaign dial.</p>
+  </div>
+  <div class="mg-actions">
+    <a class="btn ghost sm" href="/dialer/campaigns"><i class="bi bi-arrow-left"></i> Campaigns</a>
+  </div>
+</div>
+
+<div class="builder">
+  <form class="form builder-form" id="segform" method="post" action="/dialer/campaigns/new">
+
+    {% if preselected %}
+    <div class="picked-note">
+      <i class="bi bi-check2-square"></i>
+      <span>{{ preselected | length }} lead{{ '' if preselected | length == 1 else 's' }} picked from the CRM.
+        Those are included on top of anything the filters below match.</span>
+    </div>
+    {% for lid in preselected %}<input type="hidden" name="lead_id" value="{{ lid }}">{% endfor %}
+    {% endif %}
+
+    <div class="mg-card">
+      <h3>Name it</h3>
+      <div>
+        <label for="camp-name">Campaign name</label>
+        <input type="text" id="camp-name" name="name" required maxlength="140"
+               placeholder="Knoxville restaurants — first touch">
+        <span class="field-hint">Only you see this. Make it something you will recognise in a week.</span>
+      </div>
+    </div>
+
+    <div class="mg-card">
+      <h3>How it calls</h3>
+      <div class="modepick">
+        <label class="rolecard">
+          <input type="radio" name="mode" value="power" checked data-mode>
+          <span class="rolecard-body">
+            <span class="rolecard-name">You dial</span>
+            <span class="rolecard-blurb">The queue feeds the phone screen. You talk to everyone who answers.</span>
+          </span>
+        </label>
+        <label class="rolecard">
+          <input type="radio" name="mode" value="ai" data-mode>
+          <span class="rolecard-body">
+            <span class="rolecard-name">An AI voice dials</span>
+            <span class="rolecard-blurb">An agent calls, discloses that it is automated, qualifies, and hands warm ones to you.</span>
+          </span>
+        </label>
+        <label class="rolecard">
+          <input type="radio" name="mode" value="voicemail" data-mode>
+          <span class="rolecard-body">
+            <span class="rolecard-name">Voicemail only</span>
+            <span class="rolecard-blurb">Drops a recorded message. Nobody's phone is tied up in a conversation.</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="field-grid" style="margin-top:14px">
+        <div data-when="ai">
+          <label for="f-agent">AI agent</label>
+          <select id="f-agent" name="ai_agent_id">
+            <option value="">Pick an agent</option>
+            {% for a in agents | default([]) %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}
+          </select>
+          <span class="field-hint">{% if not agents %}No active agents yet — build one under Agents first.{% else %}The voice, the script and the limits come from the agent.{% endif %}</span>
+        </div>
+        <div data-when="power ai">
+          <label for="f-playbook">Playbook</label>
+          <select id="f-playbook" name="playbook_id">
+            <option value="">None</option>
+            {% for p in playbooks | default([]) %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+          </select>
+          <span class="field-hint">The steps, questions and objection answers shown on the phone screen.</span>
+        </div>
+        <div data-when="voicemail ai">
+          <label for="f-drop">Voicemail recording</label>
+          <select id="f-drop" name="voicemail_drop_id">
+            <option value="">None</option>
+            {% for d in drops | default([]) %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
+          </select>
+          <span class="field-hint">{% if not drops %}No recordings yet — record one in setup.{% else %}Played into the mailbox after the beep.{% endif %}</span>
+        </div>
+        <div>
+          <label for="f-concurrent">Calls at once</label>
+          <input type="number" id="f-concurrent" name="max_concurrent" min="1" max="20" value="1">
+          <span class="field-hint">Start at 1. Raising this is how abandoned calls happen.</span>
+        </div>
+      </div>
+
+      <label class="checkline" style="margin-top:14px">
+        <input type="checkbox" name="amd_enabled" value="1">
+        <span>Detect answering machines
+          <em>Waits a beat to work out whether a person or a mailbox picked up. Adds about a second of silence at the start.</em></span>
+      </label>
+    </div>
+
+    <div class="mg-card">
+      <h3>Who gets called</h3>
+      <p class="mg-note">Leave a filter empty to ignore it. Leads with no phone number are never included.</p>
+      <div class="field-grid">
+        <div>
+          <label for="f-statuses">CRM status</label>
+          <select class="multi" id="f-statuses" name="statuses" multiple size="7">
+            {% for st in statuses | default([]) %}<option value="{{ st }}">{{ st }}</option>{% endfor %}
+          </select>
+          <span class="field-hint">Hold Command (or Control) to pick more than one.</span>
+        </div>
+        <div>
+          <label for="f-sources">Where the lead came from</label>
+          <select class="multi" id="f-sources" name="sources" multiple size="7">
+            {% for src in sources | default([]) %}<option value="{{ src }}">{{ src }}</option>{% endfor %}
+          </select>
+          <span class="field-hint">{% if not sources %}No sources recorded on your leads yet.{% else %}Matches the source field on the lead.{% endif %}</span>
+        </div>
+      </div>
+
+      <div class="field-grid" style="margin-top:14px">
+        <div>
+          <label for="f-tags">Tags</label>
+          <input type="text" id="f-tags" name="tags" placeholder="hospitality, warm">
+          <span class="field-hint">Comma separated.{% if tags %} You have used: {{ tags[:8] | join(', ') }}{% if tags | length > 8 %}…{% endif %}{% endif %}</span>
+        </div>
+        <div>
+          <label for="f-states">States</label>
+          <input type="text" id="f-states" name="states" placeholder="TN, GA, NC">
+          <span class="field-hint">Two-letter codes, comma separated.</span>
+        </div>
+        <div>
+          <label for="f-area">Area codes</label>
+          <input type="text" id="f-area" name="area_codes" placeholder="865, 423">
+          <span class="field-hint">Comma separated.</span>
+        </div>
+        <div>
+          <label for="f-biztype">Business type</label>
+          <input type="text" id="f-biztype" name="business_type" placeholder="restaurant">
+          <span class="field-hint">Matches part of the business type on the lead.</span>
+        </div>
+        <div>
+          <label for="f-days">Not called in the last… days</label>
+          <input type="number" id="f-days" name="not_called_in_days" min="0" max="365" placeholder="30">
+          <span class="field-hint">Leave empty to include leads you called yesterday.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="savebar">
+      <button class="btn" type="submit"><i class="bi bi-check2"></i> Build this campaign</button>
+      <a class="btn ghost" href="/dialer/campaigns">Cancel</a>
+      <span class="mg-note" style="margin:0">Building freezes the list. Nothing dials until you press Start on the next screen.</span>
+    </div>
+  </form>
+
+  <aside class="preview-panel" id="previewpanel">
+    <div class="preview-head">
+      <h2><i class="bi bi-shield-check"></i> What this campaign can actually dial</h2>
+      <p>Every number is checked against your do-not-call list, the calling window in the lead's own time
+        zone, your state rules and — for AI calling — the mobile gate.</p>
+    </div>
+    <div class="preview-body">
+      <div class="preview-counts">
+        <div class="preview-count"><b id="pv-total">—</b><span>Matched</span></div>
+        <div class="preview-count good"><b id="pv-eligible">—</b><span>Can dial</span></div>
+        <div class="preview-count blocked"><b id="pv-blocked">—</b><span>Held back</span></div>
+      </div>
+      <div class="preview-state" id="pv-state"><i class="bi bi-hourglass"></i> Checking your list…</div>
+
+      <div id="pv-reasons-wrap" hidden>
+        <div class="preview-h">Why the rest are held back</div>
+        <div class="reason-list" id="pv-reasons"></div>
+      </div>
+
+      <div id="pv-sample-wrap" hidden>
+        <div class="preview-h">First few it would call</div>
+        <div class="sample-list" id="pv-sample"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('segform');
+  if (!form) return;
+
+  // Same words as dialer/compliance.py REASONS, so the screen and the call
+  // record never explain the same block two different ways.
+  var REASONS = {
+    "ok": "Cleared to dial.",
+    "no_phone": "No usable phone number on this lead.",
+    "bad_phone": "That phone number isn't dialable.",
+    "do_not_call": "This lead is marked do-not-call.",
+    "suppressed": "This number is on your do-not-call list.",
+    "outside_window": "Outside the calling window in the lead's local time.",
+    "state_blocked": "AI calling is switched off for this state.",
+    "state_window": "Outside this state's calling hours.",
+    "line_type_restricted": "AI calling is limited to landlines, and this number isn't one. A human can still dial it.",
+    "line_type_unknown": "We haven't checked whether this is a mobile number yet.",
+    "line_type_stale": "The line-type check on this number is out of date.",
+    "no_disclosure": "Set the AI disclosure name and callback number first.",
+    "daily_cap": "This lead has already been called the maximum times today.",
+    "no_number": "No phone number available to dial from."
+  };
+
+  var elTotal = document.getElementById('pv-total');
+  var elElig = document.getElementById('pv-eligible');
+  var elBlock = document.getElementById('pv-blocked');
+  var elState = document.getElementById('pv-state');
+  var reasonsWrap = document.getElementById('pv-reasons-wrap');
+  var reasonsBox = document.getElementById('pv-reasons');
+  var sampleWrap = document.getElementById('pv-sample-wrap');
+  var sampleBox = document.getElementById('pv-sample');
+  var timer = null, seq = 0;
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function showModeFields() {
+    var picked = form.querySelector('input[name=mode]:checked');
+    var mode = picked ? picked.value : 'power';
+    form.querySelectorAll('[data-when]').forEach(function (el) {
+      el.hidden = el.getAttribute('data-when').split(' ').indexOf(mode) === -1;
+    });
+  }
+
+  function render(d) {
+    elTotal.textContent = d.total || 0;
+    elElig.textContent = d.eligible || 0;
+    elBlock.textContent = d.blocked || 0;
+
+    var reasons = d.reasons || {};
+    var keys = Object.keys(reasons).sort(function (a, b) { return reasons[b] - reasons[a]; });
+    if (keys.length) {
+      reasonsBox.innerHTML = keys.map(function (k) {
+        return '<div class="reason"><div class="reason-n">' + esc(reasons[k]) + '</div>'
+          + '<div class="reason-copy">' + esc(REASONS[k] || 'Not cleared to dial.') + '</div></div>';
+      }).join('');
+      reasonsWrap.hidden = false;
+    } else {
+      reasonsWrap.hidden = true;
+    }
+
+    var sample = d.sample || [];
+    if (sample.length) {
+      sampleBox.innerHTML = sample.map(function (r) {
+        var who = esc(r.name || 'Unnamed lead');
+        var biz = r.business ? ' <span>— ' + esc(r.business) + '</span>' : '';
+        return '<div class="sample-row"><b>' + who + '</b>' + biz
+          + '<div><span>' + esc(r.phone || 'no number') + ' · ' + esc(r.line_type || 'unchecked') + '</span></div></div>';
+      }).join('');
+      sampleWrap.hidden = false;
+    } else {
+      sampleWrap.hidden = true;
+    }
+
+    if (!d.total) {
+      elState.className = 'preview-state';
+      elState.innerHTML = '<i class="bi bi-funnel"></i> No leads match these filters yet.';
+    } else if (!d.eligible) {
+      elState.className = 'preview-state err';
+      elState.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Nothing here can be dialed this way right now.';
+    } else {
+      elState.className = 'preview-state';
+      elState.innerHTML = '<i class="bi bi-check-circle"></i> Checked just now.';
+    }
+  }
+
+  function refresh() {
+    var mine = ++seq;
+    elState.className = 'preview-state';
+    elState.innerHTML = '<i class="bi bi-hourglass"></i> Checking your list…';
+    fetch('/dialer/campaigns/preview', {
+      method: 'POST', body: new FormData(form), credentials: 'same-origin'
+    }).then(function (r) {
+      if (!r.ok) throw new Error('status ' + r.status);
+      return r.json();
+    }).then(function (d) {
+      if (mine !== seq) return;
+      render(d);
+    }).catch(function () {
+      if (mine !== seq) return;
+      elState.className = 'preview-state err';
+      elState.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> Could not check the list. Your filters are still saved.';
+    });
+  }
+
+  function queue() {
+    showModeFields();
+    clearTimeout(timer);
+    timer = setTimeout(refresh, 350);
+  }
+
+  form.addEventListener('input', queue);
+  form.addEventListener('change', queue);
+  showModeFields();
+  refresh();
+})();
+</script>
+{% endblock %}

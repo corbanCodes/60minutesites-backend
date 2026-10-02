@@ -124,12 +124,14 @@ def one_pass(account_id=None, counter=0, force_slow=False):
     next one rather than sitting idle for three seconds.
     """
     from dialer import campaigns as campaigns_mod
-    from dialer import processor
+    from dialer import processor, simulate
     from dialer.models import Campaign
+    from dialer.providers import registry
     from dialer.settings_store import get_settings
 
     stats = {"inbox": 0, "inbox_failed": 0, "campaigns": 0, "dialed": 0,
-             "skipped": 0, "deferred": 0, "released": 0, "slow": False}
+             "skipped": 0, "deferred": 0, "released": 0, "simulated": 0,
+             "slow": False}
 
     inbox = processor.process_all(account_id=account_id, limit=50)
     stats["inbox"] = inbox.get("processed", 0)
@@ -144,11 +146,14 @@ def one_pass(account_id=None, counter=0, force_slow=False):
                               Campaign.mode.in_(["ai", "voicemail"]))
     if account_id is not None:
         q = q.filter(Campaign.account_id == account_id)
+    simulated_accounts = set()
     for campaign in q.all():
         settings = get_settings(campaign.account_id, create=False)
         if settings is None:
             log("tick", f"campaign={campaign.id} skipped=no-settings")
             continue
+        if registry.simulating(settings):
+            simulated_accounts.add(campaign.account_id)
         res = campaigns_mod.tick(campaign, settings, worker="worker")
         stats["campaigns"] += 1
         stats["dialed"] += res.get("dialed", 0)
@@ -159,6 +164,18 @@ def one_pass(account_id=None, counter=0, force_slow=False):
                         f"dialed={res.get('dialed', 0)} "
                         f"skipped={res.get('skipped', 0)} "
                         f"deferred={res.get('deferred', 0)}")
+
+    # Practice mode has no carrier to post a webhook back, so nothing would
+    # ever close these calls and the campaign would sit at max_concurrent
+    # forever. Pump the fake carrier's event sequence into the same inbox a
+    # real one writes to. No-op in production -- `simulating` is false there,
+    # and the set is empty. Note the fake carrier keeps its in-flight calls in
+    # process memory, so this only completes calls THIS process dialed;
+    # `--once` invocations each start with an empty simulator.
+    for acct in simulated_accounts:
+        stats["simulated"] += simulate.advance_all(acct, limit=50) or 0
+    if stats["simulated"]:
+        log("simulated", f"advanced={stats['simulated']}")
 
     stats["released"] = campaigns_mod.sweep_expired_leases(account_id) or 0
     if stats["released"]:
@@ -252,7 +269,8 @@ def run_forever(account_id=None):
             stats = one_pass(account_id, passes)
             failures = 0
             busy = (stats["inbox"] or stats["dialed"] or stats["skipped"]
-                    or stats["deferred"] or stats["released"])
+                    or stats["deferred"] or stats["released"]
+                    or stats["simulated"])
             if busy:
                 log("pass", f"n={passes} ms={int((time.monotonic() - began) * 1000)} "
                             f"campaigns={stats['campaigns']} "

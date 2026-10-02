@@ -297,3 +297,37 @@ def test_campaign_stats_and_auto_finish(ready_account):
     assert camp.stats["connects"] == 1
     assert camp.status == "done"
     assert camp.finished_at is not None
+
+
+def test_the_ai_never_dials_a_restricted_line_without_a_reason(ready_account):
+    """The invariant that matters: across a whole campaign, every AI call to
+    anything other than a landline must carry either a consent record or a
+    recorded owner override."""
+    owner, s = ready_account
+    from dialer.models import AiAgent
+    agent = AiAgent(account_id=owner.id, name="Screener", direction="outbound",
+                    elevenlabs_agent_id="ag_test", voice_id="sim-rachel")
+    db.session.add(agent)
+    db.session.commit()
+
+    leads = _seed_leads(owner, s, [("1", "Land A"), ("6", "Cell A"),
+                                   ("7", "Voip A"), ("1", "Land B"),
+                                   ("6", "Cell B")])
+    # one of the mobiles has written consent, which is the lawful case
+    compliance.record_consent(owner.id, leads[1], kind="written",
+                              source="Signed opt-in form")
+    db.session.commit()
+
+    camp = _campaign(owner, "ai", ai_agent_id=agent.id)
+    campaigns.materialize(camp, s)
+    simulate.run_campaign(camp, s)
+
+    for call in Call.query.filter_by(campaign_id=camp.id).all():
+        if call.line_type_at_dial in ("landline", "tollFree"):
+            continue
+        gate = call.gate
+        assert gate.get("unlocked_by") in ("consent", "gate_off"), (
+            f"{call.to_number} ({call.line_type_at_dial}) was dialled with "
+            f"no consent and no override: {gate}")
+    # two landlines plus the one consented mobile
+    assert Call.query.filter_by(campaign_id=camp.id).count() == 3

@@ -196,8 +196,13 @@ def seed_demo(account_id, settings, leads=40):
     made_leads = _make_leads(account_id, settings, count, rng)
     campaign, ran = _run_campaign(account_id, settings, made_leads, playbook,
                                   owner)
+    # A second, AI campaign over the landlines further down the list, so a
+    # demo shows BOTH lanes side by side -- and shows the gate skipping the
+    # mobile numbers, which is the part worth seeing.
+    ai_campaign, ai_ran = _run_ai_campaign(account_id, settings, made_leads,
+                                           playbook, agents, owner)
 
-    calls = Call.query.filter_by(campaign_id=campaign.id).count()
+    calls = Call.query.filter(Call.account_id == account_id).count()
     lead_ids = [l.id for l in made_leads]
     notes = Note.query.filter(Note.lead_id.in_(lead_ids)).count()
     tasks = Task.query.filter(Task.lead_id.in_(lead_ids)).count()
@@ -209,6 +214,9 @@ def seed_demo(account_id, settings, leads=40):
         "tasks": tasks,
         "campaign_id": campaign.id,
         "campaign_name": campaign.name,
+        "ai_campaign_id": getattr(ai_campaign, "id", None),
+        "ai_dialed": ai_ran.get("dialed", 0),
+        "ai_skipped_by_gate": ai_ran.get("skipped_by_gate", 0),
         "playbook_id": playbook.id,
         "agent_ids": [a.id for a in agents],
         "number_ids": [n.id for n in numbers],
@@ -354,6 +362,51 @@ def _make_leads(account_id, settings, count, rng):
                  "about the napkin program, including automated ones.")
     db.session.commit()
     return out
+
+
+def _run_ai_campaign(account_id, settings, made_leads, playbook, agents, owner):
+    """The AI lane. Deliberately pointed at a slice of the list that contains
+    BOTH landlines and mobiles, so the demo shows the compliance gate doing its
+    job: the landlines get called, the mobiles are skipped with a reason."""
+    from dialer.models import CampaignLead
+    agent = next((a for a in agents if a.direction == "outbound"), None)
+    if agent is None:
+        return None, {}
+    # The WHOLE list on purpose. The gate then does the filtering in front of
+    # the viewer, which is the point: the AI dials the landlines and skips the
+    # mobiles with a reason you can read.
+    lead_ids = [l.id for l in made_leads]
+    campaign = Campaign(
+        account_id=account_id,
+        name=DEMO_PREFIX + "AI screener — the whole list, gate on",
+        mode="ai", playbook_id=playbook.id, ai_agent_id=agent.id,
+        number_pool="ai",
+        segment_json=json.dumps({"lead_ids": lead_ids, "has_phone": True}),
+        status="running", max_concurrent=2,
+        created_by=getattr(owner, "id", None),
+        started_at=_now() - timedelta(hours=1))
+    db.session.add(campaign)
+    db.session.commit()
+    campaigns_mod.materialize(campaign, settings)
+
+    was_enforcing = settings.enforce_window
+    try:
+        settings.enforce_window = False
+        db.session.commit()
+        ran = simulate.run_campaign(campaign, settings)
+    finally:
+        settings.enforce_window = was_enforcing
+        db.session.commit()
+
+    ran["skipped_by_gate"] = CampaignLead.query.filter(
+        CampaignLead.campaign_id == campaign.id,
+        CampaignLead.state == "skipped").count()
+    db.session.refresh(campaign)
+    if campaign.status == "running":
+        campaign.status = "done"
+        campaign.finished_at = _now()
+        db.session.commit()
+    return campaign, ran
 
 
 def _run_campaign(account_id, settings, made_leads, playbook, owner):

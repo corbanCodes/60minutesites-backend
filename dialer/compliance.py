@@ -107,19 +107,19 @@ def has_consent(lead):
 
 
 def line_type_ok_for_ai(lead, settings):
-    """True when the number is a landline, or the account has consent, or the
-    owner has deliberately switched the gate off."""
+    """-> (allowed, why). `why` records WHICH rule allowed or refused it, so
+    the evidence on the call says more than 'ok'."""
     if has_consent(lead):
-        return True, ""
+        return True, "consent"
     if not settings.gate_on:
         return True, "gate_off"
     lt = (lead.line_type or "").strip()
     if not lt:
         return False, "line_type_unknown"
-    if lt == "landline" or lt == "tollFree":
-        return True, ""
+    if lt in ("landline", "tollFree"):
+        return True, "landline"
     if lt == "fixedVoip" and not settings.treat_voip_as_mobile:
-        return True, ""
+        return True, "fixed_voip_allowed"
     return False, "line_type_restricted"
 
 
@@ -195,9 +195,24 @@ def can_dial(lead, mode, settings, account_id, now=None, campaign=None):
     allowed, why = line_type_ok_for_ai(lead, settings)
     ev["line_type"] = lead.line_type or "unchecked"
     ev["consent"] = lead.consent_status or "none"
+    ev["unlocked_by"] = why if allowed else ""
     if why == "gate_off":
         ev["gate_override"] = True
         ev["attestation"] = (settings.gate_attestation or "")[:300]
+    if why == "consent":
+        # A restricted line type dialled on the strength of a consent record:
+        # name the record, because this is the pair an auditor asks for.
+        from dialer.models import ConsentRecord
+        rec = (ConsentRecord.query
+               .filter_by(account_id=account_id, lead_id=lead.id)
+               .filter(ConsentRecord.revoked_at.is_(None))
+               .order_by(ConsentRecord.captured_at.desc()).first())
+        ev["consent_kind"] = lead.consent_status
+        ev["consent_source"] = (lead.consent_source or "")[:200]
+        if rec is not None:
+            ev["consent_record_id"] = rec.id
+            ev["consent_captured_at"] = (rec.captured_at.isoformat()
+                                         if rec.captured_at else "")
     if not allowed:
         return dict(ev, ok=False, reason=why)
     if (settings.gate_on and not has_consent(lead)

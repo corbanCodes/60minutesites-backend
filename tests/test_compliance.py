@@ -240,3 +240,35 @@ def test_no_phone_is_refused_before_anything_else(acct):
     lead = make_lead(owner_id=owner.id, phone="not a number")
     ev = compliance.can_dial(lead, "power", s, owner.id)
     assert ev["ok"] is False and ev["reason"] == "no_phone"
+
+
+# ----------------------------------- the evidence has to name its own reason
+def test_evidence_says_which_rule_allowed_the_dial(acct):
+    owner, s = acct
+    landline = _lead(owner, "8655551231")
+    landline.line_type, landline.line_type_checked_at = "landline", _now()
+    db.session.commit()
+    ev = compliance.can_dial(landline, "ai_outbound", s, owner.id)
+    assert ev["ok"] and ev["unlocked_by"] == "landline"
+
+    mobile = _lead(owner, "8655551246", name="Cell")
+    mobile.line_type, mobile.line_type_checked_at = "mobile", _now()
+    db.session.commit()
+    compliance.record_consent(owner.id, mobile, kind="written",
+                              source="Trade-show card, signed")
+    db.session.commit()
+    ev2 = compliance.can_dial(mobile, "ai_outbound", s, owner.id)
+    assert ev2["ok"] and ev2["unlocked_by"] == "consent"
+    assert ev2["consent_kind"] == "written"
+    assert "Trade-show" in ev2["consent_source"]
+    assert ev2.get("consent_record_id")
+
+
+def test_a_mobile_with_no_consent_is_still_refused(acct):
+    owner, s = acct
+    mobile = _lead(owner, "8655551246")
+    mobile.line_type, mobile.line_type_checked_at = "mobile", _now()
+    db.session.commit()
+    ev = compliance.can_dial(mobile, "ai_outbound", s, owner.id)
+    assert ev["ok"] is False and ev["reason"] == "line_type_restricted"
+    assert ev["unlocked_by"] == ""
