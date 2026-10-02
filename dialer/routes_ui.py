@@ -137,7 +137,10 @@ def _step_data(key, s):
                                    if not p.name.startswith(DEMO_PREFIX)],
                 "DEMO_PREFIX": DEMO_PREFIX}
     if key == "voicemail":
-        return {"drops": VoicemailDrop.query.filter_by(account_id=acct).all()}
+        drops = VoicemailDrop.query.filter_by(account_id=acct).all()
+        if _repair_voicemail_defaults(acct, drops):
+            drops = VoicemailDrop.query.filter_by(account_id=acct).all()
+        return {"drops": drops}
     if key == "compliance":
         from dialer.models import StateRule
         return {"states": StateRule.query.order_by(StateRule.state_code).all()}
@@ -609,6 +612,59 @@ def voicemail_media(drop_id):
     return Response(media.data, mimetype=media.mimetype or "audio/wav")
 
 
+def _wav_seconds(data):
+    """Length of a PCM WAV, read off its own header.
+
+    The browser encodes to WAV before uploading, so this covers every
+    recording made in the app. An uploaded mp3 returns None and the row shows
+    a dash, which is honest; guessing at a length is worse than not showing
+    one.
+    """
+    try:
+        if len(data) < 44 or data[:4] != b"RIFF" or data[8:12] != b"WAVE":
+            return None
+        import struct
+        rate = struct.unpack("<I", data[24:28])[0]
+        byte_rate = struct.unpack("<I", data[28:32])[0]
+        if not byte_rate or not rate:
+            return None
+        return round(max(0, len(data) - 44) / float(byte_rate), 1) or None
+    except Exception:
+        return None
+
+
+def _only_one_default(account_id, keep_id):
+    """Exactly one message can be the one reps drop.
+
+    Two rows both reading "Reps drop this one" is not a cosmetic problem: the
+    campaign picks whichever the query returns first, so the label stops
+    predicting what will actually play.
+    """
+    for row in VoicemailDrop.query.filter_by(account_id=account_id):
+        row.is_default = (row.id == keep_id)
+
+
+def _repair_voicemail_defaults(account_id, drops):
+    """Move the default off a message that cannot be played, and off the
+    extras if more than one claims it.
+
+    Needed because the sample drop shipped marked default before anyone knew
+    it would never have audio, and that row is already sitting in live
+    accounts. Repairs on sight rather than needing a migration.
+    """
+    playable = [d for d in drops if d.media_id]
+    flagged = [d for d in drops if d.is_default]
+    broken = any(d for d in flagged if not d.media_id) or len(flagged) > 1
+    if not broken:
+        return False
+    keep = next((d for d in flagged if d.media_id), None) or (
+        playable[0] if playable else None)
+    for d in drops:
+        d.is_default = bool(keep and d.id == keep.id)
+    db.session.commit()
+    return True
+
+
 @bp.route("/voicemail/new", methods=["POST"])
 @require("playbooks.edit")
 def voicemail_new():
@@ -634,6 +690,7 @@ def voicemail_new():
         mimetype = "audio/" + mimetype.split("/", 1)[1]
     media = Media(owner_id=g.account_id, filename=f.filename,
                   mimetype=mimetype, data=data)
+    seconds = _wav_seconds(data)
     db.session.add(media)
     db.session.flush()
     # First one that can actually PLAY becomes the default. Counting rows
@@ -641,12 +698,62 @@ def voicemail_new():
     first = VoicemailDrop.query.filter_by(
         account_id=g.account_id).filter(
         VoicemailDrop.media_id.isnot(None)).count() == 0
-    db.session.add(VoicemailDrop(
+    drop = VoicemailDrop(
         account_id=g.account_id, name=name, media_id=media.id,
-        mimetype=media.mimetype, is_default=first,
-        transcript=(request.form.get("transcript") or "")[:2000]))
+        mimetype=media.mimetype, duration_s=seconds, is_default=first,
+        transcript=(request.form.get("transcript") or "")[:2000])
+    db.session.add(drop)
+    db.session.flush()
+    if first:
+        _only_one_default(g.account_id, drop.id)
     db.session.commit()
     flash(f"“{name}” saved. Your reps can drop it with one click.")
+    return redirect(url_for("dialer.setup", step=10))
+
+
+@bp.route("/voicemail/<int:drop_id>/speak", methods=["POST"])
+@require("playbooks.edit")
+def voicemail_speak(drop_id):
+    """Turn a written sample into audio you can listen to.
+
+    Mostly so the sample stops being a wall of text you have to imagine. It
+    saves as its own message, so if you like it you can use it, and the page
+    still says a real voice does better.
+    """
+    src = VoicemailDrop.query.get_or_404(drop_id)
+    if src.account_id != g.account_id:
+        abort(403)
+    s = get_settings(g.account_id)
+    text = (src.transcript or "").strip()
+    if not text:
+        flash("There is no wording on that one to read out.", "error")
+        return redirect(url_for("dialer.setup", step=10))
+    if not (s.has_elevenlabs or registry.simulating(s)):
+        flash("Connect ElevenLabs on step 6 first — that is what speaks it.",
+              "error")
+        return redirect(url_for("dialer.setup", step=10))
+
+    r = registry.voice_agent(s).speak(text, s.elevenlabs_default_voice_id or "")
+    if not r.get("ok"):
+        flash(f"ElevenLabs could not read that: {r.get('error')}", "error")
+        return redirect(url_for("dialer.setup", step=10))
+
+    audio = r["audio"]
+    media = Media(owner_id=g.account_id, filename="voicemail-ai.mp3",
+                  mimetype=r.get("mimetype") or "audio/mpeg", data=audio)
+    db.session.add(media)
+    db.session.flush()
+    drop = VoicemailDrop(
+        account_id=g.account_id, name="AI voice: " + src.name[:100],
+        media_id=media.id, mimetype=media.mimetype,
+        duration_s=_wav_seconds(audio), is_default=False, transcript=text)
+    db.session.add(drop)
+    log("voicemail.speak", target=drop.name, account_id=g.account_id,
+        user=g.member)
+    db.session.commit()
+    flash("Read out and saved as its own message. Have a listen — if you want "
+          "reps to use it, press “Use this one”. A real voice still does "
+          "better on a first call.", "sticky")
     return redirect(url_for("dialer.setup", step=10))
 
 

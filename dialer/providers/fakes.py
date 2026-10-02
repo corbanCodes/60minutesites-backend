@@ -176,6 +176,20 @@ class FakeVoiceAgent(VoiceAgent):
              "preview_url": "", "category": "premade", "hq_models": []},
         ][:limit])
 
+    def speak(self, text, voice_id, model_id=""):
+        # A real, playable 0.4s WAV tone, so practice mode exercises the whole
+        # save-and-play path rather than storing a string that fails later.
+        import math
+        import struct
+        rate, secs = 8000, 0.4
+        frames = b"".join(
+            struct.pack("<h", int(12000 * math.sin(2 * math.pi * 440 * i / rate)))
+            for i in range(int(rate * secs)))
+        header = (b"RIFF" + struct.pack("<I", 36 + len(frames)) + b"WAVEfmt "
+                  + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
+                  + b"data" + struct.pack("<I", len(frames)))
+        return ok(audio=header + frames, mimetype="audio/wav")
+
     def ensure_webhook(self, url, name):
         return ok(webhook_id=_sid("wh", url), secret="wsec_simulated_secret")
 

@@ -191,3 +191,121 @@ def test_a_call_with_real_audio_is_marked_dropped(account):
 
     assert "<Play>" in twiml
     assert db.session.get(Call, call.id).voicemail_dropped is True
+
+
+# ------------------------------------------------- exactly one default
+def test_two_messages_never_both_claim_the_default(account):
+    """Both rows read "Reps drop this one", which is not cosmetic: the
+    campaign takes whichever the query returns first, so the label stops
+    predicting what will actually play."""
+    owner, client = account
+    a = script_only(owner.id, name="Sample", default=True)   # shipped default
+    upload(client, name="Mine")                               # also claimed it
+
+    client.get("/dialer/setup/10")                            # repairs on sight
+
+    flagged = [d.name for d in VoicemailDrop.query.filter_by(
+        account_id=owner.id, is_default=True)]
+    assert flagged == ["Mine"]
+
+
+def test_the_default_moves_off_a_message_that_cannot_play(account):
+    owner, client = account
+    sample = script_only(owner.id, default=True)
+    upload(client, name="Real")
+    client.get("/dialer/setup/10")
+    assert db.session.get(VoicemailDrop, sample.id).is_default is False
+
+
+def test_a_lone_script_only_message_is_left_alone(account):
+    """Nothing playable to move the default to, so do not invent one."""
+    owner, client = account
+    sample = script_only(owner.id, default=True)
+    client.get("/dialer/setup/10")
+    assert db.session.get(VoicemailDrop, sample.id).is_default is False
+
+
+# ------------------------------------------------------------- length
+def test_a_recording_gets_its_length_from_the_file(account):
+    """The row showed a dash next to a player that knew the length perfectly
+    well, because nothing ever set duration_s."""
+    import struct
+    owner, client = account
+    rate, seconds = 8000, 2
+    frames = b"\x00\x00" * (rate * seconds)
+    wav = (b"RIFF" + struct.pack("<I", 36 + len(frames)) + b"WAVEfmt "
+           + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
+           + b"data" + struct.pack("<I", len(frames)) + frames)
+    client.post("/dialer/voicemail/new", follow_redirects=True,
+                content_type="multipart/form-data",
+                data={"name": "Two seconds",
+                      "audio": (io.BytesIO(wav), "rec.wav", "audio/wav")})
+    drop = VoicemailDrop.query.filter_by(account_id=owner.id).first()
+    assert drop.duration_s == pytest.approx(2.0, abs=0.2)
+
+
+def test_an_unreadable_file_reports_no_length_rather_than_a_wrong_one(account):
+    owner, client = account
+    upload(client, name="mp3 maybe", filename="x.mp3", mimetype="audio/mpeg")
+    assert VoicemailDrop.query.filter_by(account_id=owner.id).first().duration_s is None
+
+
+# ----------------------------------------------- hearing the written sample
+def test_the_written_sample_can_be_read_aloud(account):
+    """It was a wall of text with no way to hear it. Now it speaks, in the
+    AI voice, and saves as its own message you can choose."""
+    owner, client = account
+    sample = script_only(owner.id)
+    client.post(f"/dialer/voicemail/{sample.id}/speak", follow_redirects=True)
+    spoken = [d for d in VoicemailDrop.query.filter_by(account_id=owner.id)
+              if d.name.startswith("AI voice:")]
+    assert len(spoken) == 1
+    assert spoken[0].media_id, "it has to be playable or it changed nothing"
+
+
+def test_the_spoken_copy_does_not_steal_the_default(account):
+    """Reading a sample aloud is a preview, not a decision."""
+    owner, client = account
+    upload(client, name="Mine")
+    sample = script_only(owner.id)
+    client.post(f"/dialer/voicemail/{sample.id}/speak", follow_redirects=True)
+    assert db.session.get(VoicemailDrop,
+                          VoicemailDrop.query.filter_by(
+                              account_id=owner.id, name="Mine").first().id
+                          ).is_default is True
+
+
+def test_speaking_needs_something_to_say(account):
+    owner, client = account
+    empty = VoicemailDrop(account_id=owner.id, name="No words", transcript="")
+    db.session.add(empty)
+    db.session.commit()
+    r = client.post(f"/dialer/voicemail/{empty.id}/speak", follow_redirects=True)
+    assert "no wording" in r.get_data(as_text=True)
+
+
+def test_speaking_cannot_reach_another_account(account, ctx):
+    owner, client = account
+    other = make_user(name="Else", email="y@n.test", dialer=True)
+    theirs = VoicemailDrop(account_id=other.id, name="Theirs", transcript="hi")
+    db.session.add(theirs)
+    db.session.commit()
+    assert client.post(f"/dialer/voicemail/{theirs.id}/speak").status_code == 403
+
+
+# ------------------------------------------------------- the sample wording
+def test_the_sample_message_names_nobody(account):
+    """One recording reaches every lead, so a name in it is wrong for all but
+    one of them."""
+    owner, client = account
+    body = client.get("/dialer/setup/10").get_data(as_text=True)
+    sample = body[body.index("A message that works"):]
+    sample = sample[:sample.index("</blockquote>")]
+    assert "calling for" not in sample
+    assert "Dana" not in sample
+
+
+def test_the_page_says_to_keep_the_message_general(account):
+    owner, client = account
+    body = client.get("/dialer/setup/10").get_data(as_text=True)
+    assert "Say no names but your own" in body

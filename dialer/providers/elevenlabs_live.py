@@ -195,6 +195,29 @@ class ElevenLabsAgent(VoiceAgent):
                 break
         return ok(voices=out)
 
+    def speak(self, text, voice_id, model_id="eleven_turbo_v2_5"):
+        """Text to speech -> mp3 bytes.
+
+        Used to turn the sample voicemail wording into something you can
+        actually listen to, in the voice the AI will use, rather than asking
+        someone to imagine it.
+        """
+        text = (text or "").strip()
+        if not text:
+            return err("Nothing to say.", "bad_request")
+        if not voice_id:
+            return err("Pick a voice on step 8 first.", "bad_request")
+        r = self._req("POST", f"/v1/text-to-speech/{voice_id}", raw=True,
+                      headers={"Accept": "audio/mpeg",
+                               "Content-Type": "application/json"},
+                      json={"text": text[:2500], "model_id": model_id})
+        if not r["ok"]:
+            return r
+        audio = r.get("data") or b""
+        if not audio:
+            return err("ElevenLabs returned no audio.", "api_error")
+        return ok(audio=audio, mimetype=r.get("mimetype") or "audio/mpeg")
+
     # ----------------------------------------------------------- webhooks
     def ensure_webhook(self, url, name):
         """Create a workspace webhook and hand back its signing secret.

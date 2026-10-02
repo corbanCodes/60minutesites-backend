@@ -26,6 +26,13 @@
       {% endif %}
     </td>
     <td class="ct-actions ct-wide" style="text-align:right">
+      {% if not d.media_id and d.transcript %}
+      <form method="post" action="/dialer/voicemail/{{ d.id }}/speak" class="inline-form">
+        <button class="chip-btn" type="submit"
+                title="Reads this wording aloud in your AI voice and saves it as its own message">
+          Hear it in the AI voice</button>
+      </form>
+      {% endif %}
       {% if d.media_id and not d.is_default %}
       <form method="post" action="/dialer/voicemail/{{ d.id }}/default" class="inline-form">
         <button class="chip-btn" type="submit">Use this one</button>
@@ -100,12 +107,23 @@
 <div class="card wiz-steps-card">
   <h3>A message that works</h3>
   <blockquote class="vm-sample">
-    &ldquo;Hi, this is Corban with 60 Minute Sites, calling for Dana. I had one question about the booking page
-    on your site. You can reach me at four two three, five five five, zero one four seven. That's four two
-    three, five five five, zero one four seven. Thanks.&rdquo;
+    &ldquo;Hi, this is Corban with 60 Minute Sites. I had a quick question about the booking page on your
+    site. You can reach me at four two three, five five five, zero one four seven. That's four two three,
+    five five five, zero one four seven. Thanks.&rdquo;
   </blockquote>
-  <p class="muted" style="margin:0">Eighteen seconds. Name first, one reason, the number said twice and said
-    slowly, then silence. Most people hear a voicemail once and write the number down on the second pass.</p>
+  <p>Seventeen seconds. Your name first, one reason, the number said twice and said slowly, then silence.
+    Most people hear a voicemail once and only start writing on the second pass.</p>
+  <div class="card wiz-callout" style="margin-top:14px">
+    <i class="bi bi-people"></i>
+    <div>
+      <b>Say no names but your own.</b>
+      <p style="margin:4px 0 0">You record this once and it goes to every lead, so &ldquo;calling for
+        Dana&rdquo; reaches four hundred people who are not Dana. Same for the company you are calling, the
+        city, and anything about their business. Keep the reason general enough to be true of everyone on
+        the list: a question about their site, their hours, their suppliers. The specifics are what the
+        callback is for.</p>
+    </div>
+  </div>
 </div>
 
 <script>
