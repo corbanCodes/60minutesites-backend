@@ -137,10 +137,64 @@ def test_content_steps_complete_when_the_content_exists(bare):
     assert st["playbook"] == "done" and st["voicemail"] == "done"
 
 
-def test_simulation_marks_the_vendor_steps_done_so_a_demo_can_run(ctx):
+def test_practice_mode_does_not_pretend_your_vendors_are_connected(ctx):
+    """Practice mode makes the product USABLE with no accounts. It does not
+    make the setup checklist complete -- claiming Twilio is connected when it
+    is not is the kind of lie that loses someone's trust in every other number
+    on the page.
+
+    'Does this lane work right now' is a different question, and readiness
+    answers it: in practice mode the lanes ARE live.
+    """
     owner = make_user(name="Sim", email="s@x.test", dialer=True)
     s = get_settings(owner.id)
     st = wizard.status(s, owner.id)          # DIALER_SIMULATION=1 in conftest
-    assert st["twilio"] == "done"
-    assert st["elevenlabs"] == "done"
-    assert readiness.check(s, owner.id)["simulating"] is True
+    assert st["twilio"] == "todo"
+    assert st["elevenlabs"] == "todo"
+    assert st["llm"] == "todo"
+    assert wizard.progress(s, owner.id)["done"] == 0
+
+    ready = readiness.check(s, owner.id)
+    assert ready["simulating"] is True
+    assert ready["lanes"]["power"] is True   # usable, just not set up
+
+
+def test_demo_content_does_not_count_as_your_setup(ctx):
+    """The sample playbook and numbers belong to the demo. Remove the demo and
+    they go with it, so they must not tick your checklist."""
+    from dialer.demo import DEMO_PREFIX, DEMO_TAG
+    from dialer.models import PhoneNumber, Playbook, VoicemailDrop
+    owner = make_user(name="Demo", email="d@x.test", dialer=True)
+    s = get_settings(owner.id)
+    db.session.add_all([
+        PhoneNumber(account_id=owner.id, e164="+18655550101", pool="rep",
+                    state="active", notes=DEMO_TAG),
+        Playbook(account_id=owner.id, name=DEMO_PREFIX + "Napkin outreach"),
+        VoicemailDrop(account_id=owner.id, name=DEMO_PREFIX + "20-second drop"),
+    ])
+    db.session.commit()
+    st = wizard.status(s, owner.id)
+    assert st["numbers"] == "todo"
+    assert st["playbook"] == "todo"
+    assert st["voicemail"] == "todo"
+
+    # a real one of each DOES count
+    db.session.add_all([
+        PhoneNumber(account_id=owner.id, e164="+18655550199", pool="rep",
+                    state="active", notes=""),
+        Playbook(account_id=owner.id, name="My cold call script"),
+        VoicemailDrop(account_id=owner.id, name="My voicemail"),
+    ])
+    db.session.commit()
+    st = wizard.status(s, owner.id)
+    assert st["numbers"] == "done"
+    assert st["playbook"] == "done"
+    assert st["voicemail"] == "done"
+
+
+def test_a_brand_new_account_reports_zero_of_eleven(ctx):
+    owner = make_user(name="Fresh", email="f@x.test", dialer=True)
+    p = wizard.progress(get_settings(owner.id), owner.id)
+    assert p["done"] == 0
+    assert p["pct"] == 0
+    assert p["complete"] is False

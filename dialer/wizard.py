@@ -8,6 +8,8 @@ Two rules, both learned from how Stripe does onboarding:
 """
 from datetime import datetime, timedelta, timezone
 
+from app import db
+
 STEPS = [
     {"n": 1, "key": "intent", "title": "What do you want to do?",
      "icon": "bi-signpost-split", "mins": 1,
@@ -85,12 +87,22 @@ def _fresh(stamp, days=PROBE_MAX_AGE_DAYS):
 
 
 def status(settings, account_id):
-    """-> {key: 'done'|'todo'|'skipped'|'stale'} derived from reality, with the
-    saved wizard state only used for 'skipped' and for free-text steps."""
+    """-> {key: 'done'|'todo'|'skipped'|'stale'}, derived from what is actually
+    connected.
+
+    Two things this deliberately does NOT count, because both would make the
+    checklist lie about where you are:
+
+    * Practice mode. It lets you use the whole product with no accounts, which
+      is the point of it -- but it has not connected your Twilio, so the Twilio
+      step is not done. Whether a lane WORKS right now is a different question,
+      and readiness.check() answers that one.
+    * Demo content. The sample playbook, numbers and voicemail belong to the
+      demo, not to your setup. Remove the demo and they go with it.
+    """
+    from dialer.demo import DEMO_PREFIX, DEMO_TAG
     from dialer.models import AiAgent, PhoneNumber, Playbook, VoicemailDrop
-    from dialer.providers import registry
     saved = settings.wizard if settings else {}
-    sim = registry.simulating(settings)
     out = {}
 
     def mark(key, done, stale=False):
@@ -101,20 +113,27 @@ def status(settings, account_id):
         else:
             out[key] = "todo"
 
+    real_numbers = (PhoneNumber.query
+                    .filter_by(account_id=account_id, state="active")
+                    .filter(db.or_(PhoneNumber.notes.is_(None),
+                                   PhoneNumber.notes != DEMO_TAG)).count())
+    real_playbooks = (Playbook.query.filter_by(account_id=account_id)
+                      .filter(~Playbook.name.like(DEMO_PREFIX + "%")).count())
+    real_drops = (VoicemailDrop.query.filter_by(account_id=account_id)
+                  .filter(~VoicemailDrop.name.like(DEMO_PREFIX + "%")).count())
+
     mark("intent", bool(settings.intent))
-    mark("twilio", bool(settings.has_twilio) or sim,
+    mark("twilio", bool(settings.has_twilio),
          stale=bool(settings.twilio_verified_at)
          and not _fresh(settings.twilio_verified_at))
-    mark("business", settings.twilio_pcp_status == "business" or sim)
-    mark("numbers", PhoneNumber.query.filter_by(
-        account_id=account_id, state="active").count() > 0 or sim)
-    mark("llm", bool(settings.has_llm) or sim)
-    mark("elevenlabs", bool(settings.has_elevenlabs) or sim)
+    mark("business", settings.twilio_pcp_status == "business")
+    mark("numbers", real_numbers > 0)
+    mark("llm", bool(settings.has_llm))
+    mark("elevenlabs", bool(settings.has_elevenlabs))
     mark("compliance", bool(saved.get("compliance", {}).get("done")))
     mark("voice", bool(saved.get("voice", {}).get("done")))
-    mark("playbook", Playbook.query.filter_by(account_id=account_id).count() > 0)
-    mark("voicemail", VoicemailDrop.query.filter_by(
-        account_id=account_id).count() > 0)
+    mark("playbook", real_playbooks > 0)
+    mark("voicemail", real_drops > 0)
     mark("test", bool(saved.get("test", {}).get("done")))
     return out
 
