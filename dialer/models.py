@@ -335,7 +335,11 @@ class AiAgent(db.Model):
     # agent that says nothing until the other person speaks. Anything in
     # that field is SPOKEN VERBATIM, instructions included, which is a trap
     # worth a setting rather than a footnote.
-    opening_mode = db.Column(db.String(10), default="speak")   # speak|wait
+    # Waiting is the default everywhere. Talking over someone's "hello" is
+    # the single clearest tell that a call is automated, and nobody has ever
+    # wanted it on purpose; speaking first is the setting you reach for, not
+    # the one you should land on.
+    opening_mode = db.Column(db.String(10), default="wait")   # wait|speak
     # A hand-written system prompt that replaces the generated one entirely.
     # Empty means "use the assembled one", which is the right default and
     # not a restriction.

@@ -197,6 +197,11 @@ class FakeVoiceAgent(VoiceAgent):
                      transfer=None):
         return ok(agent_id=agent.elevenlabs_agent_id or _sid("ag", agent.name))
 
+    def get_agent(self, agent_id):
+        return ok(name="Simulated agent", first_message="",
+                  voice_id="sim-rachel", llm="", background={},
+                  has_transfer=True, tool_count=4, prompt_chars=1200)
+
     def import_number(self, e164, twilio_sid, twilio_token, agent_id=None,
                       label="", account_auth_token=None):
         return ok(phone_number_id=_sid("pn", e164))

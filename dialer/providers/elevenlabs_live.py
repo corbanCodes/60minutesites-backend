@@ -340,6 +340,36 @@ class ElevenLabsAgent(VoiceAgent):
         return ok(agent_id=agent_id)
 
     # ------------------------------------------------------------- numbers
+    def get_agent(self, agent_id):
+        """Read an agent back from ElevenLabs.
+
+        Worth having permanently. Several settings today looked correct in
+        our database and were wrong at the vendor, because ElevenLabs drops
+        unknown keys silently instead of rejecting them. The only way to
+        know what it holds is to ask it.
+        """
+        if not agent_id:
+            return err("No agent id.", "bad_request")
+        r = self._req("GET", f"/v1/convai/agents/{agent_id}")
+        if not r["ok"]:
+            return r
+        data = r.get("data") or {}
+        conv = (data.get("conversation_config") or {})
+        agent_cfg = conv.get("agent") or {}
+        prompt_cfg = agent_cfg.get("prompt") or {}
+        sound = ((conv.get("conversation") or {}).get("background_sound")
+                 or {})
+        return ok(
+            name=data.get("name", ""),
+            first_message=agent_cfg.get("first_message", ""),
+            voice_id=((conv.get("tts") or {}).get("voice_id") or ""),
+            llm=prompt_cfg.get("llm", ""),
+            background=sound,
+            has_transfer=bool((prompt_cfg.get("built_in_tools") or {})
+                              .get("transfer_to_number")),
+            tool_count=len(prompt_cfg.get("tools") or []),
+            prompt_chars=len(prompt_cfg.get("prompt") or ""))
+
     def import_number(self, e164, twilio_sid, twilio_token, agent_id=None,
                       label="", account_auth_token=None):
         """Attach one of the customer's Twilio numbers to their workspace.

@@ -154,9 +154,9 @@
       <div>
         <label for="ag-open">When the call connects</label>
         <select id="ag-open" name="opening_mode">
-          <option value="wait" {{ 'selected' if (a.opening_mode or 'speak') == 'wait' }}>
+          <option value="wait" {{ 'selected' if (a.opening_mode or 'wait') == 'wait' }}>
             Wait for them to say hello first &mdash; sounds human</option>
-          <option value="speak" {{ 'selected' if (a.opening_mode or 'speak') == 'speak' }}>
+          <option value="speak" {{ 'selected' if (a.opening_mode or 'wait') == 'speak' }}>
             Start talking the moment they pick up</option>
         </select>
         <span class="field-hint" style="display:block; margin-bottom:16px">People answer a phone with
@@ -252,6 +252,15 @@
 </div>
 
 <div class="card wiz-steps-card">
+  <h3>What ElevenLabs actually has</h3>
+  <p class="muted" style="margin:0 0 12px">Read back from them, not from us. ElevenLabs drops configuration
+    it does not recognise instead of rejecting it, so a setting can look right here and never have arrived.</p>
+  <button class="btn ghost sm" type="button" id="live-check"
+          data-url="/dialer/agents/{{ a.id }}/live">Check what they hold</button>
+  <pre id="live-out" class="ag-live" hidden></pre>
+</div>
+
+<div class="card wiz-steps-card">
   <h3>Instructions</h3>
   <p class="muted" style="margin:0 0 12px">Write your own and it replaces everything above. Leave it empty
     and the assembled version is used, which is what almost everyone wants. Paste the preview in as a
@@ -302,3 +311,34 @@
 })();
 </script>
 {% endblock %}
+
+<script>
+(function () {
+  var btn = document.getElementById('live-check');
+  var out = document.getElementById('live-out');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    out.hidden = false;
+    out.textContent = 'Asking ElevenLabs…';
+    fetch(btn.dataset.url, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        btn.disabled = false;
+        if (!d.ok) { out.textContent = d.error || 'Could not read it back.'; return; }
+        var bg = d.background || {};
+        out.textContent =
+          'Voice at ElevenLabs   : ' + (d.voice_id || '(their default)') + '\n' +
+          'Opening line          : ' + (d.first_message ? JSON.stringify(d.first_message)
+                                        : '(empty — it waits for them to speak)') + '\n' +
+          'Background sound      : ' + (bg.source_id
+                                        ? bg.source_id + ' at volume ' + (bg.volume || '?')
+                                        : 'NONE — nothing will play') + '\n' +
+          'Transfer tool         : ' + (d.has_transfer ? 'present' : 'MISSING — it cannot hand over') + '\n' +
+          'Webhook tools         : ' + d.tool_count + '\n' +
+          'Instructions          : ' + d.prompt_chars + ' characters';
+      })
+      .catch(function () { btn.disabled = false; out.textContent = 'Could not reach them.'; });
+  });
+})();
+</script>

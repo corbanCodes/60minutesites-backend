@@ -123,6 +123,7 @@ TOOLS = [
     ("crm",        "CRM",            "Work",     "/admin/crm",      "bi-kanban",                None),
     ("tasks",      "Tasks",          "Work",     "/admin/tasks",    "bi-check2-square",         None),
     ("dialer",     "Calling",        "Work",     "/dialer",         "bi-telephone-outbound",    "dialer"),
+    ("agents",     "AI agents",      "Work",     "/dialer/agents",  "bi-robot",                 "dialer"),
     ("enrich",     "Enrichment",     "Work",     "/enrich",         "bi-binoculars",            "enrichment"),
     ("sites",      "Sites",          "Build",    "/admin/sites",    "bi-window-sidebar",        None),
     ("forms",      "Forms",          "Build",    "/admin/forms",    "bi-envelope-paper",        None),
@@ -525,6 +526,11 @@ def _ensure_schema_inner():
         ("note", "kind"): "'note'",
         ("lead", "do_not_call"): "FALSE", ("lead", "call_count"): "0",
         ("lead", "consent_status"): "'none'", ("lead", "tags"): "''",
+        # Waiting for the other person to speak is the default everywhere,
+        # so an agent that predates the column gets it too rather than
+        # inheriting the old talk-over-the-hello behaviour by accident.
+        ("ai_agent", "opening_mode"): "'wait'",
+        ("ai_agent", "transfer_style"): "'brief'",
     }
     for (table, col), value in backfill.items():
         if col not in added.get(table, []):
@@ -889,6 +895,7 @@ TOOL_PREFIXES = [
     ("/admin/funnels", "funnels"),
     ("/admin/invoices", "invoices"),
     ("/admin/ai-studio", "ai_studio"),
+    ("/dialer/agents", "agents"),
     ("/admin/email", "email"),
 ]
 
@@ -919,7 +926,8 @@ def _enforce_tool_visibility():
 # A tool whose code is not deployed yet must not appear in the menu. Matching
 # against url_map is no good here: static_url_path is "" so the marketing-site
 # static route matches every path. Ask the blueprint registry instead.
-TOOL_BLUEPRINT = {"dialer": "dialer", "enrich": "enrich", "team": "teams"}
+TOOL_BLUEPRINT = {"dialer": "dialer", "agents": "dialer", "enrich": "enrich",
+                  "team": "teams"}
 
 
 def _mounted(key):

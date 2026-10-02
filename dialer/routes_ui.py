@@ -1300,7 +1300,7 @@ def agent_edit(agent_id):
             return redirect(url_for("dialer.agent_edit", agent_id=a.id))
         a.playbook_id = request.form.get("playbook_id", type=int) or None
         a.transfer_style = request.form.get("transfer_style", "brief")[:20]
-        a.opening_mode = request.form.get("opening_mode", "speak")[:10]
+        a.opening_mode = request.form.get("opening_mode", "wait")[:10]
         a.prompt_override = (request.form.get("prompt_override") or "").strip()
         a.transfer_line = (request.form.get("transfer_line") or "")[:300]
         a.max_duration_seconds = request.form.get("max_duration_seconds",
@@ -1330,6 +1330,24 @@ def agent_edit(agent_id):
         playbooks=Playbook.query.filter_by(account_id=g.account_id).all(),
         transfer_to=__import__("dialer.agents", fromlist=["x"]).transfer_number(s),
         prompt_preview=build_prompt(a, s))
+
+
+@bp.route("/agents/<int:agent_id>/live")
+@require("agents.edit")
+def agent_live(agent_id):
+    """What ElevenLabs actually holds for this agent, read back from them.
+
+    Not a debug page. ElevenLabs silently discards configuration it does not
+    recognise, so "saved here" and "working there" are different facts and
+    today proved they can disagree for weeks without a single error.
+    """
+    a = AiAgent.query.get_or_404(agent_id)
+    if a.account_id != g.account_id:
+        abort(403)
+    s = get_settings(g.account_id)
+    if not a.elevenlabs_agent_id:
+        return jsonify(ok=False, error="This agent has never synced.")
+    return jsonify(registry.voice_agent(s).get_agent(a.elevenlabs_agent_id))
 
 
 @bp.route("/agents/<int:agent_id>/sync", methods=["POST"])

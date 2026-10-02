@@ -56,7 +56,7 @@ def _generated_prompt(agent, settings):
                f"{who}.")
     if settings.disclose_ai:
         out.append(_disclosure_block(settings))
-    if (getattr(agent, "opening_mode", "") or "speak") == "wait":
+    if (getattr(agent, "opening_mode", "") or "wait") == "wait":
         out.append(
             "# Who speaks first\n"
             "Say NOTHING when the call connects. Wait for them to speak. "
@@ -355,7 +355,7 @@ def sync_agent(agent, settings):
     # connects, instructions and all. Leaving it empty is the documented way
     # to make an agent wait for the other person, so "wait" must not be
     # helpfully filled in.
-    if (agent.opening_mode or "speak") == "wait":
+    if (agent.opening_mode or "wait") == "wait":
         agent.first_message = ""
     elif not agent.first_message and settings.disclose_ai:
         agent.first_message = settings.effective_disclosure
