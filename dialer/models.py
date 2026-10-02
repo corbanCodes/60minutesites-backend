@@ -86,6 +86,10 @@ class DialerSettings(db.Model):
     elevenlabs_tier = db.Column(db.String(32), default="")
     elevenlabs_concurrency = db.Column(db.Integer, default=0)
     elevenlabs_webhook_id = db.Column(db.String(64), default="")
+    # Why the webhook could not be created, in ElevenLabs' own words. Kept
+    # because the only place this used to appear was a flash message, so the
+    # page afterwards could say nothing but "Missing" and a guess at the cause.
+    elevenlabs_webhook_error = db.Column(db.String(400), default="")
     elevenlabs_webhook_secret_enc = db.Column(db.Text)
     elevenlabs_default_voice_id = db.Column(db.String(64), default="")
     elevenlabs_bursting = db.Column(db.Boolean, default=False)

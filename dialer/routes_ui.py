@@ -267,16 +267,7 @@ def _test_vendor(vendor, s, redirect_after=False):
             # the post-call webhook is created FIRST, so an under-privileged
             # key fails here rather than three steps later
             if not s.elevenlabs_webhook_id:
-                from dialer import urls as _u
-                w = va.ensure_webhook(_u.elevenlabs_post_call(),
-                                      "60MS HQ post-call")
-                if w.get("ok"):
-                    s.elevenlabs_webhook_id = w.get("webhook_id", "")[:64]
-                    s.set_secret("elevenlabs_webhook_secret", w.get("secret"))
-                else:
-                    flash("Connected, but we couldn't create the results "
-                          f"webhook: {w.get('error')}. Use a key made by the "
-                          "workspace owner or an admin.", "error")
+                _make_elevenlabs_webhook(s, va)
             flash(f"ElevenLabs connected — {s.elevenlabs_tier} plan, "
                   f"{s.elevenlabs_concurrency} calls at once.")
         else:
@@ -517,6 +508,51 @@ def _is_local_only(number):
     if not re.fullmatch(r"PN[0-9a-fA-F]{32}", sid):
         return True
     return (number.friendly_name or "").startswith(DEMO_PREFIX)
+
+
+def _make_elevenlabs_webhook(s, va=None):
+    """Create the post-call webhook and remember why if it will not.
+
+    Runs on connect, so an under-privileged key fails here rather than three
+    steps later when calls come back silent. The error is STORED, not just
+    flashed: a flash is gone on the next click, and the page was left saying
+    "Missing" beside a guess at the cause, which sent someone off to re-make a
+    key that may have been fine.
+    """
+    from dialer import urls as _u
+    va = va or registry.voice_agent(s)
+    w = va.ensure_webhook(_u.elevenlabs_post_call(), "60MS HQ post-call")
+    if w.get("ok"):
+        s.elevenlabs_webhook_id = w.get("webhook_id", "")[:64]
+        s.set_secret("elevenlabs_webhook_secret", w.get("secret"))
+        s.elevenlabs_webhook_error = ""
+        return True
+    s.elevenlabs_webhook_error = str(w.get("error") or "")[:400]
+    return False
+
+
+@bp.route("/setup/elevenlabs/webhook", methods=["POST"])
+@require("dialer.settings")
+def elevenlabs_webhook_retry():
+    """Try the webhook again without touching the key.
+
+    Worth its own button because the usual fix is on ElevenLabs' side, not
+    ours: widen the key's permissions, then come back. Replacing a working
+    key to re-run one failed call is a strange thing to ask of someone.
+    """
+    s = get_settings(g.account_id)
+    if s.elevenlabs_webhook_id:
+        flash("The results webhook is already set up.")
+    elif not s.has_elevenlabs:
+        flash("Add your ElevenLabs key first.", "error")
+    elif _make_elevenlabs_webhook(s):
+        flash("Results webhook created. AI calls will come back with "
+              "transcripts and summaries.")
+    else:
+        flash(f"ElevenLabs still refused: {s.elevenlabs_webhook_error}",
+              "error")
+    db.session.commit()
+    return redirect(url_for("dialer.setup", step=6))
 
 
 def _link_number_to_elevenlabs(s, number):

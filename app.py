@@ -465,6 +465,10 @@ def _ensure_schema_inner():
                  "feature_enrichment": "BOOLEAN", "hidden_tools": "VARCHAR(600)",
                  "last_login_at": "TIMESTAMP", "job_title": "VARCHAR(80)"},
         "flipbook": {"toc": "TEXT"},
+        # --- dialer's own tables. create_all() makes a NEW table but never
+        # alters one that already exists, so a column added to a dialer model
+        # after its table shipped needs a line here exactly like any other.
+        "dialer_settings": {"elevenlabs_webhook_error": "VARCHAR(400)"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---
         "task": {"assignee_id": "INTEGER"},

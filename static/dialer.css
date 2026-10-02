@@ -114,6 +114,14 @@ tr.matrix-group td { background: #F6F1EB; font-weight: 800; font-size: 11px; tex
    same kind of message: something about this account is not real yet. */
 /* The number label sits under its number and only shows its Save button
    once it is being edited, so four rows of them are not four live buttons. */
+/* A vendor's own words about why something failed. Quoting them beats our
+   guess at the cause, which is what used to sit here. */
+.vendor-err {
+  margin-top: 7px; padding: 8px 11px; border-radius: 8px;
+  background: #FBEEEC; border-left: 3px solid #B3362B;
+  font-size: 13px; line-height: 1.5; color: #7A2A22;
+}
+
 .num-name { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
 .num-name-input {
   flex: 1; min-width: 0; max-width: 260px; padding: 5px 9px; font-size: 13px;

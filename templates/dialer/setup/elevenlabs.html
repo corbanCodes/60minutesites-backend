@@ -25,8 +25,11 @@
         <td>{% if s.elevenlabs_webhook_id %}<span class="pill" style="background:#2E7D4F">Created</span>
               Call results come back to this app automatically.
             {% else %}<span class="pill" style="background:#B3362B">Missing</span>
-              Without it you get no transcripts from AI calls. Replace the key with one made by the workspace
-              owner or an admin.{% endif %}</td></tr>
+              Without it, AI calls still happen but come back with no transcript and no summary.
+              {% if s.elevenlabs_webhook_error %}
+              <div class="vendor-err">ElevenLabs said: &ldquo;{{ s.elevenlabs_webhook_error }}&rdquo;</div>
+              {% endif %}
+            {% endif %}</td></tr>
     <tr><td>Burst pricing</td>
         <td>{% if s.elevenlabs_bursting %}<span class="pill" style="background:#B98A2B">On</span>
               Going past your concurrency limit silently bills at double, 16 cents a minute.
@@ -39,6 +42,11 @@
     <form method="post" action="/dialer/setup/test/elevenlabs" class="inline-form">
       <button class="btn ghost sm" type="submit"><i class="bi bi-arrow-repeat"></i> Test connection</button>
     </form>
+    {% if not s.elevenlabs_webhook_id %}
+    <form method="post" action="/dialer/setup/elevenlabs/webhook" class="inline-form">
+      <button class="btn sm" type="submit"><i class="bi bi-link-45deg"></i> Create the results webhook</button>
+    </form>
+    {% endif %}
     <button class="btn ghost sm" type="button" id="replace-toggle">Replace key</button>
   </div>
 </div>
