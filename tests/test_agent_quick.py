@@ -172,3 +172,45 @@ def test_the_tools_still_carry_their_required_fields():
     assert by_name["set_disposition"]["parameters"]["required"] == ["disposition"]
     assert "dnc" in by_name["set_disposition"]["parameters"]["properties"][
         "disposition"]["enum"]
+
+
+def test_a_failed_sync_can_be_retried_on_its_own(account):
+    """The edit form could only sync as part of saving every field, so
+    retrying meant resubmitting the whole agent and risking blanking
+    something. A sync that failed for a reason outside the agent should be
+    retryable once that reason is fixed."""
+    owner, client = account
+    playbook(owner.id)
+    client.post("/dialer/agents/quick", follow_redirects=True)
+    a = AiAgent.query.filter_by(account_id=owner.id).first()
+    a.last_sync_error = "ElevenLabs said no"
+    a.elevenlabs_agent_id = ""
+    a.name = "Keep this name"
+    db.session.commit()
+
+    client.post(f"/dialer/agents/{a.id}/sync", follow_redirects=True)
+
+    a = db.session.get(AiAgent, a.id)
+    assert a.elevenlabs_agent_id, "the retry did not reach ElevenLabs"
+    assert not a.last_sync_error
+    assert a.name == "Keep this name", "a sync must not touch anything else"
+
+
+def test_the_retry_is_offered_where_the_error_is_shown(account):
+    owner, client = account
+    playbook(owner.id)
+    client.post("/dialer/agents/quick", follow_redirects=True)
+    a = AiAgent.query.filter_by(account_id=owner.id).first()
+    a.last_sync_error = "Value error, Must set one of: description…"
+    db.session.commit()
+    body = client.get(f"/dialer/agents/{a.id}").get_data(as_text=True)
+    assert "Try the sync again" in body
+
+
+def test_the_retry_cannot_touch_another_accounts_agent(account, ctx):
+    owner, client = account
+    other = make_user(name="Else", email="q@n.test", dialer=True)
+    theirs = AiAgent(account_id=other.id, name="Theirs")
+    db.session.add(theirs)
+    db.session.commit()
+    assert client.post(f"/dialer/agents/{theirs.id}/sync").status_code == 403

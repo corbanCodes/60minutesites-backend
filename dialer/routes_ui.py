@@ -1249,6 +1249,32 @@ def agent_edit(agent_id):
         prompt_preview=build_prompt(a, s))
 
 
+@bp.route("/agents/<int:agent_id>/sync", methods=["POST"])
+@require("agents.edit")
+def agent_sync(agent_id):
+    """Push this agent to ElevenLabs again, changing nothing else.
+
+    The edit form can sync, but only as part of saving every field, so
+    retrying a failed sync meant re-submitting the whole agent and risking
+    blanking something. A sync that failed for a reason outside the agent --
+    a rejected schema, a key that needed widening -- should be retryable on
+    its own once the cause is fixed.
+    """
+    from dialer.agents import sync_agent
+    a = AiAgent.query.get_or_404(agent_id)
+    if a.account_id != g.account_id:
+        abort(403)
+    s = get_settings(g.account_id)
+    res = sync_agent(a, s)
+    db.session.commit()
+    if res.get("ok"):
+        flash(f"“{a.name}” is live at ElevenLabs. It can take calls now.")
+    else:
+        flash(f"ElevenLabs still rejected it: {a.last_sync_error}", "error")
+    return redirect(request.referrer
+                    or url_for("dialer.agent_edit", agent_id=a.id))
+
+
 @bp.route("/agents/<int:agent_id>/delete", methods=["POST"])
 @require("agents.edit")
 def agent_delete(agent_id):

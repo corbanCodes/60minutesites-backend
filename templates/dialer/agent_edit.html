@@ -17,7 +17,13 @@
         <span class="sync-state never"><i class="bi bi-dash-circle"></i> Never sent to ElevenLabs</span>
       {% endif %}
     </div>
-    {% if a.last_sync_error %}<p class="mg-sub" style="color:#8E2A20">{{ a.last_sync_error }}</p>{% endif %}
+    {% if a.last_sync_error %}
+    <p class="mg-sub" style="color:#8E2A20">{{ a.last_sync_error }}</p>
+    <form method="post" action="/dialer/agents/{{ a.id }}/sync" class="inline-form" style="margin-top:8px">
+      <button class="btn sm" type="submit"><i class="bi bi-arrow-repeat"></i> Try the sync again</button>
+      <span class="muted" style="margin-left:8px">Nothing else on this page is changed.</span>
+    </form>
+    {% endif %}
   </div>
   <div class="mg-actions">
     <a class="btn ghost sm" href="/dialer/agents"><i class="bi bi-arrow-left"></i> Agents</a>
