@@ -74,9 +74,19 @@ def build_prompt(agent, settings):
                      f'{o.get("response", "")}' for o in pb.objections]
             out.append("# When they push back\n" + "\n".join(lines))
         if pb.transfer_criteria:
-            out.append(f"# When to hand over to a person\n{pb.transfer_criteria}\n"
-                       "Use the transfer tool. Tell them a colleague is coming "
-                       "on, then transfer.")
+            out.append(
+                "# Handing the call to a person — your most important job\n"
+                f"{pb.transfer_criteria}\n"
+                "The moment that is true, STOP SELLING. Do not ask another "
+                "qualifying question, do not explain the offer again, do not "
+                "confirm details you already have. Say one short line such as "
+                "\"Perfect — let me put you straight through to a colleague, "
+                "one moment\", then call the transfer tool immediately.\n"
+                "Every extra sentence after they qualify is a chance to lose "
+                "them. Transferring a second too early costs nothing; a second "
+                "too late costs the call.\n"
+                "If the transfer does not connect, apologise once, get the "
+                "best time to call back, and book it.")
         if pb.never_do:
             out.append(f"# Never\n{pb.never_do}")
     if agent.transfer_rules:
@@ -111,6 +121,25 @@ def build_prompt(agent, settings):
         "politely rather than staying on it.\n"
         "- Before you finish, use log_note to record anything useful you "
         "learned, and set_disposition to record the outcome.")
+
+    # 6. the callback, which is the second-best outcome and usually the one
+    out.append(
+        "# When they cannot talk now\n"
+        "This is the second-best outcome and it happens more than anything "
+        "else, so treat it as a result rather than a failure.\n"
+        "- Ask for a better time, out loud and specifically: \"When would be "
+        "a better time to catch you — is the morning or the afternoon "
+        "easier?\" A day and a rough time is enough. Do not accept a vague "
+        "\"later\" without one follow-up attempt at pinning it down.\n"
+        "- If they are not the right person at all, get the name of whoever "
+        "is and when they are usually around. That is worth more than the "
+        "call you were trying to have.\n"
+        "- Say the time back to them so it is confirmed: \"Thursday morning, "
+        "got it.\"\n"
+        "- Then record it with log_note, in plain words including the day and "
+        "time they said, set_disposition to callback, and END THE CALL. Do "
+        "not keep talking once you have the time; you already have what you "
+        "came for.")
     return "\n\n".join(out)
 
 

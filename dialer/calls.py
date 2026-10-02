@@ -152,7 +152,15 @@ SUMMARY_SHAPE = """Return ONLY a JSON object:
  "objections": ["objections the prospect raised"],
  "qualification": {"<question key>": "<answer>"},
  "revocation_detected": true/false,
- "follow_up": {"title": "...", "kind": "Call|Follow-up|Email", "in_days": N} or null}"""
+ "follow_up": {"title": "...", "kind": "Call|Follow-up|Email", "in_days": N,
+   "at": "YYYY-MM-DD HH:MM" if they named a day or time, else null,
+   "said": "what they actually said about when to call, in their words"} or null}
+
+If the person asked to be called back, "at" is the important field. Read it
+off what they said: "Thursday morning" with today's date given below becomes
+that Thursday at 09:00, "after 3" today becomes today at 15:00, "next week"
+with no day becomes the next Tuesday at 10:00. Only fill it in if they
+actually indicated a time; a guess that is wrong is worse than in_days."""
 
 
 def finalize(call, settings=None, force=False):
@@ -203,8 +211,14 @@ def finalize(call, settings=None, force=False):
         if call.system_outcome == "answered_machine":
             transcript = ("[This call reached an answering machine.]\n"
                           + transcript)
+        # "Thursday morning" is only resolvable against a date, and the
+        # model has no idea when the call happened unless it is told.
+        when = call.started_at or _now()
+        today = (f"Today is {when.strftime('%A %d %B %Y')} "
+                 f"and the call was at {when.strftime('%H:%M')}.")
         prompt = (f"{SUMMARY_SHAPE % json.dumps(list(DEFAULT_STAGE_MAP))}\n\n"
-                  f"{chr(10).join(ctx_bits)}\n\nTRANSCRIPT:\n{transcript}")
+                  f"{today}\n{chr(10).join(ctx_bits)}\n\n"
+                  f"TRANSCRIPT:\n{transcript}")
         r = registry.llm(settings).complete(SUMMARY_SYSTEM, prompt,
                                             max_tokens=700, json_mode=True)
         if r.get("ok") and isinstance(r.get("data"), dict):
@@ -294,6 +308,31 @@ def _call_note(call):
     return "\n".join(bits)
 
 
+def _callback_time(raw):
+    """A time the prospect named, or None.
+
+    Anything unparseable, in the past, or absurdly far out is treated as no
+    answer rather than forced into a date: a follow-up on the wrong day is
+    worse than one the rep schedules themselves.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    text = raw.strip()[:40]
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%d"):
+        try:
+            when = datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+        if fmt == "%Y-%m-%d":
+            when = when.replace(hour=10)
+        now = _now()
+        if when < now - timedelta(hours=1) or when > now + timedelta(days=120):
+            return None
+        return when
+    return None
+
+
 def _follow_up(call, lead, fu):
     if not fu or not isinstance(fu, dict) or lead is None:
         return
@@ -302,12 +341,20 @@ def _follow_up(call, lead, fu):
         return
     kind = fu.get("kind") if fu.get("kind") in ("Call", "Follow-up", "Email") \
         else "Follow-up"
-    try:
-        days = max(0, min(int(fu.get("in_days") or 1), 90))
-    except (TypeError, ValueError):
-        days = 1
-    due = (_now() + timedelta(days=days)).replace(hour=16, minute=0, second=0,
-                                                  microsecond=0)
+    # A time the person actually named beats a round number of days. "Call
+    # Thursday morning" landing on Thursday at 09:00 is the difference
+    # between a task that gets honoured and one that gets reshuffled.
+    due = _callback_time(fu.get("at"))
+    if due is None:
+        try:
+            days = max(0, min(int(fu.get("in_days") or 1), 90))
+        except (TypeError, ValueError):
+            days = 1
+        due = (_now() + timedelta(days=days)).replace(
+            hour=16, minute=0, second=0, microsecond=0)
+    said = (fu.get("said") or "").strip()[:200]
+    if said and said.lower() not in title.lower():
+        title = f"{title} — they said: {said}"[:240]
     db.session.add(Task(owner_id=call.account_id or None, lead_id=lead.id,
                         title=title, kind=kind, due_at=due,
                         assignee_id=call.agent_user_id))
