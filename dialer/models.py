@@ -340,6 +340,12 @@ class AiAgent(db.Model):
     # wanted it on purpose; speaking first is the setting you reach for, not
     # the one you should land on.
     opening_mode = db.Column(db.String(10), default="wait")   # wait|speak
+    # Where THIS agent hands a qualified call. Empty falls back to the
+    # account-wide number. It lives here because "where does it ring" is a
+    # property of the campaign you are running, not of the whole account,
+    # and because the page used to send people to a settings screen that
+    # does not contain it.
+    transfer_to_number = db.Column(db.String(32), default="")
     # A hand-written system prompt that replaces the generated one entirely.
     # Empty means "use the assembled one", which is the right default and
     # not a restriction.

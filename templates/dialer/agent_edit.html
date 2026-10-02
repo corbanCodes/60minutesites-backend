@@ -73,11 +73,15 @@
                  placeholder="Great — sorry, can you give me one second?"
                  style="margin-top:8px">
           <span class="field-hint">Only used when you pick “My own line”.</span>
+          <label for="ag-transfer-to" style="margin-top:14px">Where it rings</label>
+          <input type="tel" id="ag-transfer-to" name="transfer_to_number" maxlength="32"
+                 value="{{ a.transfer_to_number or '' }}" placeholder="+1 555 010 0000">
+          <span class="field-hint">The phone a qualified call is handed to. Leave it empty to use the
+            account-wide number{% if transfer_to %}, currently {{ transfer_to }}{% else %}, which is not set,
+            so this agent would qualify and never hand over{% endif %}.</span>
           <p class="ag-transfer-map">
             <b>When</b> it transfers comes from the playbook's “when to hand the call to a person”.
-            <b>How</b> it sounds is this setting. <b>Where</b> it rings is
-            <a href="/dialer/setup/8">step 8</a>{% if transfer_to %}, currently {{ transfer_to }}{% else %},
-            which is not set yet, so it will qualify and never hand over{% endif %}.
+            <b>How</b> it sounds and <b>where</b> it rings are both on this page, right here.
           </p>
         </div>
 

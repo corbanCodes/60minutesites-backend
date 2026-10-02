@@ -473,6 +473,7 @@ def _ensure_schema_inner():
         "ai_agent": {"transfer_style": "VARCHAR(20)",
                      "transfer_line": "VARCHAR(300)",
                      "opening_mode": "VARCHAR(10)",
+                     "transfer_to_number": "VARCHAR(32)",
                      "prompt_override": "TEXT"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---

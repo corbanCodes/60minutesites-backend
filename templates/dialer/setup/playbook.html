@@ -91,6 +91,22 @@
   full instruction set it receives &mdash; lives on the <a href="/dialer/agents">agents page</a>.</p>
 
 <div class="card wiz-steps-card">
+  <h3>Install the NapkinAds guide</h3>
+  <p class="muted" style="margin:0 0 12px">Their written calling guide, turned into a playbook and a
+    matching agent: ask for the manager, say almost nothing, transfer the instant a decision maker is on
+    the line, and otherwise pin down a callback time. Adds two rows and changes nothing you already have.</p>
+  <form method="post" action="/dialer/playbooks/napkin" class="pb-draft">
+    <label for="napkin-transfer">Phone the qualified call should ring</label>
+    <input type="tel" id="napkin-transfer" name="transfer_to" maxlength="32"
+           placeholder="+1 555 010 0000">
+    <span class="field-hint">Your salesperson's line. Leave it empty to use the account-wide number.</span>
+    <div class="pb-draft-actions">
+      <button class="btn" type="submit"><i class="bi bi-box-seam"></i> Install it</button>
+    </div>
+  </form>
+</div>
+
+<div class="card wiz-steps-card">
   <h3>How the hand-off to a person actually works</h3>
   <ol class="wiz-ol wiz-ol-roomy">
     <li>

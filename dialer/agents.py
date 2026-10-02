@@ -265,8 +265,13 @@ def transfer_intro(agent):
     return TRANSFER_STYLES.get(style, TRANSFER_STYLES["brief"])["say"]
 
 
-def transfer_number(settings):
+def transfer_number(settings, agent=None):
     """The phone a qualified call should land on, or "".
+
+    An agent's own number wins. One account can run a restaurant campaign
+    that rings the bar team and a retail one that rings somebody else, and
+    forcing both through a single account-wide setting is why "where does
+    it transfer" had no satisfying answer.
 
     Two modes exist. "number" is an explicit phone the owner typed. "browser"
     means whoever is on shift, which is a softphone in a browser tab and has
@@ -274,6 +279,9 @@ def transfer_number(settings):
     callback number the AI already reads out, which is required to reach a
     human during business hours anyway.
     """
+    own = (getattr(agent, "transfer_to_number", "") or "").strip()
+    if own:
+        return own
     if (settings.transfer_mode or "") == "number" and settings.transfer_number:
         return settings.transfer_number
     return settings.ai_callback_number or ""
@@ -287,7 +295,7 @@ def transfer_config(agent, settings):
     given to it. The agent would say "let me put you through to a colleague"
     and then sit there, which is worse than never offering.
     """
-    number = transfer_number(settings)
+    number = transfer_number(settings, agent)
     if not number:
         return None
     condition = (agent.transfer_rules or "").strip()

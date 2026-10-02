@@ -1025,6 +1025,64 @@ def _repair_playbook_default(rows, demo_prefix):
     db.session.commit()
 
 
+@bp.route("/playbooks/napkin", methods=["POST"])
+@require("playbooks.edit")
+def playbook_napkin():
+    """Install NapkinAds' own calling guide as a playbook and an agent.
+
+    Their document is a specification: it mixes what the AI says with what
+    the system has to do afterwards. The saying becomes the playbook, the
+    doing is machinery that already exists here, and the prompt only has to
+    make the agent report outcomes in a shape that machinery reads.
+
+    Additive. It creates two rows and touches nothing already on the
+    account.
+    """
+    from dialer import napkin
+    from dialer.agents import sync_agent
+    s = get_settings(g.account_id)
+    back = request.form.get("back") or url_for("dialer.setup", step=9)
+
+    pb = napkin.build(g.account_id, s)
+    pb.is_default = Playbook.query.filter_by(
+        account_id=g.account_id, is_default=True).count() == 0
+    db.session.add(pb)
+    db.session.flush()
+
+    agent = AiAgent(
+        account_id=g.account_id, name="NapkinAds venue caller",
+        direction="outbound", playbook_id=pb.id,
+        voice_id=s.elevenlabs_default_voice_id or "",
+        company_facts="NapkinAds supplies restaurants and bars with free "
+                      "napkins carrying a local advert, at no cost to the "
+                      "venue.",
+        persona=napkin.PERSONA,
+        knowledge_text=napkin.extra_rules(s),
+        transfer_style="custom", transfer_line=napkin.TRANSFER_LINE,
+        transfer_to_number=(request.form.get("transfer_to") or "").strip()[:32],
+        opening_mode="wait",
+        background_preset=(s.background_preset or "office1")
+        if s.background_noise else "",
+        max_duration_seconds=240, active=True)
+    db.session.add(agent)
+    db.session.flush()
+
+    res = sync_agent(agent, s)
+    log("playbooks.napkin", target=pb.name, account_id=g.account_id,
+        user=g.member)
+    db.session.commit()
+
+    if res.get("ok"):
+        flash("NapkinAds' guide is installed as a playbook and an agent, "
+              "and the agent is live at ElevenLabs. Read the script before "
+              "you point it at a list — every line is editable.", "sticky")
+    else:
+        flash(f"Installed here, but ElevenLabs would not take the agent: "
+              f"{agent.last_sync_error}. Open it and press “Try the sync "
+              f"again”.", "error")
+    return redirect(url_for("dialer.playbook_edit", playbook_id=pb.id))
+
+
 @bp.route("/playbooks/draft", methods=["POST"])
 @require("playbooks.edit")
 def playbook_draft():
@@ -1303,6 +1361,9 @@ def agent_edit(agent_id):
         a.opening_mode = request.form.get("opening_mode", "wait")[:10]
         a.prompt_override = (request.form.get("prompt_override") or "").strip()
         a.transfer_line = (request.form.get("transfer_line") or "")[:300]
+        if "transfer_to_number" in request.form:
+            a.transfer_to_number = (request.form.get("transfer_to_number")
+                                    or "").strip()[:32]
         a.max_duration_seconds = request.form.get("max_duration_seconds",
                                                   type=int) or 420
         a.voicemail_behavior = request.form.get("voicemail_behavior",
@@ -1328,7 +1389,8 @@ def agent_edit(agent_id):
         "dialer/agent_edit.html", s=s, ready=ready, prog=prog, a=a,
         voices=voices,
         playbooks=Playbook.query.filter_by(account_id=g.account_id).all(),
-        transfer_to=__import__("dialer.agents", fromlist=["x"]).transfer_number(s),
+        transfer_to=__import__("dialer.agents",
+                               fromlist=["x"]).transfer_number(s, a),
         prompt_preview=build_prompt(a, s))
 
 
