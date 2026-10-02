@@ -469,6 +469,10 @@ def _ensure_schema_inner():
         # alters one that already exists, so a column added to a dialer model
         # after its table shipped needs a line here exactly like any other.
         "dialer_settings": {"elevenlabs_webhook_error": "VARCHAR(400)"},
+        "ai_agent": {"transfer_style": "VARCHAR(20)",
+                     "transfer_line": "VARCHAR(300)",
+                     "opening_mode": "VARCHAR(10)",
+                     "prompt_override": "TEXT"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---
         "task": {"assignee_id": "INTEGER"},

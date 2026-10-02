@@ -222,7 +222,7 @@ class FakeVoiceAgent(VoiceAgent):
             analysis = {"disposition": "voicemail_left", "qualified": False}
         else:
             transcript = (
-                f"agent: Hi, this is an automated AI assistant calling on behalf of "
+                f"agent: Hi, I'm an AI assistant calling from "
                 f"NapkinAds. Is the owner or manager around?\n"
                 f"user: This is {name}, I'm the manager. What's this about?\n"
                 f"agent: We supply bars and restaurants with free napkins -- they carry "

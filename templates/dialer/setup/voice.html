@@ -10,8 +10,11 @@
     <div class="voicegrid">
       {% for v in voices %}
       <label class="voicecard">
+        {# Nothing is pre-ticked. Showing the first voice as chosen made it
+           impossible to tell you had never chosen, which is how an agent
+           ended up built with no voice at all. #}
         <input type="radio" name="voice_id" value="{{ v.voice_id }}"
-               {{ 'checked' if s.elevenlabs_default_voice_id == v.voice_id or (not s.elevenlabs_default_voice_id and loop.first) }}>
+               {{ 'checked' if s.elevenlabs_default_voice_id == v.voice_id }}>
         <span class="voicecard-body">
           <span class="voicecard-name">
             {# The play button is a button, not the label, so clicking it
@@ -35,6 +38,10 @@
       </label>
       {% endfor %}
     </div>
+    {% if not s.elevenlabs_default_voice_id %}
+    <p class="vm-unchosen"><b>No voice chosen yet.</b> Until you pick one and save, any AI agent you build
+      uses whatever ElevenLabs defaults to, which is unlikely to be the one you want.</p>
+    {% endif %}
     <p class="muted" style="margin:8px 0 0">Press play to hear one. Pick the one that sounds like someone who
       works for you &mdash; a voice that is too polished reads as a robot, and a plain one gets further into
       the call. <b>Stock</b> voices ship with ElevenLabs and everyone has them. <b>Yours</b> is one you cloned
@@ -96,6 +103,9 @@
     </label>
     <div>
       <label for="background_preset">Which room</label>
+      <p class="muted" style="margin:0 0 6px; font-size:13px">These are ElevenLabs' own recordings, mixed in
+        on their side. There is no upload: their background-sound setting takes a preset and nothing else, so
+        a file of your own cannot be used here however good it is.</p>
       <select id="background_preset" name="background_preset">
         <option value="office1" {{ 'selected' if s.background_preset == 'office1' or not s.background_preset }}>Small office, quiet</option>
         <option value="office2" {{ 'selected' if s.background_preset == 'office2' }}>Busier office, some voices</option>

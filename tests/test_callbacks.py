@@ -134,4 +134,5 @@ def test_the_agent_is_told_to_stop_selling_the_moment_it_can_transfer(ctx):
     agent = AiAgent(account_id=owner.id, name="Q", playbook_id=pb.id)
     prompt = build_prompt(agent, s)
     assert "STOP SELLING" in prompt
-    assert "transfer tool immediately" in prompt
+    assert "call the transfer tool" in prompt
+    assert "Do not wait for them to answer" in prompt

@@ -238,11 +238,15 @@ class DialerSettings(db.Model):
     def effective_disclosure(self):
         if self.ai_disclosure_text:
             return self.ai_disclosure_text
+        # Short on purpose. The first line of a cold call is the only one
+        # you are guaranteed to get, and "this is an automated AI assistant
+        # calling on behalf of" spends it on throat-clearing. Legally what is
+        # required is that they know it is AI; nothing requires a phone
+        # number read aloud to someone who is already on the phone, and
+        # reading one at second three is the single fastest way to be hung
+        # up on. The callback number belongs in the voicemail, where it is.
         who = self.ai_disclosure_name or "our company"
-        line = f"Hi, this is an automated AI assistant calling on behalf of {who}."
-        if self.ai_callback_number:
-            line += f" You can reach a person any time at {self.ai_callback_number}."
-        return line
+        return f"Hi, I'm an AI assistant calling from {who}."
 
 
 # -------------------------------------------------------------------- numbers
@@ -322,6 +326,20 @@ class AiAgent(db.Model):
     voicemail_drop_id = db.Column(db.Integer)
     dtmf_enabled = db.Column(db.Boolean, default=True)
     background_preset = db.Column(db.String(20), default="")
+    # How it hands over. The words said in the second before a transfer
+    # decide whether the prospect waits or hangs up, and they are a matter
+    # of taste rather than something a product should decide for everyone.
+    transfer_style = db.Column(db.String(20), default="brief")
+    transfer_line = db.Column(db.String(300), default="")
+    # "wait" leaves ElevenLabs' first_message EMPTY, which is how you get an
+    # agent that says nothing until the other person speaks. Anything in
+    # that field is SPOKEN VERBATIM, instructions included, which is a trap
+    # worth a setting rather than a footnote.
+    opening_mode = db.Column(db.String(10), default="speak")   # speak|wait
+    # A hand-written system prompt that replaces the generated one entirely.
+    # Empty means "use the assembled one", which is the right default and
+    # not a restriction.
+    prompt_override = db.Column(db.Text, default="")
     knowledge_text = db.Column(db.Text, default="")
     active = db.Column(db.Boolean, default=True)
     synced_at = db.Column(db.DateTime)

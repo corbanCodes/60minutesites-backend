@@ -19,6 +19,12 @@ TIMEOUT = 25          # control plane
 AUDIO_TIMEOUT = 60    # a 10-minute MP3 over a slow link
 SIGNATURE_MAX_AGE = 30 * 60  # seconds; replay window for post-call webhooks
 
+# ElevenLabs' own background-sound preset ids. There is no upload: the field
+# accepts a preset and nothing else, so "where do I put my office noise file"
+# has the answer "you don't, pick one of these".
+BACKGROUND_PRESETS = ("office1", "office2", "restaurant", "city", "typing",
+                      "elevator1", "elevator2", "elevator3", "elevator4")
+
 NO_KEY = "Add your ElevenLabs key in Setup first."
 
 # Concurrency is NOT returned anywhere in the API -- it is a property of the

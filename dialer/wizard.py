@@ -67,7 +67,13 @@ STEPS = [
      "why": "Record it once. From then on a rep hears the beep, clicks one "
             "button and is already dialling the next number.",
      "skippable": True},
-    {"n": 11, "key": "test", "title": "Make a test call",
+    {"n": 11, "key": "agent", "title": "Build your AI agent",
+     "icon": "bi-robot", "mins": 3,
+     "why": "The agent is the thing that actually talks: a voice, your "
+            "script, and a rule for when to put a person on. Everything "
+            "before this is parts; this is where they become a caller.",
+     "skippable": True},
+    {"n": 12, "key": "test", "title": "Make a test call",
      "icon": "bi-telephone-outbound", "mins": 2,
      "why": "Proves the whole chain works before you point it at a real list.",
      "skippable": True},
@@ -148,6 +154,12 @@ def status(settings, account_id):
     probe("business", bool(settings.has_twilio)
           and settings.twilio_pcp_status == "business")
     mark("numbers", real_numbers > 0)
+    # An agent counts only once ElevenLabs has it. A row in our database
+    # that never synced cannot answer a phone.
+    from dialer.models import AiAgent as _AiAgent
+    mark("agent", _AiAgent.query.filter_by(account_id=account_id)
+         .filter(_AiAgent.elevenlabs_agent_id != "")
+         .filter(_AiAgent.elevenlabs_agent_id.isnot(None)).count() > 0)
     probe("llm", bool(settings.has_llm))
     probe("elevenlabs", bool(settings.has_elevenlabs))
     mark("compliance", bool(saved.get("compliance", {}).get("done")))

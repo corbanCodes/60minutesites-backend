@@ -2,6 +2,7 @@
 {% set active = 'dialer' %}
 {% block title %}{{ a.name }} | AI agents | 60MS HQ{% endblock %}
 {% block content %}
+<script src="/static-admin/voiceplay.js"></script>
 <link rel="stylesheet" href="/static-admin/manage.css">
 
 <div class="mg-head">
@@ -43,16 +44,43 @@
         </div>
         <div>
           <label for="ag-model">Thinking model</label>
-          <input type="text" id="ag-model" name="llm_model" list="modellist" value="{{ a.llm_model or '' }}"
-                 placeholder="gemini-2.0-flash">
-          <datalist id="modellist">
-            <option value="gemini-2.0-flash"></option>
-            <option value="gpt-4o-mini"></option>
-            <option value="gpt-4o"></option>
-            <option value="claude-3-5-haiku"></option>
-          </datalist>
-          <span class="field-hint">A faster model interrupts less. Leave it alone unless the agent sounds slow.</span>
+          <select id="ag-model" name="llm_model">
+            <option value="" {{ 'selected' if not a.llm_model }}>Let ElevenLabs choose (recommended)</option>
+            {% for m in ELEVEN_MODELS %}
+            <option value="{{ m }}" {{ 'selected' if a.llm_model == m }}>{{ m }}</option>
+            {% endfor %}
+            {% if a.llm_model and a.llm_model not in ELEVEN_MODELS %}
+            <option value="{{ a.llm_model }}" selected>{{ a.llm_model }} (set by ElevenLabs)</option>
+            {% endif %}
+          </select>
+          <span class="field-hint">This is the brain behind the voice, and it is ElevenLabs' list, not
+            ours — which is where a name like gemini-2.0-flash comes from if you never picked one. A faster
+            model interrupts less. Leave it on the default unless the agent sounds slow.</span>
         </div>
+        <div class="ag-transfer">
+          <label for="ag-transfer-style">Handing over to a person</label>
+          <select id="ag-transfer-style" name="transfer_style">
+            {% for key, st in TRANSFER_STYLES.items() %}
+            <option value="{{ key }}" {{ 'selected' if (a.transfer_style or 'brief') == key }}>
+              {{ st.label }}</option>
+            {% endfor %}
+          </select>
+          <span class="field-hint">
+            {% for key, st in TRANSFER_STYLES.items() %}{% if (a.transfer_style or 'brief') == key %}{{
+              st.hint }}{% endif %}{% endfor %}</span>
+          <input type="text" name="transfer_line" maxlength="300"
+                 value="{{ a.transfer_line or '' }}"
+                 placeholder="Great — sorry, can you give me one second?"
+                 style="margin-top:8px">
+          <span class="field-hint">Only used when you pick “My own line”.</span>
+          <p class="ag-transfer-map">
+            <b>When</b> it transfers comes from the playbook's “when to hand the call to a person”.
+            <b>How</b> it sounds is this setting. <b>Where</b> it rings is
+            <a href="/dialer/setup/8">step 8</a>{% if transfer_to %}, currently {{ transfer_to }}{% else %},
+            which is not set yet, so it will qualify and never hand over{% endif %}.
+          </p>
+        </div>
+
         <div>
           <label for="ag-playbook">Playbook</label>
           <select id="ag-playbook" name="playbook_id">
@@ -62,6 +90,11 @@
             {% endfor %}
           </select>
           <span class="field-hint">{% if not playbooks %}No playbooks yet — build one first.{% else %}The steps, questions and objection answers it follows.{% endif %}</span>
+          {% if not a.playbook_id %}
+          <p class="ag-noscript"><b>No script attached.</b> This agent will introduce itself and then
+            improvise, because none of your steps, questions or objections reach it. Pick one above and
+            save.</p>
+          {% endif %}
         </div>
         <div>
           <label for="ag-maxdur">Hang up after</label>
@@ -82,7 +115,18 @@
           <input type="radio" name="voice_id" value="{{ v.voice_id }}" data-voicename="{{ v.name }}"
                  {{ 'checked' if a.voice_id == v.voice_id }}>
           <span class="voicecard-body">
-            <span class="voicecard-name"><i class="bi bi-soundwave"></i>{{ v.name }}</span>
+            <span class="voicecard-name">
+            {% if v.preview_url %}
+            <button type="button" class="voiceplay" data-src="{{ v.preview_url }}"
+                    aria-label="Hear {{ v.name or v.voice_id }}"><i class="bi bi-play-fill"></i></button>
+            {% else %}
+            <span class="voiceplay voiceplay-off" aria-hidden="true"><i class="bi bi-soundwave"></i></span>
+            {% endif %}
+            <span class="voicecard-title">{{ v.name or v.voice_id }}</span>
+          </span>
+          {% if v.category %}
+          <span class="voicetag voicetag-{{ v.category }}">{{ VOICE_KINDS.get(v.category, v.category) }}</span>
+          {% endif %}
             <span class="voicecard-labels">{{ v.labels or 'no description' }}</span>
           </span>
         </label>
@@ -111,7 +155,11 @@
         <label for="ag-first">First thing it says</label>
         <textarea id="ag-first" name="first_message"
                   placeholder="Hi, this is an automated assistant calling on behalf of…">{{ a.first_message or '' }}</textarea>
-        <span class="field-hint">Leave it empty to use the disclosure line from your compliance settings.</span>
+        <span class="field-hint"><b>Spoken out loud, word for word, exactly as typed.</b> It is a line,
+          not an instruction: anything here, including notes in brackets, gets read to the prospect. To tell
+          the agent how to behave, use <b>Instructions</b> at the bottom of this page. Leave it empty to use
+          the disclosure line from your compliance settings. Ignored entirely when the call is set to wait
+          for them to speak.</span>
       </div>
       <div>
         <label for="ag-persona">How it comes across</label>
@@ -189,10 +237,35 @@
         left and your compliance settings. It updates when you save.</p>
     </summary>
     <pre>{{ prompt_preview | default('Nothing to show yet. Save the agent and the instructions appear here.', true) }}</pre>
+  </div>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>Instructions</h3>
+  <p class="muted" style="margin:0 0 12px">Write your own and it replaces everything above. Leave it empty
+    and the assembled version is used, which is what almost everyone wants. Paste the preview in as a
+    starting point and change what you like &mdash; it is your product.</p>
+  <form method="post" action="/dialer/agents/{{ a.id }}">
+    <input type="hidden" name="keep" value="1">
+    <textarea name="prompt_override" rows="14" class="ag-prompt"
+              placeholder="Leave empty to use the assembled instructions.">{{ a.prompt_override or '' }}</textarea>
+    <p class="muted" style="margin:8px 0 12px">
+      {% if s.disclose_ai %}The disclosure line is still added after yours, because
+        <a href="/dialer/setup/7">step 7</a> has “the AI tells people it is an AI” switched on. Turn that off
+        and nothing is appended.{% else %}Nothing is appended. The disclosure is switched off on
+        <a href="/dialer/setup/7">step 7</a>, which is a legal risk you have taken on deliberately.{% endif %}
+    </p>
+    <button class="btn" type="submit" name="sync" value="1">
+      <i class="bi bi-save"></i> Save instructions and push to ElevenLabs</button>
+  </form>
     <div class="promptbox-foot">
       <i class="bi bi-lock-fill"></i>
-      <span>The disclosure block cannot be removed. You can change your company name and callback number, but
-        the sentence saying a machine is calling always goes out first.</span>
+      <span>The disclosure block is on because <b>“The AI tells people it is an AI”</b> is ticked on
+        <a href="/dialer/setup/7">step 7</a>. Untick it there and this block disappears from the prompt.
+        It is your product and your call. What you are taking on: several states require the disclosure
+        within the first few seconds, and the FCC treats an AI voice as an artificial one under the TCPA,
+        so switching it off is choosing the legal risk deliberately rather than by accident. The wording
+        itself is yours to rewrite on that same step.</span>
     </div>
   </details>
 </div>

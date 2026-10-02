@@ -42,6 +42,15 @@ def ctx():
 # and "professional" both mean a voice ElevenLabs supplies; what a buyer
 # actually cares about is whether anyone else calling the same list could be
 # using it too.
+# ElevenLabs picks the brain when you do not, which is where a name like
+# gemini-2.0-flash appears from having never chosen. These are theirs, not
+# ours, and the empty default is the right answer for almost everyone.
+ELEVEN_MODELS = [
+    "gemini-2.0-flash", "gemini-2.5-flash", "gpt-4o-mini", "gpt-4o",
+    "claude-3-5-haiku", "claude-sonnet-4",
+]
+
+
 VOICE_KINDS = {
     "premade": "Stock",
     "professional": "Stock, premium",
@@ -58,7 +67,10 @@ def _dialer_globals():
     template, so nothing has to mirror the list in Jinja."""
     from dialer.models import (DISPOSITION_HOTKEYS, DISPOSITION_ICONS,
                                DISPOSITION_LABELS, DISPOSITIONS)
+    from dialer.agents import TRANSFER_STYLES
     return {"VOICE_KINDS": VOICE_KINDS,
+            "ELEVEN_MODELS": ELEVEN_MODELS,
+            "TRANSFER_STYLES": TRANSFER_STYLES,
             "DISPOSITIONS": DISPOSITIONS,
             "DISPOSITION_LABELS": DISPOSITION_LABELS,
             "DISPOSITION_ICONS": DISPOSITION_ICONS,
@@ -145,6 +157,10 @@ def _step_data(key, s):
     if key == "compliance":
         from dialer.models import StateRule
         return {"states": StateRule.query.order_by(StateRule.state_code).all()}
+    if key == "agent":
+        from dialer.agents import transfer_number
+        return {"agents": AiAgent.query.filter_by(account_id=acct).all(),
+                "transfer_to": transfer_number(get_settings(acct))}
     if key == "test":
         rows = PhoneNumber.query.filter_by(account_id=acct,
                                            state="active").all()
@@ -162,6 +178,11 @@ def _step_data(key, s):
 def setup_save(key):
     s = get_settings(g.account_id)
     f = request.form
+    # Some of these settings are baked into the agent's prompt or config at
+    # sync time, so saving them here changes nothing at ElevenLabs until the
+    # agents are pushed again. Saving the disclosure and hearing the old one
+    # on the next call is indistinguishable from the save not working.
+    _resync = False
 
     if key == "intent":
         s.intent = f.get("intent", "")
@@ -180,10 +201,12 @@ def setup_save(key):
         s.smart_window = bool(f.get("smart_window"))
         s.enforce_window = bool(f.get("enforce_window"))
         s.honor_state_rules = bool(f.get("honor_state_rules"))
+        _resync = True
         s.honor_national_dnc = bool(f.get("honor_national_dnc"))
         s.retention_days = f.get("retention_days", type=int) or 90
         wizard.mark(s, "compliance", done=True)
     elif key == "voice":
+        _resync = True
         s.elevenlabs_default_voice_id = f.get("voice_id", "")
         s.max_call_seconds = f.get("max_call_seconds", type=int) or 600
         s.idle_hangup_seconds = f.get("idle_hangup_seconds", type=int) or None
@@ -204,7 +227,21 @@ def setup_save(key):
         abort(404)
 
     db.session.commit()
-    flash("Saved.")
+    if _resync:
+        from dialer.agents import resync_all
+        synced, failed = resync_all(g.account_id, s)
+        db.session.commit()
+        if failed:
+            flash(f"Saved here, but ElevenLabs would not take the change for "
+                  f"{', '.join(failed)}. Open the agent and press “Try the "
+                  f"sync again”.", "error")
+        elif synced:
+            flash(f"Saved, and pushed to {synced} AI "
+                  f"agent{'' if synced == 1 else 's'}.")
+        else:
+            flash("Saved.")
+    else:
+        flash("Saved.")
     nxt = wizard.progress(s, g.account_id)["next"]
     return redirect(url_for("dialer.setup", step=nxt["n"]) if nxt
                     else url_for("dialer.setup"))
@@ -1052,7 +1089,22 @@ def playbook_edit(playbook_id):
         pb.objections_json = _rows(request.form, "objection",
                                    ["trigger", "response"], split="trigger")
         db.session.commit()
-        flash("Playbook saved.")
+        # The AI's instructions live at ElevenLabs and were assembled the
+        # last time an agent synced, so editing the script used to change
+        # what reps read and leave the AI saying the old words.
+        from dialer.agents import resync_for_playbook
+        synced, failed = resync_for_playbook(pb.id, s)
+        db.session.commit()
+        if failed:
+            flash(f"Playbook saved, but ElevenLabs would not take the change "
+                  f"for {', '.join(failed)}. Open the agent and press “Try "
+                  f"the sync again”.", "error")
+        elif synced:
+            flash(f"Playbook saved, and pushed to {synced} AI "
+                  f"agent{'' if synced == 1 else 's'}. They are saying the "
+                  f"new words from the next call.")
+        else:
+            flash("Playbook saved.")
         return redirect(url_for("dialer.playbook_edit", playbook_id=pb.id))
     return render_template("dialer/playbook_edit.html", s=s, ready=ready,
                            prog=prog, pb=pb)
@@ -1158,6 +1210,13 @@ def agent_quick():
               "error")
         return redirect(back)
 
+    if not (s.elevenlabs_default_voice_id or registry.simulating(s)):
+        flash("Pick a voice on step 8 first. Without one the agent uses "
+              "whatever ElevenLabs defaults to, which is how you end up on a "
+              "call wondering why it does not sound like the voice you "
+              "chose.", "error")
+        return redirect(back)
+
     rows = Playbook.query.filter_by(account_id=g.account_id).all()
     mine = [p for p in rows if not p.name.startswith(DEMO_PREFIX)]
     pb = (next((p for p in mine if p.is_default), None) or (mine[0] if mine
@@ -1177,6 +1236,11 @@ def agent_quick():
         persona=("Brief, warm and unbothered. You are not closing, you are "
                  "finding out quickly whether this is the right person, and "
                  "getting a colleague on the line if it is."),
+        # Inherit the room chosen on step 8. Without this the agent is built
+        # with no ambience at all and the setting on step 8 looks broken.
+        background_preset=(s.background_preset or "office1")
+        if s.background_noise else "",
+        opening_mode="wait",
         max_duration_seconds=s.max_call_seconds or 240, active=True)
     db.session.add(agent)
     db.session.flush()
@@ -1220,7 +1284,25 @@ def agent_edit(agent_id):
                       "background_preset"):
             if field in request.form:
                 setattr(a, field, request.form.get(field) or "")
+        if "prompt_override" in request.form:
+            a.prompt_override = (request.form.get("prompt_override") or "").strip()
+        # The instructions form posts on its own, so a save from it must not
+        # blank every field it never showed.
+        if request.form.get("keep"):
+            db.session.commit()
+            from dialer.agents import sync_agent
+            res = sync_agent(a, s)
+            db.session.commit()
+            flash("Instructions saved and pushed to ElevenLabs."
+                  if res.get("ok") else
+                  f"Saved here, but ElevenLabs rejected it: {res.get('error')}",
+                  None if res.get("ok") else "error")
+            return redirect(url_for("dialer.agent_edit", agent_id=a.id))
         a.playbook_id = request.form.get("playbook_id", type=int) or None
+        a.transfer_style = request.form.get("transfer_style", "brief")[:20]
+        a.opening_mode = request.form.get("opening_mode", "speak")[:10]
+        a.prompt_override = (request.form.get("prompt_override") or "").strip()
+        a.transfer_line = (request.form.get("transfer_line") or "")[:300]
         a.max_duration_seconds = request.form.get("max_duration_seconds",
                                                   type=int) or 420
         a.voicemail_behavior = request.form.get("voicemail_behavior",
@@ -1246,6 +1328,7 @@ def agent_edit(agent_id):
         "dialer/agent_edit.html", s=s, ready=ready, prog=prog, a=a,
         voices=voices,
         playbooks=Playbook.query.filter_by(account_id=g.account_id).all(),
+        transfer_to=__import__("dialer.agents", fromlist=["x"]).transfer_number(s),
         prompt_preview=build_prompt(a, s))
 
 
@@ -2003,7 +2086,7 @@ def test_call():
     e164, key, ok = compliance.normalize(to)
     if not ok:
         flash("That doesn't look like a phone number.", "error")
-        return redirect(url_for("dialer.setup", step=11))
+        return redirect(url_for("dialer.setup", step=12))
 
     lead = Lead.query.filter_by(owner_id=g.account_id, phone_key=key).first()
     if lead is None:
@@ -2018,7 +2101,7 @@ def test_call():
     ev = compliance.can_dial(lead, mode, s, g.account_id)
     if not ev["ok"] and ev["reason"] not in ("line_type_unknown",):
         flash(compliance.explain(ev), "error")
-        return redirect(url_for("dialer.setup", step=11))
+        return redirect(url_for("dialer.setup", step=12))
 
     chosen_id = request.form.get("from_number_id", type=int)
     number = None
@@ -2031,7 +2114,7 @@ def test_call():
             flash(f"{number.pretty} is sample data, not a number you own, so "
                   f"Twilio will not place a call from it. Pick another.",
                   "error")
-            return redirect(url_for("dialer.setup", step=11))
+            return redirect(url_for("dialer.setup", step=12))
     if number is None:
         number = camp_mod.pick_number(g.account_id, "ai" if agent else "rep",
                                       lead, simulate_ok=registry.simulating(s))
@@ -2039,11 +2122,11 @@ def test_call():
         flash("No number is in the AI pool. Open step 4 and switch one of "
               "your numbers to “AI agents”; a number cannot serve both the "
               "AI and your reps.", "error")
-        return redirect(url_for("dialer.setup", step=11))
+        return redirect(url_for("dialer.setup", step=12))
     if number is None:
         flash("No number on your account can place this call. Buy one on "
               "step 4, or check none of them are parked.", "error")
-        return redirect(url_for("dialer.setup", step=11))
+        return redirect(url_for("dialer.setup", step=12))
     if agent:
         # ElevenLabs places the call, not Twilio, so it has to have been
         # given the number first. Importing only happened when a number was
@@ -2060,11 +2143,11 @@ def test_call():
                   f"has nothing to call from. Open step 4 and move it into "
                   f"the AI pool, or use “Just ring my phone” to test the "
                   f"rest of the chain.", "error")
-            return redirect(url_for("dialer.setup", step=11))
+            return redirect(url_for("dialer.setup", step=12))
         if not agent.elevenlabs_agent_id:
             flash(f"“{agent.name}” has not synced to ElevenLabs. Open it and "
                   f"press “Try the sync again”.", "error")
-            return redirect(url_for("dialer.setup", step=11))
+            return redirect(url_for("dialer.setup", step=12))
 
     call = calls_mod.start_call(g.account_id, lead, mode, s,
                                 from_number=number.e164 if number else "",
@@ -2094,7 +2177,7 @@ def test_call():
     db.session.commit()
     if not r.get("ok"):
         flash(f"The call didn't go out: {r.get('error')}", "error")
-        return redirect(url_for("dialer.setup", step=11))
+        return redirect(url_for("dialer.setup", step=12))
 
     if registry.simulating(s):
         simulate.advance(call, s)

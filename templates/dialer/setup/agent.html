@@ -1,0 +1,91 @@
+{% extends "dialer/setup/_shell.html" %}
+{% block step %}
+
+{% if agents %}
+<h3 class="wiz-h3">Your agents <span class="count-chip">{{ agents | length }}</span></h3>
+<table class="cardtable">
+  <tr><th>Name</th><th>Voice</th><th>Script</th><th>Hands over</th><th>At ElevenLabs</th><th></th></tr>
+  {% for a in agents %}
+  <tr>
+    <td class="ct-title ct-wide">
+      <a class="rowlink" href="/dialer/agents/{{ a.id }}">{{ a.name }}</a>
+      <div class="subtext">{{ (a.direction or 'outbound') | capitalize }}</div>
+    </td>
+    <td data-label="Voice">
+      {% if a.voice_id %}<span class="pill" style="background:#2E7D4F">Set</span>
+      {% else %}<span class="pill" style="background:#B98A2B">Default</span>{% endif %}
+    </td>
+    <td data-label="Script">
+      {% if a.playbook_id %}<span class="pill" style="background:#2E7D4F">Attached</span>
+      {% else %}<span class="pill" style="background:#B3362B">None</span>{% endif %}
+    </td>
+    <td data-label="Hands over">
+      {% if transfer_to %}{{ TRANSFER_STYLES.get(a.transfer_style or 'brief', {}).get('label', '—') }}
+      {% else %}<span class="muted">nowhere set</span>{% endif %}
+    </td>
+    <td data-label="At ElevenLabs">
+      {% if a.elevenlabs_agent_id %}<span class="pill" style="background:#2E7D4F">Live</span>
+      {% else %}<span class="pill" style="background:#B3362B">Not synced</span>{% endif %}
+    </td>
+    <td class="ct-actions ct-wide" style="text-align:right">
+      <a class="chip-btn" href="/dialer/agents/{{ a.id }}">Edit</a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="card empty">
+  <i class="bi bi-robot"></i>
+  <p><b>No agent yet, so nothing can talk.</b></p>
+  <p class="muted">Every other part is ready. An agent is just those parts tied together.</p>
+</div>
+{% endif %}
+
+<div class="card wiz-steps-card">
+  <h3>{{ 'Add another agent' if agents else 'Build it' }}</h3>
+  <p class="muted" style="margin:0 0 14px">Takes your default playbook and the voice you picked on
+    <a href="/dialer/setup/8">step 8</a>, ties them together, and sends the result to ElevenLabs. You can
+    change every part of it afterwards.</p>
+  <form method="post" action="/dialer/agents/quick">
+    <input type="hidden" name="back" value="/dialer/setup/11">
+    <button class="btn" type="submit"><i class="bi bi-magic"></i>
+      {{ 'Build another' if agents else 'Build my AI agent' }}</button>
+  </form>
+</div>
+
+<div class="card wiz-steps-card">
+  <h3>What an agent is made of</h3>
+  <table class="plan-table cardtable">
+    <tr><th>Part</th><th>Where it comes from</th></tr>
+    <tr><td class="ct-title ct-wide"><b>Its voice</b></td>
+        <td data-label="From"><a href="/dialer/setup/8">Step 8</a>, and overridable per agent.</td></tr>
+    <tr><td class="ct-title ct-wide"><b>What it says</b></td>
+        <td data-label="From">Your playbook from <a href="/dialer/setup/9">step 9</a>. Editing the script
+          now pushes straight to the agent.</td></tr>
+    <tr><td class="ct-title ct-wide"><b>When it hands over</b></td>
+        <td data-label="From">The playbook's “when to hand the call to a person”.</td></tr>
+    <tr><td class="ct-title ct-wide"><b>How it hands over</b></td>
+        <td data-label="From">The agent itself: one short line, an explicit heads-up, or a natural aside.</td></tr>
+    <tr><td class="ct-title ct-wide"><b>Where it rings</b></td>
+        <td data-label="From"><a href="/dialer/setup/8">Step 8</a>{% if transfer_to %} &mdash; currently
+          {{ transfer_to }}{% else %} &mdash; <b>not set</b>, so it will qualify and never transfer{% endif %}.</td></tr>
+    <tr><td class="ct-title ct-wide"><b>Whether it says it is an AI</b></td>
+        <td data-label="From"><a href="/dialer/setup/7">Step 7</a>. Yours to switch off.</td></tr>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block help %}
+<details class="guide">
+  <summary><i class="bi bi-question-circle"></i> Why the agent is separate from the script</summary>
+  <div class="guide-body">
+    <p>One script, several agents. The same napkin pitch can run with a calm voice for restaurants and a
+      brisker one for bars, or hand to different people depending on who is on shift. Splitting them means
+      editing the script once updates every agent reading it, which is what happens now when you save on
+      step 9.</p>
+    <p>It also means an agent is cheap to throw away. If one sounds wrong, build another and point it at the
+      same script rather than unpicking the one you have.</p>
+  </div>
+</details>
+{% endblock %}

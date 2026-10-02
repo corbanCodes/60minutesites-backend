@@ -21,7 +21,7 @@
 
 {% if not agents %}
 <form method="post" action="/dialer/agents/quick" id="agent-quick-form">
-  <input type="hidden" name="back" value="/dialer/setup/11">
+  <input type="hidden" name="back" value="/dialer/setup/12">
 </form>
 {% endif %}
 
@@ -49,6 +49,13 @@
       {% endif %}
     </div>
   </div>
+
+  {% if agents %}
+  <p class="muted" style="margin:6px 0 0">Want it to sound different?
+    {% for a in agents %}<a href="/dialer/agents/{{ a.id }}">Edit {{ a.name }}</a>{{ ", "
+    if not loop.last }}{% endfor %} &mdash; voice, script, how it comes across, and exactly what it is
+    told, on one page.</p>
+  {% endif %}
 
   {% if not agents %}
   <div class="card wiz-callout" style="margin-top:14px">

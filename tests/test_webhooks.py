@@ -113,7 +113,7 @@ def test_elevenlabs_post_call_fills_in_the_conversation(acct, client):
     from dialer import processor
     processor.process_all(account_id=owner.id)
     db.session.refresh(call)
-    assert "automated AI assistant" in call.transcript
+    assert "AI assistant" in call.transcript
     assert call.duration_s == 72
     assert call.qualification.get("tables") == "40"
     assert call.finalized_at is not None

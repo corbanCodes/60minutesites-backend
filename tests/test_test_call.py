@@ -92,7 +92,7 @@ def test_the_screen_offers_only_numbers_that_can_dial(account):
     owner, client = account
     number(owner.id, "+18655550101", sid="PNdemo0101")
     number(owner.id, "+14406642753")
-    body = client.get("/dialer/setup/11").get_data(as_text=True)
+    body = client.get("/dialer/setup/12").get_data(as_text=True)
     picker = body[body.index('name="from_number_id"'):]
     picker = picker[:picker.index("</select>")]
     assert "664-2753" in picker
@@ -104,7 +104,7 @@ def test_the_screen_names_the_unusable_ones_rather_than_hiding_them(account):
     owner, client = account
     number(owner.id, "+18655550101", sid="PNdemo0101")
     number(owner.id, "+14406642753")
-    body = client.get("/dialer/setup/11").get_data(as_text=True)
+    body = client.get("/dialer/setup/12").get_data(as_text=True)
     assert "Not usable" in body
     assert "865) 555-0101" in body
 

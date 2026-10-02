@@ -112,7 +112,7 @@ def test_no_playbook_means_a_clear_refusal(account):
 def test_the_button_is_offered_when_there_is_no_agent(account):
     owner, client = account
     playbook(owner.id)
-    body = client.get("/dialer/setup/11").get_data(as_text=True)
+    body = client.get("/dialer/setup/12").get_data(as_text=True)
     assert "Build an AI agent from my script" in body
     assert "/dialer/agents/quick" in body
 
@@ -121,7 +121,7 @@ def test_the_button_goes_away_once_an_agent_exists(account):
     owner, client = account
     playbook(owner.id)
     client.post("/dialer/agents/quick", follow_redirects=True)
-    body = client.get("/dialer/setup/11").get_data(as_text=True)
+    body = client.get("/dialer/setup/12").get_data(as_text=True)
     assert "Build an AI agent from my script" not in body
 
 
@@ -130,7 +130,7 @@ def test_the_new_agent_is_selectable_on_the_test_call(account):
     owner, client = account
     playbook(owner.id)
     client.post("/dialer/agents/quick", follow_redirects=True)
-    body = client.get("/dialer/setup/11").get_data(as_text=True)
+    body = client.get("/dialer/setup/12").get_data(as_text=True)
     picker = body.split('id="agent_id"')[1].split("</select>")[0]
     assert "NapkinAds Official agent" in picker
 

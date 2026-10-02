@@ -20,7 +20,33 @@ def _now():
 
 
 def build_prompt(agent, settings):
-    """The full system prompt, in the order the agent should think in."""
+    """The full system prompt, in the order the agent should think in.
+
+    A hand-written override replaces all of this. It is your product and
+    there is no good reason the generated version should be the only one you
+    are allowed. The disclosure rule is the single thing still appended
+    afterwards, and only while the step 7 switch is on -- turn that off and
+    even this is yours.
+    """
+    override = (getattr(agent, "prompt_override", "") or "").strip()
+    if override:
+        if settings.disclose_ai:
+            return override + "\n\n" + _disclosure_block(settings)
+        return override
+    return _generated_prompt(agent, settings)
+
+
+def _disclosure_block(settings):
+    return (
+        "# Disclosure (never skip, never reword away)\n"
+        f"Your FIRST words on every call must make clear that you are an "
+        f"automated assistant and who you are calling for:\n"
+        f"  \"{settings.effective_disclosure}\"\n"
+        "If anyone asks whether you are a real person, say plainly that "
+        "you are an AI assistant. Never claim to be human.")
+
+
+def _generated_prompt(agent, settings):
     pb = db.session.get(Playbook, agent.playbook_id) if agent.playbook_id else None
     out = []
 
@@ -29,13 +55,14 @@ def build_prompt(agent, settings):
     out.append(f"# Who you are\nYou are a voice assistant making calls for "
                f"{who}.")
     if settings.disclose_ai:
+        out.append(_disclosure_block(settings))
+    if (getattr(agent, "opening_mode", "") or "speak") == "wait":
         out.append(
-            "# Disclosure (never skip, never reword away)\n"
-            f"Your FIRST words on every call must make clear that you are an "
-            f"automated assistant and who you are calling for:\n"
-            f"  \"{settings.effective_disclosure}\"\n"
-            "If anyone asks whether you are a real person, say plainly that "
-            "you are an AI assistant. Never claim to be human.")
+            "# Who speaks first\n"
+            "Say NOTHING when the call connects. Wait for them to speak. "
+            "People answer a phone with \"hello\" and talking over that is "
+            "the clearest sign of a machine. When they have spoken, greet "
+            "them back naturally and only then begin.")
     if settings.records_calls and settings.announce_recording:
         out.append(f"# Recording\nSay this early, before anything substantive: "
                    f"\"{settings.announce_text}\"")
@@ -79,9 +106,10 @@ def build_prompt(agent, settings):
                 f"{pb.transfer_criteria}\n"
                 "The moment that is true, STOP SELLING. Do not ask another "
                 "qualifying question, do not explain the offer again, do not "
-                "confirm details you already have. Say one short line such as "
-                "\"Perfect — let me put you straight through to a colleague, "
-                "one moment\", then call the transfer tool immediately.\n"
+                "confirm details you already have.\n"
+                f"{transfer_intro(agent)}\n"
+                "Then call the transfer tool. Do not wait for them to "
+                "answer whatever you just said.\n"
                 "Every extra sentence after they qualify is a chance to lose "
                 "them. Transferring a second too early costs nothing; a second "
                 "too late costs the call.\n"
@@ -141,6 +169,100 @@ def build_prompt(agent, settings):
         "not keep talking once you have the time; you already have what you "
         "came for.")
     return "\n\n".join(out)
+
+
+def resync_for_playbook(playbook_id, settings):
+    """Push every agent that reads this playbook back to ElevenLabs.
+
+    The prompt is assembled at sync time and then lives at ElevenLabs. So
+    editing a script changed what reps read on screen and left the AI saying
+    the old words until somebody happened to re-sync the agent by hand.
+    Step 9 promises in so many words that "write it once and both sides stay
+    in step"; this is the line that makes that true.
+
+    Returns (synced, failures).
+    """
+    if not playbook_id:
+        return 0, []
+    agents = AiAgent.query.filter_by(playbook_id=playbook_id).all()
+    ok_count, failed = 0, []
+    for agent in agents:
+        if not agent.elevenlabs_agent_id:
+            continue          # never synced; building it is a separate act
+        r = sync_agent(agent, settings)
+        if r.get("ok"):
+            ok_count += 1
+        else:
+            failed.append(agent.name)
+    return ok_count, failed
+
+
+def resync_all(account_id, settings):
+    """Every synced agent on the account. Used when something global
+    changes -- the disclosure, the voice, the transfer number -- because all
+    three are baked into the prompt or the agent config at sync time."""
+    agents = AiAgent.query.filter_by(account_id=account_id).all()
+    ok_count, failed = 0, []
+    for agent in agents:
+        if not agent.elevenlabs_agent_id:
+            continue
+        r = sync_agent(agent, settings)
+        if r.get("ok"):
+            ok_count += 1
+        else:
+            failed.append(agent.name)
+    return ok_count, failed
+
+
+TRANSFER_STYLES = {
+    "brief": {
+        "label": "One short line, then go",
+        "hint": "Fastest. The prospect barely registers a pause.",
+        "say": "Say one short line and transfer immediately. Something like "
+               "\"Perfect \u2014 one second\" or \"Great, let me grab a "
+               "colleague.\" Do not explain what you are doing, do not ask "
+               "permission, do not confirm anything first.",
+    },
+    "explicit": {
+        "label": "Say plainly that a person is coming on",
+        "hint": "Slower, but nobody is surprised by the new voice.",
+        "say": "Tell them clearly what is about to happen, then transfer: "
+               "\"That's great \u2014 I'm going to put you through to a "
+               "colleague who can set this up. One moment.\" Then go. Do "
+               "not keep selling while you say it.",
+    },
+    "natural": {
+        "label": "A natural aside, like a person would",
+        "hint": "Sounds least like a machine. Worth a second of delay.",
+        "say": "Use a small human aside and transfer while you say it. "
+               "Something like \"Oh great \u2014 sorry, can you give me one "
+               "second?\" or \"Perfect, bear with me a moment.\" Keep it "
+               "under about three seconds and sound slightly busy rather "
+               "than scripted.",
+    },
+    "custom": {
+        "label": "My own line",
+        "hint": "Write exactly what it says before handing over.",
+        "say": "",
+    },
+}
+
+
+def transfer_intro(agent):
+    """What the agent says in the second before it hands over.
+
+    The words here decide whether the prospect waits for the new voice or
+    hangs up on a silence, which is too much to leave to one hard-coded
+    sentence.
+    """
+    style = (getattr(agent, "transfer_style", "") or "brief").lower()
+    if style == "custom":
+        line = (getattr(agent, "transfer_line", "") or "").strip()
+        if line:
+            return (f"Say exactly this, then transfer immediately: "
+                    f"\"{line}\"")
+        style = "brief"
+    return TRANSFER_STYLES.get(style, TRANSFER_STYLES["brief"])["say"]
 
 
 def transfer_number(settings):
@@ -229,7 +351,13 @@ def sync_agent(agent, settings):
                     "X-HQ-Token": account_token(agent.account_id)},
                 "request_body_schema": spec["parameters"]},
         })
-    if not agent.first_message and settings.disclose_ai:
+    # ElevenLabs SPEAKS first_message verbatim the instant the call
+    # connects, instructions and all. Leaving it empty is the documented way
+    # to make an agent wait for the other person, so "wait" must not be
+    # helpfully filled in.
+    if (agent.opening_mode or "speak") == "wait":
+        agent.first_message = ""
+    elif not agent.first_message and settings.disclose_ai:
         agent.first_message = settings.effective_disclosure
     if not agent.voicemail_message:
         agent.voicemail_message = voicemail_text(agent, settings)

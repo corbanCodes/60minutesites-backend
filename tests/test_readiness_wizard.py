@@ -92,7 +92,8 @@ def test_bursting_is_warned_about_because_it_doubles_the_rate(bare):
 def test_wizard_progress_starts_empty_and_lists_what_is_required(bare):
     owner, s = bare
     p = wizard.progress(s, owner.id)
-    assert p["done"] == 0 and p["total"] == 11
+    # The count follows STEPS rather than a number written twice.
+    assert p["done"] == 0 and p["total"] == len(wizard.STEPS)
     assert p["complete"] is False
     keys = {step["key"] for step in p["required_left"]}
     assert keys == set(wizard.REQUIRED)

@@ -183,9 +183,11 @@ def test_ai_calls_carry_the_disclosure_and_produce_a_transcript(ready_account):
 
     call = Call.query.filter_by(campaign_id=camp.id).first()
     assert "NapkinAds" in call.disclosure_text
-    assert "automated AI assistant" in call.disclosure_text
+    # Short wording on purpose. What has to survive is that the
+    # caller is told it is an AI, not one particular sentence.
+    assert "AI assistant" in call.disclosure_text
     assert call.elevenlabs_conversation_id
-    assert "automated AI assistant" in call.transcript
+    assert "AI assistant" in call.transcript
     assert call.finalized_at
 
 
