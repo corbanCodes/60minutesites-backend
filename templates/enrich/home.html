@@ -1,0 +1,138 @@
+{% extends "enrich/_base.html" %}
+{% block title %}Enrichment · 60MS HQ{% endblock %}
+{% block heading %}Enrichment{% endblock %}
+{% block lede %}
+<p class="en-lede">Upload a list. Get back the same list with the work done:
+  a plain summary of every company's website, or an email written for every
+  single person on it. You pay OpenAI directly with your own key and we add
+  nothing on top.</p>
+{% endblock %}
+
+{% block en_content %}
+
+{% if blockers %}
+  {% for b in blockers %}
+  <div class="en-alert bad">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div class="en-alert-body">
+      <h3>{{ b.feature }} will not work until you add {{ b.needs }}</h3>
+      <p>{{ b.fix }}</p>
+      <a class="btn" href="{{ url_for('enrich.settings_page') }}">
+        <i class="bi bi-key"></i>&nbsp;Add your key</a>
+    </div>
+  </div>
+  {% endfor %}
+{% endif %}
+
+<div class="en-hero">
+
+  <div class="en-pick">
+    <div class="en-ico"><i class="bi bi-search"></i></div>
+    <h2>Research websites</h2>
+    <p>Point at the column with the company's website. We read each site once
+      and write four plain sentences about what the business actually does, so
+      you walk into the conversation knowing something. Forty contacts at the
+      same company cost one read, not forty.</p>
+    <span class="en-price"><i class="bi bi-cash-coin"></i>
+      About half a cent for ten companies on the cheap model</span>
+    <form method="post" action="{{ url_for('enrich.job_new') }}"
+          enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="scrape">
+      <label class="en-file">
+        <i class="bi bi-filetype-csv"></i>
+        Choose a CSV or spreadsheet
+        <input type="file" name="file" accept=".csv,.xlsx,.xlsm,text/csv">
+        <span class="en-file-name"></span>
+      </label>
+      <input type="text" name="name" placeholder="Name this job (optional)">
+      <button class="btn" type="submit">
+        <i class="bi bi-arrow-right"></i>&nbsp;Set up the research</button>
+    </form>
+  </div>
+
+  <div class="en-pick alt">
+    <div class="en-ico"><i class="bi bi-envelope-paper"></i></div>
+    <h2>Write personal emails</h2>
+    <p>Build a prompt by dragging your spreadsheet columns into it, see it
+      filled in with a real person's details before you spend anything, then
+      write one email, or up to twelve genuinely different versions, for
+      every row.</p>
+    <span class="en-price"><i class="bi bi-cash-coin"></i>
+      Around a dime for four hundred emails on the cheap model</span>
+    <form method="post" action="{{ url_for('enrich.job_new') }}"
+          enctype="multipart/form-data">
+      <input type="hidden" name="kind" value="personalize">
+      <label class="en-file">
+        <i class="bi bi-filetype-csv"></i>
+        Choose a CSV or spreadsheet
+        <input type="file" name="file" accept=".csv,.xlsx,.xlsm,text/csv">
+        <span class="en-file-name"></span>
+      </label>
+      <input type="text" name="name" placeholder="Name this job (optional)">
+      <button class="btn" type="submit">
+        <i class="bi bi-arrow-right"></i>&nbsp;Build the prompt</button>
+    </form>
+  </div>
+
+</div>
+
+<div class="en-stats">
+  <div class="en-stat hi">
+    <div class="n">{{ saved_sites }}</div>
+    <div class="l">Websites researched</div>
+  </div>
+  <div class="en-stat">
+    <div class="n">{{ templates|length }}</div>
+    <div class="l">Saved prompts</div>
+  </div>
+  <div class="en-stat {{ 'no' if spend.over else 'ok' }}">
+    <div class="n">{{ spend.spent_pretty }}</div>
+    <div class="l">Spent this month{% if spend.cap %} of {{ spend.cap_pretty }}{% endif %}</div>
+    {% if spend.cap %}
+    <div class="en-meter {{ 'over' if spend.over }}">
+      <span style="width: {{ spend.pct }}%"></span></div>
+    {% endif %}
+  </div>
+  <div class="en-stat">
+    <div class="n">{{ (s.default_model or 'gpt-4o-mini').replace('gpt-', '') }}</div>
+    <div class="l">Default model</div>
+  </div>
+</div>
+
+<h2 style="margin:0 0 12px">Recent jobs</h2>
+{% if recent %}
+<div class="en-jobs">
+  {% for j in recent %}
+  <a class="en-job"
+     href="{{ url_for('enrich.job_setup', job_id=j.id) if j.status == 'draft'
+             else url_for('enrich.job_view', job_id=j.id) }}">
+    <div>
+      <div class="en-job-name">
+        <i class="bi {{ 'bi-search' if j.kind == 'scrape' else 'bi-envelope-paper' }}"></i>
+        {{ j.name or 'Untitled' }}
+      </div>
+      <div class="en-job-meta">
+        {{ j.total }} rows &middot;
+        {{ 'website research' if j.kind == 'scrape' else 'email writing' }}
+        {%- if j.reused %} &middot; {{ j.reused }} reused{% endif %}
+        {%- if j.failed %} &middot; {{ j.failed }} failed{% endif %}
+        &middot; {{ j.created_at.strftime('%d %b') if j.created_at else '' }}
+      </div>
+    </div>
+    <div class="en-job-right">
+      <span class="en-state {{ j.status }}">{{ j.status }}</span>
+      <span class="muted">{{ j.pct }}% &middot; {{ money(j.cost) }}</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="en-empty">
+  <i class="bi bi-inboxes"></i>
+  <h3>No jobs yet</h3>
+  <p>Upload a list above. Nothing is charged until you have seen the
+    estimate and pressed Start, and you can stop a run at any point.</p>
+</div>
+{% endif %}
+
+{% endblock %}

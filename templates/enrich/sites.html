@@ -1,0 +1,102 @@
+{% extends "enrich/_base.html" %}
+{% block title %}Saved research · Enrichment{% endblock %}
+{% block heading %}Saved research{% endblock %}
+{% block lede %}
+<p class="en-lede">Every website you have ever had researched, kept. The next
+  list you upload only pays for the companies that are not already here, so
+  this gets cheaper every time you use it.</p>
+{% endblock %}
+
+{% block en_content %}
+
+<div class="en-stats">
+  <div class="en-stat hi">
+    <div class="n">{{ total }}</div>
+    <div class="l">Companies in your library</div>
+  </div>
+  <div class="en-stat ok">
+    <div class="n">{{ with_summary }}</div>
+    <div class="l">Ready to reuse for free</div>
+  </div>
+</div>
+
+<form class="en-search" method="get">
+  <input type="search" name="q" value="{{ q }}"
+         placeholder="Search your saved research">
+  <button class="btn ghost" type="submit">
+    <i class="bi bi-search"></i>&nbsp;Search</button>
+  {% if q %}
+  <a class="btn ghost" href="{{ url_for('enrich.sites') }}">Clear</a>
+  {% endif %}
+</form>
+
+{% if sites %}
+  {% if total > shown %}
+  <p class="muted" style="margin:0 0 14px">Showing the {{ shown }} most
+    recently fetched of {{ total }}. Search to find an older one.</p>
+  {% endif %}
+  <div class="en-sites">
+    {% for site in sites %}
+    <div class="en-site">
+      <h3><a href="{{ site.final_url or site.url or ('https://' ~ site.domain) }}"
+             target="_blank" rel="noopener">{{ site.domain }}
+          <i class="bi bi-box-arrow-up-right" style="font-size:11px"></i></a></h3>
+      {% if site.title %}
+      <p class="en-site-title">{{ site.title }}</p>
+      {% endif %}
+
+      {% if site.summary %}
+      <p class="sum">{{ site.summary }}</p>
+      {% else %}
+      <div class="en-issue bad" style="margin-top:11px">
+        <i class="bi bi-exclamation-octagon-fill"></i>
+        <span>{{ site.error or 'This one could not be read.' }}</span></div>
+      {% endif %}
+
+      <div class="en-site-foot">
+        <span class="when">
+          {% if site.summarized_at %}
+            Summarised {{ site.summarized_at.strftime('%d %b %Y') }}
+          {% elif site.scraped_at %}
+            Fetched {{ site.scraped_at.strftime('%d %b %Y') }}
+          {% endif %}
+          {%- if site.cost %} &middot; {{ money(site.cost) }}{% endif %}
+        </span>
+        <form method="post"
+              action="{{ url_for('enrich.site_resummarise', site_id=site.id) }}">
+          <input type="hidden" name="q" value="{{ q }}">
+          <button class="chip-btn" type="submit"
+                  title="Fetch the site again and write a new summary">
+            <i class="bi bi-arrow-repeat"></i>&nbsp;Re-summarise</button>
+        </form>
+        <form method="post"
+              action="{{ url_for('enrich.site_delete', site_id=site.id) }}"
+              onsubmit="return confirm('Remove {{ site.domain }} from your library?')">
+          <button class="chip-btn danger" type="submit">
+            <i class="bi bi-trash3"></i></button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% elif q %}
+  <div class="en-empty">
+    <i class="bi bi-search"></i>
+    <h3>Nothing matches "{{ q }}"</h3>
+    <p>Try part of the domain instead, or clear the search to see everything
+      you have.</p>
+    <a class="btn ghost" href="{{ url_for('enrich.sites') }}">Clear the search</a>
+  </div>
+{% else %}
+  <div class="en-empty">
+    <i class="bi bi-collection"></i>
+    <h3>Your library is empty, for now</h3>
+    <p>Run a website research job and every company it reads lands here. The
+      second list you upload will reuse whatever it recognises instead of
+      paying to read the same sites twice.</p>
+    <a class="btn" href="{{ url_for('enrich.home') }}">
+      <i class="bi bi-upload"></i>&nbsp;Upload a list</a>
+  </div>
+{% endif %}
+
+{% endblock %}

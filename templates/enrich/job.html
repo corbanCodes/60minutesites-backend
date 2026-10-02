@@ -1,0 +1,158 @@
+{% extends "enrich/_base.html" %}
+{% block title %}{{ job.name or 'Job' }} · Enrichment{% endblock %}
+{% block heading %}{{ job.name or 'Untitled job' }}{% endblock %}
+{% block lede %}
+<p class="en-lede">
+  {{ 'Website research' if job.kind == 'scrape' else 'Email writing' }} over
+  {{ job.total }} rows from <b>{{ job.source_filename or 'your upload' }}</b>.
+</p>
+{% endblock %}
+
+{% block en_content %}
+
+<div id="en-run" data-status="{{ job.status }}"
+     data-tick="{{ url_for('enrich.job_tick', job_id=job.id) }}">
+
+  <div class="en-progress">
+    <div class="en-prog-top">
+      <div>
+        <div class="en-prog-pct" id="en-pct">{{ job.pct }}%</div>
+        <div class="en-prog-sub" id="en-sub">
+          {{ job.done or 0 }} done &middot; {{ job.reused or 0 }} reused
+          &middot; {{ job.failed or 0 }} failed &middot;
+          {{ job.remaining }} to go</div>
+      </div>
+      <div class="en-prog-cost">
+        <div class="en-prog-pct en-prog-money" id="en-cost">{{ money(job.cost) }}</div>
+        <div class="en-prog-sub">spent so far, at OpenAI</div>
+      </div>
+    </div>
+
+    <div class="en-bar {{ 'run' if job.status == 'running' }}" id="en-bar">
+      <span style="width: {{ job.pct }}%"></span></div>
+
+    <div style="margin-top:14px;display:flex;gap:10px;align-items:center;
+                flex-wrap:wrap">
+      <span class="en-state {{ job.status }}" data-state>{{ job.status }}</span>
+      {% if job.kind == 'scrape' and job.reused %}
+      <span class="count-chip">{{ job.reused }}
+        row{{ '' if job.reused == 1 else 's' }} reused a summary you already
+        had</span>
+      {% endif %}
+    </div>
+
+    <p class="muted" id="en-note"
+       style="margin:12px 0 0;{{ '' if job.error else 'display:none' }}"
+       >{{ job.error }}</p>
+
+    {% if job.status == 'paused' %}
+    <div class="en-issue warn" style="margin-top:14px">
+      <i class="bi bi-pause-circle-fill"></i>
+      <span>Paused at row {{ (job.done or 0) + (job.failed or 0) }}. Nothing
+        is lost and nothing is being charged. Press Resume whenever you like,
+        today or next week, and it carries on from exactly here.</span>
+    </div>
+    {% elif job.status == 'running' %}
+    <div class="en-issue good" style="margin-top:14px">
+      <i class="bi bi-arrow-repeat"></i>
+      <span>Running. This page is doing the work, so leave it open. If you
+        close it the job just stops where it is and waits for you.</span>
+    </div>
+    {% elif job.status == 'done' and job.failed %}
+    {# "Finished 8 rows" when one of them failed is the kind of half-truth
+       that gets found in row 400 of the export instead of here. #}
+    <div class="en-issue warn" style="margin-top:14px">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>Finished: {{ job.done or 0 }} of {{ job.total }} rows written for
+        {{ money(job.cost) }}.
+        {{ job.failed }} row{{ '' if job.failed == 1 else 's' }} failed and
+        {{ 'is' if job.failed == 1 else 'are' }} explained below. The export
+        includes every row either way, with the reason in its status
+        column.</span>
+    </div>
+    {% elif job.status == 'done' %}
+    <div class="en-issue good" style="margin-top:14px">
+      <i class="bi bi-check-circle-fill"></i>
+      <span>Finished {{ job.total }} rows for {{ money(job.cost) }}. Download
+        the sheet below; your original columns are all still there.</span>
+    </div>
+    {% endif %}
+
+    <div class="en-run-actions">
+      {% if job.status == 'running' %}
+      <form method="post" action="{{ url_for('enrich.job_pause', job_id=job.id) }}">
+        <button class="btn ghost" type="submit">
+          <i class="bi bi-pause-fill"></i>&nbsp;Pause</button></form>
+      {% elif job.status in ('paused', 'failed') %}
+      <form method="post" action="{{ url_for('enrich.job_start', job_id=job.id) }}">
+        <button class="btn" type="submit">
+          <i class="bi bi-play-fill"></i>&nbsp;Resume</button></form>
+      {% endif %}
+
+      {% if job.failed %}
+      <form method="post"
+            action="{{ url_for('enrich.job_retry_failed', job_id=job.id) }}">
+        <button class="btn ghost" type="submit">
+          <i class="bi bi-arrow-counterclockwise"></i>&nbsp;Retry
+          {{ job.failed }} failed</button></form>
+      {% endif %}
+
+      {# one primary per screen: Download only leads once there is nothing
+         left to run #}
+      <a class="btn {{ '' if job.status == 'done' else 'ghost' }}"
+         href="{{ url_for('enrich.job_export', job_id=job.id) }}">
+        <i class="bi bi-download"></i>&nbsp;Download CSV</a>
+
+      {% if job.status != 'running' %}
+      <a class="btn ghost" href="{{ url_for('enrich.job_setup', job_id=job.id) }}">
+        <i class="bi bi-sliders"></i>&nbsp;Change the setup</a>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('enrich.job_delete', job_id=job.id) }}"
+            onsubmit="return confirm('Delete this job and its rows? Your saved website research is kept.')">
+        <button class="btn ghost" type="submit">
+          <i class="bi bi-trash3"></i>&nbsp;Delete</button></form>
+    </div>
+  </div>
+
+  <h2 style="margin:24px 0 12px">Latest rows</h2>
+  <div id="en-rows">
+    {% if rows %}
+      {% for r in rows %}
+      <div class="en-rowcard">
+        <div class="en-rowcard-top">
+          <b>{{ r.label }}</b>
+          <span class="en-state {{ 'done' if r.state == 'done'
+                  else 'failed' if r.state == 'failed' else 'paused' }}"
+                >{{ r.state }}</span>
+          {% if r.reused %}<span class="count-chip">reused</span>{% endif %}
+          <span class="muted" style="margin-left:auto">row {{ r.idx }}
+            &middot; {{ r.cost }}</span>
+        </div>
+        {% for f in r.fields %}
+        <div class="en-out">
+          <div class="en-out-k">{{ f.name }}</div>
+          <div class="en-out-v">{{ f.value }}</div>
+        </div>
+        {% endfor %}
+        {% if r.error %}
+        <div class="en-issue bad" style="margin-top:9px">
+          <i class="bi bi-exclamation-octagon-fill"></i>
+          <span>{{ r.error }}</span></div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="en-empty">
+        <i class="bi bi-hourglass"></i>
+        <h3>Nothing finished yet</h3>
+        <p>The first few rows will appear here as they are written, with
+          exactly what came back, so you can stop early if it is not what you
+          wanted.</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{% endblock %}

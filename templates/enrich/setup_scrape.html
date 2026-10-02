@@ -1,0 +1,163 @@
+{% extends "enrich/_base.html" %}
+{% block title %}Set up research · Enrichment{% endblock %}
+{% block heading %}Research websites{% endblock %}
+{% block lede %}
+<p class="en-lede">{{ job.total }} rows from
+  <b>{{ job.source_filename or 'your upload' }}</b>. Tell us which column holds
+  the website and we will read each one once, however many contacts share it.</p>
+{% endblock %}
+
+{% block en_content %}
+
+{% for b in blockers %}
+<div class="en-alert bad">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <div class="en-alert-body">
+    <h3>{{ b.feature }} will not work until you add {{ b.needs }}</h3>
+    <p>{{ b.fix }}</p>
+    <a class="btn" href="{{ url_for('enrich.settings_page') }}">
+      <i class="bi bi-key"></i>&nbsp;Settings</a>
+  </div>
+</div>
+{% endfor %}
+
+<form method="post" id="en-setup"
+      data-preview-url="{{ url_for('enrich.job_preview', job_id=job.id) }}">
+<div class="en-split">
+  <div>
+
+    <div class="en-card">
+      <h2><i class="bi bi-link-45deg"></i>Which column holds the website?</h2>
+      <p class="en-why">We will take whatever is in it, strip the http, the
+        www and the tracking junk, and reduce it to one company per domain.
+        An email address in that column works too.</p>
+
+      <div class="en-field">
+        <label for="website_column">Website column</label>
+        <select id="website_column" name="website_column">
+          <option value="">Choose a column...</option>
+          {% for h in headers %}
+          <option value="{{ h }}"
+                  {{ 'selected' if state.mapping.website == h }}>{{ h }}</option>
+          {% endfor %}
+        </select>
+        <span class="en-hint">We guessed this from your header row. Change it
+          if we guessed wrong.</span>
+      </div>
+
+      <div class="en-field">
+        <label for="name">Job name</label>
+        <input type="text" id="name" name="name" value="{{ job.name }}"
+               placeholder="What is this list?">
+      </div>
+    </div>
+
+    <div class="en-card">
+      <h2><i class="bi bi-chat-left-text"></i>Anything else to look for?</h2>
+      <p class="en-why">Optional. The summary already covers what the company
+        does, who it serves, its size and anything unusual. Add a line here if
+        you want something specific called out as well.</p>
+      <div class="en-field">
+        <label for="instructions">Extra instructions</label>
+        <textarea id="instructions" name="instructions" rows="4"
+                  placeholder="For example: say whether they look like they already have a website agency, and name the city they serve."
+                  >{{ cfg.instructions or '' }}</textarea>
+        <span class="en-hint">Changing this re-summarises companies you have
+          already researched, using the page text we saved. It does not fetch
+          their site again.</span>
+      </div>
+    </div>
+
+    <div class="en-card">
+      <h2><i class="bi bi-cpu"></i>Which model writes the summary?</h2>
+      <p class="en-why">A website summary is a reading job, not a writing
+        job. The cheap model is genuinely fine here.</p>
+      <div class="en-models">
+        {% set chosen = cfg.model or job.model %}
+        {% for m in models %}
+        <label class="en-model {{ 'on' if chosen == m.id }}">
+          <input type="radio" name="model" value="{{ m.id }}"
+                 {{ 'checked' if chosen == m.id }}>
+          <span>
+            <span class="m-name">{{ m.label }}</span>
+            <span class="m-blurb">{{ m.blurb }}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+
+  </div>
+
+  <aside class="en-side">
+    <div class="en-quote" id="en-quote">
+      <h3>Estimated cost</h3>
+      <div class="big">{{ state.estimate.total_pretty or '$0.00' }}</div>
+      <div class="line">
+        {% if state.estimate %}
+          {{ state.estimate.pending_rows }} rows,
+          {{ state.estimate.unique_domains }} companies,
+          {{ state.estimate.to_fetch }} new to fetch
+        {% endif %}
+      </div>
+      <div class="sub">
+        {% if state.estimate.already_have %}
+          {{ state.estimate.already_have }} of these are already in your
+          research library and cost nothing.
+        {% else %}
+          Nothing in your library yet, so every company is a fresh fetch.
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="en-issues" id="en-issues">
+      {% for p in state.problems %}
+      <div class="en-issue bad"><i class="bi bi-exclamation-octagon-fill"></i>
+        <span>{{ p }}</span></div>
+      {% endfor %}
+      {% for w in state.warnings %}
+      <div class="en-issue warn"><i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ w }}</span></div>
+      {% endfor %}
+      {% if not state.problems and not state.warnings %}
+      <div class="en-issue good"><i class="bi bi-check-circle-fill"></i>
+        <span>Nothing wrong with this setup. You are ready to run.</span></div>
+      {% endif %}
+    </div>
+
+    <div class="en-preview">
+      <h3><i class="bi bi-eye"></i>Your first row</h3>
+      <p class="en-why">What we would actually look up, taken from the first
+        real row of your sheet.</p>
+      <div class="en-pv-label">Website found</div>
+      <div class="en-pv-box" id="en-pv-domain">
+        {% if state.preview.domain %}
+          {{ state.preview.raw }} &rarr; <b>{{ state.preview.domain }}</b>
+        {% else %}
+          <span class="muted">Nothing in that column looks like a website on
+            this row.</span>
+        {% endif %}
+      </div>
+      <div class="en-pv-label">The rest of the row</div>
+      <div class="en-pv-row">
+        {% for k, v in state.preview.row.items() %}
+        <span class="en-pv-cell"><b>{{ k }}</b> {{ v }}</span>
+        {% endfor %}
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="en-actions">
+  <span class="en-bar-cost" id="en-bar-cost">
+    Estimated cost <b>{{ state.estimate.total_pretty or '$0.00' }}</b></span>
+  <button class="btn ghost" type="submit" name="action" value="save">
+    <i class="bi bi-save"></i>&nbsp;Save for later</button>
+  <button class="btn" type="submit" name="action" value="start"
+          id="en-start" {{ 'disabled' if state.problems }}>
+    <i class="bi bi-play-fill"></i>&nbsp;Start the research</button>
+</div>
+</form>
+
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "enrich/_base.html" %}
+{% block title %}Key and spending · Enrichment{% endblock %}
+{% block heading %}Key &amp; spending{% endblock %}
+{% block lede %}
+<p class="en-lede">Your OpenAI key, your OpenAI bill. Everything in this
+  module is billed by OpenAI straight to the account that owns the key below.
+  We never use a key of ours and we never add a margin.</p>
+{% endblock %}
+
+{% block en_content %}
+
+<div class="en-split">
+  <div>
+
+    <div class="en-card">
+      <h2><i class="bi bi-key"></i>OpenAI key</h2>
+      <p class="en-why">Stored encrypted. Only the last four characters are
+        ever shown again, including to us.</p>
+
+      {% if s.openai_key_enc %}
+        <div class="en-issue {{ 'good' if s.verified_at else 'bad' }}"
+             style="margin-bottom:16px">
+          <i class="bi {{ 'bi-check-circle-fill' if s.verified_at
+                          else 'bi-exclamation-octagon-fill' }}"></i>
+          <span>
+            Key <span class="en-key">&bull;&bull;&bull;&bull;{{ s.openai_last4 }}</span>
+            {% if s.verified_at %}
+              worked when it was last tested on
+              {{ s.verified_at.strftime('%d %b %Y') }}.
+            {% else %}
+              is saved but is not working: {{ s.verify_error or 'it has not been tested yet.' }}
+            {% endif %}
+          </span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+          <form method="post" style="display:inline">
+            <input type="hidden" name="action" value="test">
+            <button class="btn ghost" type="submit">
+              <i class="bi bi-lightning-charge"></i>&nbsp;Test it again</button>
+          </form>
+          <form method="post" style="display:inline"
+                onsubmit="return confirm('Remove this key? Jobs will pause until a new one is added.')">
+            <input type="hidden" name="action" value="forget">
+            <button class="btn ghost" type="submit">
+              <i class="bi bi-trash3"></i>&nbsp;Remove it</button>
+          </form>
+        </div>
+      {% endif %}
+
+      <form method="post" class="en-field" style="margin-bottom:0">
+        <input type="hidden" name="action" value="key">
+        <label for="openai_key">
+          {{ 'Replace the key' if s.openai_key_enc else 'Paste your OpenAI key' }}
+        </label>
+        <input type="password" id="openai_key" name="openai_key"
+               autocomplete="off" spellcheck="false" placeholder="sk-..."
+               style="width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;font-family:var(--font);font-size:16px;min-height:44px">
+        <span class="en-hint">Get one at platform.openai.com under API keys.
+          Saving it also tests it, because a key that is saved but broken is a
+          run that fails on row one.</span>
+        <div><button class="btn" type="submit">
+          <i class="bi bi-shield-check"></i>&nbsp;Save and test</button></div>
+      </form>
+
+      {% if dialer_key %}
+      <form method="post" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <input type="hidden" name="action" value="import">
+        <p class="en-why" style="margin-bottom:10px">
+          Your calling setup already has a working OpenAI key ending
+          <span class="en-key">{{ dialer_key }}</span>. Use the same one here
+          rather than pasting it twice.</p>
+        <button class="btn ghost" type="submit">
+          <i class="bi bi-arrow-left-right"></i>&nbsp;Use my calling key</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <form method="post" class="en-card">
+      <input type="hidden" name="action" value="save">
+      <h2><i class="bi bi-sliders"></i>Defaults</h2>
+      <p class="en-why">Every job starts from these and can override them.</p>
+
+      <div class="en-field">
+        <label>Default model</label>
+        <div class="en-models">
+          {% for m in models %}
+          <label class="en-model {{ 'on' if s.default_model == m.id }}">
+            <input type="radio" name="default_model" value="{{ m.id }}"
+                   {{ 'checked' if s.default_model == m.id }}>
+            <span>
+              <span class="m-name">{{ m.label }}</span>
+              <span class="m-blurb">{{ m.blurb }}</span>
+              <span class="m-rate">${{ '%.2f'|format(m['in']) }} per million words
+                in, ${{ '%.2f'|format(m.out) }} out</span>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+        {% if s.verified_at and models|length < all_models|length %}
+        <span class="en-hint">Only the models your key can actually call are
+          listed.</span>
+        {% endif %}
+      </div>
+
+      <div class="en-two">
+        <div class="en-field">
+          <label for="cap">Monthly spend cap</label>
+          <input type="number" id="cap" name="monthly_spend_cap" min="0"
+                 step="1" inputmode="decimal"
+                 value="{{ '%g'|format(s.monthly_spend_cap) if s.monthly_spend_cap else '' }}"
+                 placeholder="No cap">
+          <span class="en-hint">In dollars. A running job pauses when the cap
+            is hit instead of carrying on; it does not cancel.</span>
+        </div>
+        <div class="en-field">
+          <label for="timeout">Page timeout</label>
+          <input type="number" id="timeout" name="scrape_timeout" min="5"
+                 max="60" step="1" inputmode="numeric"
+                 value="{{ s.scrape_timeout or 15 }}">
+          <span class="en-hint">Seconds to wait for a company's website before
+            giving up on it. Small-business hosting is slow; 15 is sensible.</span>
+        </div>
+      </div>
+
+      <button class="btn" type="submit">
+        <i class="bi bi-check2"></i>&nbsp;Save defaults</button>
+    </form>
+
+  </div>
+
+  <aside class="en-side">
+    <div class="en-quote">
+      <h3>Spent this month</h3>
+      <div class="big">{{ spend.spent_pretty }}</div>
+      {% if spend.cap %}
+        <div class="line">of your {{ spend.cap_pretty }} cap</div>
+        <div class="en-meter {{ 'over' if spend.over }}">
+          <span style="width: {{ spend.pct }}%"></span></div>
+        <div class="sub">
+          {% if spend.over %}
+            The cap is reached, so jobs will pause until you raise it or the
+            month rolls over.
+          {% else %}
+            {{ money(spend.cap - spend.spent) }} left before jobs start pausing.
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="line">No cap set</div>
+        <div class="sub">Set one above if you would rather a mistyped
+          spreadsheet stopped itself.</div>
+      {% endif %}
+    </div>
+
+    <div class="en-preview">
+      <h3><i class="bi bi-info-circle"></i>How the billing works</h3>
+      <p class="en-why">OpenAI charges your key per word in and per word out.
+        A website summary is a few thousand words in and about a hundred out,
+        which is why it costs a fraction of a cent. We show you the real
+        number from OpenAI's own usage figures after every row, not an
+        estimate.</p>
+      <div class="en-pv-label">What we never do</div>
+      <div class="en-pv-box" style="white-space:normal">We never show your
+        key again after you save it, never put it in a log or an error
+        message, and never add a markup. If a job costs $0.14 at OpenAI, it
+        costs you $0.14.</div>
+    </div>
+  </aside>
+</div>
+
+{% endblock %}

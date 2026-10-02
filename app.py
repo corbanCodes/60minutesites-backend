@@ -3528,10 +3528,12 @@ def chat_contact(slug):
 # Imported LAST, after db and every core model exists: the packages do
 # `from app import db, Lead, ...` and this is the point where that resolves.
 import dialer  # noqa: E402
+import enrich  # noqa: E402
 import teams  # noqa: E402
 
 dialer.init_app(app)
 teams.init_app(app)
+enrich.init_app(app)
 
 with app.app_context():
     ensure_schema()          # picks up the dialer/teams tables declared above

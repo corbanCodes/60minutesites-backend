@@ -1,0 +1,65 @@
+{% extends "enrich/_base.html" %}
+{% block title %}Saved prompts · Enrichment{% endblock %}
+{% block heading %}Saved prompts{% endblock %}
+{% block lede %}
+<p class="en-lede">A prompt that worked, kept so it does not have to be
+  rewritten from memory next month. Load one from the prompt builder on any
+  email job.</p>
+{% endblock %}
+
+{% block en_content %}
+
+{% if templates %}
+  {% for t in templates %}
+  <div class="en-tpl">
+    <div class="en-tpl-top">
+      <b>{{ t.name }}</b>
+      <span class="count-chip">{{ t.variants or 1 }}
+        version{{ '' if (t.variants or 1) == 1 else 's' }}</span>
+      <span class="count-chip">{{ t.model }}</span>
+      {% if t.separate_subject %}
+      <span class="count-chip">own subject prompt</span>
+      {% endif %}
+      <form method="post"
+            action="{{ url_for('enrich.template_delete', template_id=t.id) }}"
+            onsubmit="return confirm('Delete the saved prompt \'{{ t.name }}\'?')">
+        <button class="chip-btn danger" type="submit">
+          <i class="bi bi-trash3"></i>&nbsp;Delete</button>
+      </form>
+    </div>
+    {% if t.subject_prompt %}
+    <div class="en-pv-label">Subject prompt</div>
+    <pre>{{ t.subject_prompt }}</pre>
+    {% endif %}
+    <div class="en-pv-label">Email prompt</div>
+    <pre>{{ t.body_prompt or 'Empty.' }}</pre>
+    <p class="muted" style="margin:10px 0 0">
+      {%- if t.tone %}Tone: {{ t.tone }}. {% endif -%}
+      Up to {{ t.max_words or 120 }} words.
+      {%- if t.updated_at %} Saved {{ t.updated_at.strftime('%d %b %Y') }}.{% endif %}
+    </p>
+  </div>
+  {% endfor %}
+
+  <div class="en-alert">
+    <i class="bi bi-info-circle-fill"></i>
+    <div class="en-alert-body">
+      <h3>What a template does not keep</h3>
+      <p>Your name, your company and your house rules stay with the job, not
+        with the template, because there is nowhere in a saved prompt to put
+        them. Set them again on each job: they are two fields.</p>
+    </div>
+  </div>
+{% else %}
+  <div class="en-empty">
+    <i class="bi bi-bookmark-star"></i>
+    <h3>No saved prompts yet</h3>
+    <p>Build a prompt on an email job, get it writing something you would
+      actually send, then press Save as template. It will be waiting on the
+      next list.</p>
+    <a class="btn" href="{{ url_for('enrich.home') }}">
+      <i class="bi bi-upload"></i>&nbsp;Start an email job</a>
+  </div>
+{% endif %}
+
+{% endblock %}

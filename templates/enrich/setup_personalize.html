@@ -1,0 +1,266 @@
+{% extends "enrich/_base.html" %}
+{% block title %}Build the prompt · Enrichment{% endblock %}
+{% block heading %}Write personal emails{% endblock %}
+{% block lede %}
+<p class="en-lede">{{ job.total }} rows from
+  <b>{{ job.source_filename or 'your upload' }}</b>. Drag a column into the
+  prompt to write about that person's own details, and watch the preview on
+  the right fill in with a real row before you spend anything.</p>
+{% endblock %}
+
+{% block en_content %}
+
+{% for b in blockers %}
+<div class="en-alert bad">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  <div class="en-alert-body">
+    <h3>{{ b.feature }} will not work until you add {{ b.needs }}</h3>
+    <p>{{ b.fix }}</p>
+    <a class="btn" href="{{ url_for('enrich.settings_page') }}">
+      <i class="bi bi-key"></i>&nbsp;Settings</a>
+  </div>
+</div>
+{% endfor %}
+
+<form method="post" id="en-setup"
+      data-preview-url="{{ url_for('enrich.job_preview', job_id=job.id) }}">
+<div class="en-split">
+  <div>
+
+    <div class="en-card">
+      <h2><i class="bi bi-pencil-square"></i>The prompt</h2>
+      <p class="en-why">Write it as if you were briefing a person. The
+        {{ '{' }}braced{{ '}' }} bits are swapped for that row's real values
+        before anything is sent.</p>
+
+      <div class="en-palette">
+        <p class="en-why">
+          <b>Your spreadsheet columns.</b>
+          <span class="only-pointer">Drag one into a box below, or click it to
+            drop it where the cursor is.</span>
+          <span class="only-touch">Tap one to add it where the cursor is.</span>
+        </p>
+        <div class="en-chips">
+          {% for h in headers %}
+          <button type="button" class="en-chip" draggable="true"
+                  data-token="{{ '{' }}{{ h }}{{ '}' }}">
+            <i class="bi bi-grip-vertical"></i>{{ h }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <label class="en-toggle" for="en-separate">
+        <input type="checkbox" id="en-separate" name="separate_subject"
+               value="1" {{ 'checked' if cfg.get('separate_subject', True) }}>
+        <span>
+          <span class="t">Write the subject with its own prompt</span>
+          <span class="w">Leave this on. Asking for a subject and a body in
+            one answer is the thing that has always broken: the subject line
+            ends up repeated at the top of the email.</span>
+        </span>
+      </label>
+
+      <div class="en-field" id="en-subject-wrap">
+        <label for="subject_prompt">Subject line prompt</label>
+        <div class="en-drop">
+          <textarea id="subject_prompt" name="subject_prompt" rows="3"
+                    placeholder="A short, specific subject line for {First Name} at {Company}. No clickbait, no colons."
+                    >{{ cfg.subject_prompt or '' }}</textarea>
+        </div>
+        <span class="en-hint">Leave blank and the subject will be written
+          from the email prompt instead.</span>
+      </div>
+
+      <div class="en-field">
+        <label for="body_prompt">Email prompt</label>
+        <div class="en-drop">
+          <textarea id="body_prompt" name="body_prompt" rows="8"
+                    placeholder="Write a short first email to {First Name}, who runs {Company} in {City}. Mention {Website Summary} in one specific line, then ask for fifteen minutes next week."
+                    >{{ cfg.body_prompt or '' }}</textarea>
+        </div>
+        <span class="en-hint">If you ran a website research job first, drag
+          {{ '{' }}Website Summary{{ '}' }} in here and every email can say
+          something true about their business.</span>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+                  padding-top:14px;border-top:1px solid var(--line)">
+        <button type="button" class="btn ghost" id="en-template-save"
+                data-url="{{ url_for('enrich.template_save') }}">
+          <i class="bi bi-bookmark-plus"></i>&nbsp;Save as template</button>
+        {% if templates %}
+        <select id="en-template-load" class="en-tplpick"
+                data-url="{{ url_for('enrich.template_load', template_id=0) }}">
+          <option value="">Load a saved prompt...</option>
+          {% for t in templates %}
+          <option value="{{ t.id }}">{{ t.name }}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="en-card">
+      <h2><i class="bi bi-layers"></i>How many versions per person?</h2>
+      <p class="en-why">Each version is told to take a genuinely different
+        run at the same person, not to reword the last one. More versions
+        means more to choose from and a proportionally bigger bill.</p>
+      <div class="en-range-row">
+        <input type="range" id="en-variants" name="variants" min="1"
+               max="{{ max_variants }}" step="1"
+               value="{{ cfg.get('variants', 1) or 1 }}">
+        <span class="en-range-val" id="en-variants-val">
+          {{ cfg.get('variants', 1) or 1 }}</span>
+      </div>
+      <div class="en-steer" id="en-variants-steer"
+           data-steers='{{ steers|tojson }}'></div>
+    </div>
+
+    <div class="en-card">
+      <h2><i class="bi bi-person-badge"></i>Voice and length</h2>
+      <p class="en-why">Who it is from and how it should sound. These are
+        added to every call, so keep them short.</p>
+      <div class="en-two">
+        <div class="en-field">
+          <label for="sender_name">Your name</label>
+          <input type="text" id="sender_name" name="sender_name"
+                 value="{{ cfg.sender_name or '' }}" placeholder="Corban">
+        </div>
+        <div class="en-field">
+          <label for="sender_company">Your company</label>
+          <input type="text" id="sender_company" name="sender_company"
+                 value="{{ cfg.sender_company or '' }}"
+                 placeholder="60 Minute Sites">
+        </div>
+      </div>
+      <div class="en-two">
+        <div class="en-field">
+          <label for="tone">Tone</label>
+          <input type="text" id="tone" name="tone" value="{{ cfg.tone or '' }}"
+                 placeholder="direct, friendly, no jargon">
+        </div>
+        <div class="en-field">
+          <label for="max_words">Maximum words</label>
+          <input type="number" id="max_words" name="max_words" min="20"
+                 max="600" step="10" inputmode="numeric"
+                 value="{{ cfg.get('max_words', 120) or 120 }}">
+        </div>
+      </div>
+      <div class="en-field">
+        <label for="extra_rules">House rules</label>
+        <textarea id="extra_rules" name="extra_rules" rows="3"
+                  placeholder="Never say 'I hope this finds you well'. Sign off with just my first name."
+                  >{{ cfg.extra_rules or '' }}</textarea>
+        <span class="en-hint">These are not kept when you save a template.</span>
+      </div>
+    </div>
+
+    <div class="en-card">
+      <h2><i class="bi bi-cpu"></i>Which model writes it?</h2>
+      <p class="en-why">This is the one place the model choice really shows.
+        The cheap one is fine for a big cold list; move up when the list is
+        short and the email matters.</p>
+      <div class="en-models">
+        {% set chosen = cfg.model or job.model %}
+        {% for m in models %}
+        <label class="en-model {{ 'on' if chosen == m.id }}">
+          <input type="radio" name="model" value="{{ m.id }}"
+                 {{ 'checked' if chosen == m.id }}>
+          <span>
+            <span class="m-name">{{ m.label }}</span>
+            <span class="m-blurb">{{ m.blurb }}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="en-field" style="margin-top:16px">
+        <label for="name">Job name</label>
+        <input type="text" id="name" name="name" value="{{ job.name }}"
+               placeholder="What is this list?">
+      </div>
+    </div>
+
+
+  </div>
+
+  <aside class="en-side">
+    <div class="en-quote" id="en-quote">
+      <h3>Estimated cost</h3>
+      <div class="big">{{ state.estimate.total_pretty or '$0.00' }}</div>
+      <div class="line">
+        {% if state.estimate.calls_total is defined %}
+          {{ state.estimate.rows }} rows x {{ state.estimate.calls_per_row }}
+          call{{ '' if state.estimate.calls_per_row == 1 else 's' }} =
+          {{ '{:,}'.format(state.estimate.calls_total) }} calls
+        {% endif %}
+      </div>
+      <div class="sub">
+        {% if state.estimate.variants is defined %}
+          {{ state.estimate.variants }}
+          version{{ '' if state.estimate.variants == 1 else 's' }} per row at
+          {{ state.estimate.per_row_pretty }} a row. Billed by OpenAI to your
+          own key.
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="en-issues" id="en-issues">
+      {% for p in state.problems %}
+      <div class="en-issue bad"><i class="bi bi-exclamation-octagon-fill"></i>
+        <span>{{ p }}</span></div>
+      {% endfor %}
+      {% for w in state.warnings %}
+      <div class="en-issue warn"><i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ w }}</span></div>
+      {% endfor %}
+      {% if not state.problems and not state.warnings %}
+      <div class="en-issue good"><i class="bi bi-check-circle-fill"></i>
+        <span>Nothing wrong with this setup. You are ready to run.</span></div>
+      {% endif %}
+    </div>
+
+    <div class="en-preview">
+      <h3><i class="bi bi-eye"></i>Live preview</h3>
+      <p class="en-why">Your prompt with the first real row's values dropped
+        in. Anything still highlighted is a column we could not find.</p>
+
+      <div class="en-pv-label">Subject prompt, filled in</div>
+      <div class="en-pv-box {{ 'empty' if not state.preview.subject }}"
+           id="en-pv-subject">{% if state.preview.subject %}{{ state.preview.subject }}{% else %}No subject prompt yet - the subject will be written from the email prompt.{% endif %}</div>
+
+      <div class="en-pv-label">Email prompt, filled in</div>
+      <div class="en-pv-box {{ 'empty' if not state.preview.body }}"
+           id="en-pv-body">{% if state.preview.body %}{{ state.preview.body }}{% else %}Write the email prompt and it will appear here, filled in with this row's real values.{% endif %}</div>
+
+      <div class="en-pv-label">The row we are previewing</div>
+      <div class="en-pv-row">
+        {% for k, v in state.preview.row.items() %}
+        <span class="en-pv-cell"><b>{{ k }}</b> {{ v }}</span>
+        {% endfor %}
+      </div>
+
+      <details class="en-raw">
+        <summary><i class="bi bi-code-slash"></i>Everything we send OpenAI
+          for this row</summary>
+        <pre id="en-pv-raw">{{ state.preview.system }}
+
+---
+
+{{ state.preview.user }}</pre>
+      </details>
+    </div>
+  </aside>
+</div>
+
+<div class="en-actions">
+  <span class="en-bar-cost" id="en-bar-cost">
+    Estimated cost <b>{{ state.estimate.total_pretty or '$0.00' }}</b></span>
+  <button class="btn ghost" type="submit" name="action" value="save">
+    <i class="bi bi-save"></i>&nbsp;Save for later</button>
+  <button class="btn" type="submit" name="action" value="start"
+          id="en-start" {{ 'disabled' if state.problems }}>
+    <i class="bi bi-play-fill"></i>&nbsp;Write the emails</button>
+</div>
+</form>
+
+{% endblock %}
