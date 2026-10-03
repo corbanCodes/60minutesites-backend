@@ -501,16 +501,6 @@ def test_a_rep_marked_unavailable_is_not_rung(world):
     assert bridge.rep_destination(s, owner.id, agent) == "+18655550199"
 
 
-def test_number_mode_on_the_account_skips_the_browser(world):
-    owner, s, agent, fake, client = world
-    agent.transfer_to_number = ""
-    s.transfer_mode = "number"
-    s.transfer_number = "+18655550177"
-    db.session.commit()
-    present(owner.id, owner.id)
-    assert bridge.rep_destination(s, owner.id, agent) == "+18655550177"
-
-
 def test_the_browser_leg_is_a_client_call_into_the_room(world):
     owner, s, agent, fake, client = world
     agent.transfer_to_number = ""
@@ -881,3 +871,107 @@ def test_the_test_page_says_the_browser_is_where_a_handoff_lands(world):
     body = client.get("/dialer/setup/12").get_data(as_text=True)
     assert "your browser phone" in body
     assert "/dialer/phone" in body
+
+
+
+# -------------------------------- the browser is rung whenever it is there
+def test_number_mode_on_the_account_no_longer_switches_the_browser_off(world):
+    """The live failure: step 8 was on "one phone number", a rep sat live
+    and available in the phone page, and the leg went to the callback
+    number -- the phone already on the call."""
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = ""
+    s.transfer_mode = "number"
+    s.transfer_number = "+18655550177"
+    db.session.commit()
+    present(owner.id, owner.id)
+    assert bridge.rep_destination(s, owner.id, agent) == \
+        f"client:t{owner.id}_u{owner.id}"
+
+
+def test_a_stale_power_dialer_hold_does_not_block_the_browser(world):
+    owner, s, agent, fake, client = world
+    from dialer.models import RepPresence
+    old = live_call(owner, s, agent)
+    old.status = "completed"
+    db.session.commit()
+    p = present(owner.id, owner.id)
+    p.current_call_id = old.id          # left behind by a crashed shift
+    db.session.commit()
+    assert bridge.softphone_target(owner.id) == f"client:t{owner.id}_u{owner.id}"
+
+
+def test_a_rep_genuinely_on_a_call_is_not_rung(world):
+    owner, s, agent, fake, client = world
+    busy = live_call(owner, s, agent)      # in-progress
+    p = present(owner.id, owner.id)
+    p.current_call_id = busy.id
+    db.session.commit()
+    assert bridge.softphone_target(owner.id) == ""
+
+
+def test_a_heartbeat_clears_a_stale_hold(world):
+    owner, s, agent, fake, client = world
+    from dialer.models import RepPresence
+    old = live_call(owner, s, agent)
+    old.status = "completed"
+    db.session.commit()
+    p = present(owner.id, owner.id)
+    p.current_call_id = old.id
+    db.session.commit()
+    client.post("/dialer/presence", json={})
+    assert RepPresence.query.filter_by(user_id=owner.id).one().current_call_id is None
+
+
+def test_the_bridge_hold_survives_a_heartbeat(world):
+    owner, s, agent, fake, client = world
+    from dialer.models import RepPresence
+    p = present(owner.id, owner.id)
+    p.current_call_id = -1
+    db.session.commit()
+    client.post("/dialer/presence", json={})
+    assert RepPresence.query.filter_by(user_id=owner.id).one().current_call_id == -1
+
+
+# --------------------------------------------- it says where it will ring
+def test_the_explanation_names_the_browser_when_it_is_there(world):
+    owner, s, agent, fake, client = world
+    present(owner.id, owner.id)
+    dest, why = bridge.destination_explained(s, owner.id, agent)
+    assert dest.startswith("client:")
+    assert "browser" in why and "available" in why
+
+
+def test_the_explanation_says_why_the_browser_is_not_rung(world):
+    owner, s, agent, fake, client = world
+    present(owner.id, owner.id, fresh=False)
+    dest, why = bridge.destination_explained(s, owner.id, agent)
+    assert dest == HUMAN
+    assert "last seen" in why and "min ago" in why
+
+
+def test_the_explanation_says_nobody_and_why(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = LINE
+    s.ai_callback_number = ""
+    db.session.commit()
+    dest, why = bridge.destination_explained(s, owner.id, agent)
+    assert dest == ""
+    assert why.startswith("NOBODY")
+    assert "one of your own numbers" in why
+
+
+
+def test_the_test_page_says_where_a_handoff_would_ring_right_now(world):
+    owner, s, agent, fake, client = world
+    present(owner.id, owner.id)
+    body = client.get("/dialer/setup/12").get_data(as_text=True)
+    assert "a hand-off would ring" in body
+    assert "your browser phone" in body
+
+
+def test_the_test_page_says_when_the_browser_will_not_be_rung(world):
+    owner, s, agent, fake, client = world
+    present(owner.id, owner.id, fresh=False)
+    body = client.get("/dialer/setup/12").get_data(as_text=True)
+    assert "last seen" in body

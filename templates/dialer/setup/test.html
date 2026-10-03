@@ -50,6 +50,20 @@
     </div>
   </div>
 
+  {% if handoff_where %}
+  <div class="callout" style="margin:10px 0;border-left:4px solid #E8562A">
+    <b>Right now, a hand-off would ring:</b>
+    <ul style="margin:6px 0 0 18px">
+      {% for a in agents if a.id in handoff_where %}
+      <li><b>{{ a.name }}</b> &rarr; {{ handoff_where[a.id] }}</li>
+      {% endfor %}
+    </ul>
+    <p class="muted" style="margin:6px 0 0">This is read live from the phone page's heartbeat and the
+      agent's settings. If it does not say "your browser phone", fix that before placing the call —
+      reload this page to re-check.</p>
+  </div>
+  {% endif %}
+
   {% if agents %}
   <p class="muted" style="margin:6px 0 0">Want it to sound different?
     {% for a in agents %}<a href="/dialer/agents/{{ a.id }}">Edit {{ a.name }}</a>{{ ", "

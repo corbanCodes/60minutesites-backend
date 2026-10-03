@@ -176,7 +176,20 @@ def _step_data(key, s):
         # A sample number cannot place a real call, and listing it as one of
         # the numbers "it will call from" is how a test call went out on
         # +18655550101 and came back with Twilio error 21210.
-        return {"agents": AiAgent.query.filter_by(account_id=acct).all(),
+        agents = AiAgent.query.filter_by(account_id=acct).all()
+        # Where a hand-off will ring, and why, BEFORE the call is placed.
+        # A night of live tests was spent inferring this from logs.
+        from dialer.bridge import destination_explained
+        s_ = get_settings(acct)
+        where = {}
+        for a in agents:
+            if (a.transfer_handoff or "") == "bridge" or a.direction == "outbound":
+                try:
+                    where[a.id] = destination_explained(s_, acct, a)[1]
+                except Exception as e:      # never let the readout break the page
+                    where[a.id] = f"could not work it out: {e}"
+        return {"agents": agents,
+                "handoff_where": where,
                 "numbers": [n for n in rows if not n.is_placeholder],
                 "fake_numbers": [n for n in rows if n.is_placeholder]}
     return {}
@@ -1885,6 +1898,14 @@ def presence_update():
         p.conference_name = str(data["conference_name"])[:120]
     if data.get("rep_call_sid"):
         p.rep_call_sid = str(data["rep_call_sid"])[:64]
+    # A call id left behind by a crashed shift would mark this rep busy
+    # for ever and quietly stop every hand-off reaching the browser.
+    if p.current_call_id not in (None, -1):
+        from dialer.models import Call as _Call
+        from dialer.bridge import TERMINAL
+        c = db.session.get(_Call, p.current_call_id)
+        if c is None or c.status in TERMINAL:
+            p.current_call_id = None
     p.last_seen_at = _now()
     db.session.commit()
     return jsonify(ok=True, on_shift=bool(p.on_shift),

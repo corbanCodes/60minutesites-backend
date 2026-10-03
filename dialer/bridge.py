@@ -290,14 +290,53 @@ def softphone_target(account_id):
     marked available, or "". Presence has to be fresh: a tab closed
     yesterday still has a row, and ringing it would ring nothing for
     twenty seconds and then apologise to the prospect."""
+    rep = _free_browser_rep(account_id)
+    return f"client:t{account_id}_u{rep.user_id}" if rep else ""
+
+
+def _rep_is_busy(rep):
+    """-1 is the bridge's own hold. Any other id is a power-dialer call,
+    which counts only while that call is actually in progress -- a crash
+    mid-shift used to leave an id behind for ever and silently stop every
+    hand-off from reaching the browser."""
+    cid = rep.current_call_id
+    if cid is None:
+        return False
+    if cid == -1:
+        return True
+    call = db.session.get(Call, cid)
+    return bool(call and call.status not in TERMINAL)
+
+
+def _free_browser_rep(account_id):
     from dialer.models import RepPresence
     since = _now() - PRESENCE_FRESH
-    rep = (RepPresence.query
-           .filter_by(account_id=account_id, available_for_transfers=True)
-           .filter(RepPresence.current_call_id.is_(None))
-           .filter(RepPresence.last_seen_at >= since)
-           .order_by(RepPresence.last_seen_at.desc()).first())
-    return f"client:t{account_id}_u{rep.user_id}" if rep else ""
+    rows = (RepPresence.query
+            .filter_by(account_id=account_id, available_for_transfers=True)
+            .filter(RepPresence.last_seen_at >= since)
+            .order_by(RepPresence.last_seen_at.desc()).all())
+    return next((r for r in rows if not _rep_is_busy(r)), None)
+
+
+def browser_status(account_id):
+    """Why the browser will or will not be rung, in words for a screen."""
+    from dialer.models import RepPresence
+    rows = (RepPresence.query.filter_by(account_id=account_id)
+            .order_by(RepPresence.last_seen_at.desc()).all())
+    if not rows:
+        return "no browser phone has ever been opened on this account"
+    rep = rows[0]
+    age = (_now() - rep.last_seen_at).total_seconds() if rep.last_seen_at else None
+    if age is None or age > PRESENCE_FRESH.total_seconds():
+        mins = int(age // 60) if age is not None else None
+        return (f"the phone page was last seen "
+                f"{'%d min ago' % mins if mins is not None else 'never'} "
+                f"\u2014 open it and keep it open")
+    if not rep.available_for_transfers:
+        return "the phone page is open but \u201cAvailable for transfers\u201d is off"
+    if _rep_is_busy(rep):
+        return "the phone page is open but marked busy on another call"
+    return "the phone page is open and available"
 
 
 def own_numbers(account_id):
@@ -343,10 +382,13 @@ def rep_destination(settings, account_id, agent):
     account-wide number. One of the account's own numbers is never a
     destination, typed or not.
     """
-    if (settings.transfer_mode or "") != "number":
-        client = softphone_target(account_id)
-        if client:
-            return client
+    # Whoever is live in the browser gets it. The account-wide "one phone
+    # number" mode used to switch the browser off here, which on a live
+    # test sent the leg to the callback number -- the very phone already
+    # on the call -- while a rep sat available in the phone page.
+    client = softphone_target(account_id)
+    if client:
+        return client
     own = (getattr(agent, "transfer_to_number", "") or "").strip()
     if own and not is_own_number(account_id, own):
         return own
@@ -355,6 +397,24 @@ def rep_destination(settings, account_id, agent):
     if number and is_own_number(account_id, number):
         return ""
     return number
+
+
+def destination_explained(settings, account_id, agent):
+    """-> (destination, sentence). What a hand-off will ring, and why,
+    for the test page: the one question that cost a night of guessing."""
+    dest = rep_destination(settings, account_id, agent)
+    why = browser_status(account_id)
+    if dest.startswith("client:"):
+        return dest, "your browser phone \u2014 " + why
+    own = (getattr(agent, "transfer_to_number", "") or "").strip()
+    if dest:
+        src = ("the number typed on the agent" if own and dest == own
+               else "the account-wide number")
+        return dest, f"{dest} ({src}); not the browser because {why}"
+    skipped = own and is_own_number(account_id, own)
+    return "", ("NOBODY \u2014 " + why
+                + (f"; {own} is one of your own numbers and is skipped"
+                   if skipped else "; and no real mobile is set"))
 
 
 def ring_rep(settings, account_id, agent, room, caller_id):
