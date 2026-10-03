@@ -61,6 +61,14 @@ def find_or_create_lead(account_id, caller, called):
 
 def route_inbound(account_id, settings, number, caller, called, call_sid):
     """-> a TwiML document string."""
+    # A blind transfer from our own AI lands here as an inbound call on a
+    # rep-pool number. It is not a caller; it is a prospect mid-call, and
+    # it must never reach the lead-creation or voicemail path below.
+    from dialer.bridge import try_bridge
+    bridged = try_bridge(account_id, settings, caller, called, call_sid)
+    if bridged:
+        return bridged
+
     lead = find_or_create_lead(account_id, caller, called)
     purpose = (number.purpose if number else "both")
     parked = bool(number and number.state == "parked")

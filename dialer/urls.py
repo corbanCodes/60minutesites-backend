@@ -49,6 +49,11 @@ def twilio_status(account_id):
     return hook(f"/twilio/{account_id}/status")
 
 
+def twilio_bridge_rep(account_id, room):
+    """Status callback for the rep's leg of a silent hand-off."""
+    return hook(f"/twilio/{account_id}/bridge/{room}/rep")
+
+
 def twilio_amd(call_id):
     return hook(f"/twilio/amd/{call_id}")
 

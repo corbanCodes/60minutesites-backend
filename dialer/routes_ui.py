@@ -1123,7 +1123,11 @@ def playbook_napkin():
     agent.transfer_line = napkin.TRANSFER_LINE
     agent.opening_mode = "wait"
     agent.voice_delivery = agent.voice_delivery or "calm"
-    agent.transfer_handoff = agent.transfer_handoff or "blind"
+    # No ring and no hold music is the brief. The bridge delivers that and
+    # needs a rep-pool number to land on; without one it is a normal ring.
+    from dialer.bridge import handoff_line
+    agent.transfer_handoff = ("bridge" if handoff_line(g.account_id)
+                              else (agent.transfer_handoff or "blind"))
     # A pasted-in copy of an older prompt would freeze all of the above.
     agent.prompt_override = ""
     dest = (request.form.get("transfer_to") or "").strip()[:32]
@@ -1474,7 +1478,9 @@ def agent_edit(agent_id):
         voices=voices,
         playbooks=Playbook.query.filter_by(account_id=g.account_id).all(),
         transfer_to=__import__("dialer.agents",
-                               fromlist=["x"]).transfer_number(s, a),
+                               fromlist=["x"]).human_number(s, a),
+        handoff_line=__import__("dialer.bridge",
+                                fromlist=["x"]).handoff_line(g.account_id),
         prompt_preview=build_prompt(a, s))
 
 

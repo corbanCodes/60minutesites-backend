@@ -108,7 +108,9 @@
           </select>
           <span class="field-hint">
             {% for key, h in HANDOFFS.items() %}{% if (a.transfer_handoff or 'blind') == key %}{{
-              h.hint }}{% endif %}{% endfor %}</span>
+              h.hint }}{% endif %}{% endfor %}
+            {% if handoff_line %} Your hand-off line is {{ handoff_line.pretty }}.{% else %} You have no
+            rep-pool number yet, so the bridge cannot be used — add one on step 4.{% endif %}</span>
           <p class="ag-transfer-map">
             <b>When</b> it transfers comes from the playbook's “when to hand the call to a person”.
             <b>How</b> it sounds and <b>where</b> it rings are both on this page, right here.

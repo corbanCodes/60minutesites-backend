@@ -139,6 +139,25 @@ def twilio_voice(account_id):
                               request.values.get("CallSid", "")))
 
 
+@hooks_bp.route("/twilio/<int:account_id>/bridge/<room>/rep",
+                methods=["POST", "GET"])
+def twilio_bridge_rep(account_id, room):
+    """The rep's leg of a silent hand-off reported a status.
+
+    Only a leg that never connected matters here: the prospect is sitting
+    in our room hearing office ambience, and somebody has to let them go.
+    """
+    s = _settings(account_id)
+    if not _verify_twilio(s):
+        abort(403)
+    status = request.values.get("CallStatus", "")
+    _inbox(account_id, "twilio", "bridge_rep", f"bridge:{room}:{status}",
+           request.values.to_dict())
+    from dialer.bridge import rep_leg_ended
+    rep_leg_ended(s, account_id, room, status)
+    return _xml("<Response/>")
+
+
 @hooks_bp.route("/twilio/voicemail/<int:call_id>", methods=["POST", "GET"])
 def twilio_voicemail(call_id):
     """A voicemail-blast leg answered. AMD decides whether to play or hang up."""

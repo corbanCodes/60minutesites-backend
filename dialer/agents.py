@@ -346,6 +346,21 @@ def transfer_number(settings, agent=None):
     callback number the AI already reads out, which is required to reach a
     human during business hours anyway.
     """
+    if handoff_type(agent) == "bridge":
+        from dialer.bridge import handoff_line
+        line = handoff_line(getattr(agent, "account_id", None)
+                            or settings.account_id)
+        if line is not None:
+            return line.e164
+    return human_number(settings, agent)
+
+
+def human_number(settings, agent=None):
+    """The PERSON a qualified call should reach, regardless of route.
+
+    transfer_number() is what the vendor's tool dials, which under the
+    bridge is one of our own numbers; this is who our bridge then rings.
+    """
     own = (getattr(agent, "transfer_to_number", "") or "").strip()
     if own:
         return own
@@ -391,6 +406,15 @@ def delivery_tts(agent):
 
 
 HANDOFFS = {
+    "bridge": {
+        "label": "Through our own line \u2014 no ring, no hold music",
+        "hint": "The AI hands the call to one of your rep-pool numbers, we "
+                "answer it instantly, park them with office ambience "
+                "instead of Twilio's music, and ring you into the same "
+                "room. They hear one continuous call. Needs a number in "
+                "the rep pool; without one this falls back to a normal "
+                "ring.",
+    },
     "blind": {
         "label": "Straight through \u2014 no hold music",
         "hint": "The leg is handed over as it is: a normal ring, your "
@@ -425,6 +449,12 @@ def handoff_type(agent):
     return want if want in HANDOFFS else "blind"
 
 
+def vendor_transfer_type(agent):
+    """What ElevenLabs is asked for. The bridge is a blind transfer to our
+    own line; the quiet part happens on our side of it."""
+    return "blind" if handoff_type(agent) == "bridge" else handoff_type(agent)
+
+
 def transfer_collides(agent, settings, to_number):
     """True when the hand-off would dial the phone already on the call.
 
@@ -439,7 +469,7 @@ def transfer_collides(agent, settings, to_number):
     impossible destination, so it has to be caught before the call is placed.
     """
     from dialer import compliance
-    dest = transfer_number(settings, agent)
+    dest = human_number(settings, agent)
     if not dest or not to_number:
         return False
     _, a, ok_a = compliance.normalize(dest)
@@ -490,7 +520,7 @@ def transfer_config(agent, settings):
                 "transfer_destination": {"type": "phone",
                                          "phone_number": number},
                 "condition": condition[:900],
-                "transfer_type": handoff_type(agent),
+                "transfer_type": vendor_transfer_type(agent),
             }],
             # Documented default is true; sent explicitly because the line
             # the tool speaks is the whole of what the prospect hears.
