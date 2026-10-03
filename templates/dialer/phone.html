@@ -210,6 +210,20 @@
 
   {# ---------------------------------------------------------- transfers #}
   <section class="ph-card ph-avail">
+    <b>This phone is line:</b>
+    {% if my_numbers %}
+    <select id="ph-line" style="margin-left:6px">
+      {% for n in my_numbers %}
+      <option value="{{ n.id }}"{% if handoff_line and n.id == handoff_line.id %} selected{% endif %}>{{ n.pretty or n.e164 }}{%
+        if n.friendly_name and n.friendly_name != n.e164 %} &middot; {{ n.friendly_name }}{% endif %}</option>
+      {% endfor %}
+    </select>
+    <p class="muted" style="margin:4px 0 8px">Your rep line: a hand-off arrives on it and shows it as the caller ID.
+      Below is where <i>you</i> pick it up.</p>
+    {% else %}
+    <p class="muted" style="margin:4px 0 8px">No rep line yet &mdash; <a href="/dialer/numbers">add one</a>.
+      A hand-off needs a rep-pool number to arrive on.</p>
+    {% endif %}
     <b>When the AI hands a call over, ring:</b>
     <label class="ph-toggle" style="margin-top:8px">
       <input type="radio" name="ph-ring" id="ph-ring-browser" value="browser"
@@ -228,8 +242,8 @@
       <span>Available for transfers</span>
     </label>
     <p class="muted" id="ph-ring-now" style="margin:6px 0 0">Right now a hand-off rings: checking&hellip;</p>
-    <p class="muted" style="margin:4px 0 0">Not your Twilio numbers: those are lines the app answers for you.
-      This is where <i>you</i> pick up.</p>
+    <p class="muted" style="margin:4px 0 0">The mobile is a phone you carry, not one of your Twilio numbers;
+      the line above is the number the app answers for you.</p>
   </section>
 
   <p class="ph-foot">Keep this window open and the call survives anything you do in HQ.<span class="dl-kbd-only"><br>
@@ -427,6 +441,15 @@ document.addEventListener('DOMContentLoaded', function () {
   $('ph-ring-browser').addEventListener('change', saveRing);
   $('ph-ring-mobile').addEventListener('change', saveRing);
   $('ph-ring-number').addEventListener('change', saveRing);
+  var lineSel = $('ph-line');
+  if (lineSel) lineSel.addEventListener('change', function () {
+    fetch('/dialer/presence', { method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handoff_line_id: parseInt(lineSel.value, 10) }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d && d.ok === false) { $('ph-ring-now').textContent = d.error || 'Could not save.'; } else { ringNow(); } })
+      .catch(function () {});
+  });
   ringNow();
   setInterval(ringNow, 20000);
 

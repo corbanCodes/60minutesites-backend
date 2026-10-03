@@ -806,20 +806,20 @@ def test_an_own_number_in_any_formatting_is_caught(world):
     assert bridge.is_own_number(owner.id, HUMAN) is False
 
 
-def test_saving_an_own_number_as_the_destination_is_refused_with_a_reason(world):
+def test_saving_the_ai_line_as_the_destination_is_refused_with_a_reason(world):
     owner, s, agent, fake, client = world
     body = client.post(f"/dialer/agents/{agent.id}", follow_redirects=True,
-                       data={"name": agent.name, "transfer_to_number": LINE,
+                       data={"name": agent.name, "transfer_to_number": AI,
                              "transfer_handoff": "bridge"}
                        ).get_data(as_text=True)
-    assert "one of your own numbers" in body
+    assert "AI line" in body and "second AI" in body
     assert db.session.get(AiAgent, agent.id).transfer_to_number == ""
 
 
-def test_installing_with_an_own_number_falls_back_to_the_browser(world):
+def test_installing_with_the_ai_line_falls_back_to_the_browser(world):
     owner, s, agent, fake, client = world
     body = client.post("/dialer/playbooks/napkin", follow_redirects=True,
-                       data={"transfer_to": LINE}).get_data(as_text=True)
+                       data={"transfer_to": AI}).get_data(as_text=True)
     assert "browser phone will be rung instead" in body
     from dialer import napkin
     pb = Playbook.query.filter_by(account_id=owner.id, name=napkin.NAME).one()
@@ -961,7 +961,7 @@ def test_the_explanation_says_nobody_and_why(world):
     dest, why = bridge.destination_explained(s, owner.id, agent)
     assert dest == ""
     assert why.startswith("NOBODY")
-    assert "one of your own numbers" in why
+    assert "your rep line" in why and "no mobile is set" in why
 
 
 
@@ -986,7 +986,7 @@ def test_the_phone_page_lets_you_choose_browser_or_mobile(world):
     owner, s, agent, fake, client = world
     body = client.get("/dialer/phone").get_data(as_text=True)
     assert 'id="ph-ring-browser"' in body and 'id="ph-ring-mobile"' in body
-    assert "Not your Twilio numbers" in body
+    assert 'id="ph-line"' in body and "This phone is line" in body
 
 
 def test_choosing_a_mobile_from_the_phone_page_is_what_rings(world):
@@ -1003,6 +1003,8 @@ def test_choosing_a_mobile_from_the_phone_page_is_what_rings(world):
 def test_an_own_number_is_refused_from_the_phone_page_too(world):
     owner, s, agent, fake, client = world
     r = client.post("/dialer/presence", json={"handoff_mobile": LINE}).get_json()
+    assert r["ok"] is False and "rep line, not a mobile" in r["error"]
+    r = client.post("/dialer/presence", json={"handoff_mobile": AI}).get_json()
     assert r["ok"] is False and "own numbers" in r["error"]
 
 
@@ -1019,3 +1021,112 @@ def test_the_phone_page_can_ask_where_a_handoff_rings_right_now(world):
     r = client.get("/dialer/handoff/where").get_json()
     assert r["ok"] and "browser" in r["text"]
     assert r["destination"].startswith("client:")
+
+
+# ------------------------------------------ the rep line IS where it rings
+LINE2 = "+18655550103"
+
+
+def _second_line(owner):
+    n = PhoneNumber(account_id=owner.id, e164=LINE2, pool="rep", state="active",
+                    twilio_sid="PN" + "c" * 32, friendly_name="Rep 2",
+                    area_code="865")
+    db.session.add(n)
+    db.session.commit()
+    return n
+
+
+def test_the_rep_line_is_accepted_on_the_agent_and_explained(world):
+    """He bought numbers and sorted them into AI and rep pools, so the rep
+    number is, to him, where a hand-off rings. It is: the line it arrives
+    on. Refusing it as "one of your own numbers" was the app arguing with
+    its own setup page."""
+    owner, s, agent, fake, client = world
+    body = client.post(f"/dialer/agents/{agent.id}", follow_redirects=True,
+                       data={"name": agent.name, "transfer_to_number": LINE,
+                             "transfer_handoff": "bridge"}
+                       ).get_data(as_text=True)
+    assert "is your rep line" in body and "Phone page" in body
+    assert db.session.get(AiAgent, agent.id).transfer_to_number == LINE
+    assert get_settings(owner.id).handoff_line_id == \
+        PhoneNumber.query.filter_by(account_id=owner.id, e164=LINE).one().id
+
+
+def test_installing_with_the_rep_line_keeps_it(world):
+    owner, s, agent, fake, client = world
+    body = client.post("/dialer/playbooks/napkin", follow_redirects=True,
+                       data={"transfer_to": LINE}).get_data(as_text=True)
+    assert "is your rep line" in body
+    from dialer import napkin
+    pb = Playbook.query.filter_by(account_id=owner.id, name=napkin.NAME).one()
+    assert AiAgent.query.filter_by(playbook_id=pb.id).one().transfer_to_number == LINE
+
+
+def test_a_rep_line_on_the_agent_rings_the_browser_as_that_line(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = LINE
+    db.session.commit()
+    present(owner.id, owner.id)
+    dest, why = bridge.destination_explained(s, owner.id, agent)
+    assert dest.startswith("client:") and f"as line {LINE}" in why
+    live_call(owner, s, agent)
+    handoff(client, owner)
+    assert fake.created and fake.created[-1]["from_"] == LINE
+    assert fake.created[-1]["to"].startswith("client:"), "never dialled as a phone"
+
+
+def test_a_rep_line_on_the_agent_falls_to_the_mobile_set_on_the_phone_page(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = LINE
+    s.transfer_mode, s.transfer_number = "number", HUMAN
+    db.session.commit()
+    dest, why = bridge.destination_explained(s, owner.id, agent)
+    assert dest == HUMAN and "phone page" in why and LINE in why
+
+
+def test_the_second_rep_line_can_be_named_on_the_agent(world):
+    owner, s, agent, fake, client = world
+    _second_line(owner)
+    assert bridge.handoff_line(owner.id).e164 == LINE
+    agent.transfer_to_number = LINE2
+    db.session.commit()
+    assert bridge.handoff_line(owner.id, agent).e164 == LINE2
+    # and a hand-off landing on it is recognised, not treated as inbound
+    call = live_call(owner, s, agent)
+    client.post(f"/dialer/hooks/twilio/{owner.id}/voice",
+                data={"From": AI, "To": LINE2, "CallSid": "CAx2",
+                      "Direction": "outbound-dial"})
+    assert db.session.get(Call, call.id).conference_name == "handoff-CAx2"
+
+
+def test_the_phone_page_chooses_the_account_s_line(world):
+    owner, s, agent, fake, client = world
+    n2 = _second_line(owner)
+    r = client.post("/dialer/presence", json={"handoff_line_id": n2.id}).get_json()
+    assert r["ok"]
+    assert get_settings(owner.id).handoff_line_id == n2.id
+    assert bridge.handoff_line(owner.id).e164 == LINE2
+    body = client.get("/dialer/phone").get_data(as_text=True)
+    assert f'value="{n2.id}" selected' in body
+    assert client.get("/dialer/handoff/where").get_json()["line"] == LINE2
+
+
+def test_the_phone_page_refuses_a_line_that_is_not_a_rep_line(world):
+    owner, s, agent, fake, client = world
+    ai = PhoneNumber.query.filter_by(account_id=owner.id, e164=AI).one()
+    r = client.post("/dialer/presence", json={"handoff_line_id": ai.id}).get_json()
+    assert r["ok"] is False and "rep line" in r["error"]
+    r = client.post("/dialer/presence", json={"handoff_line_id": "junk"}).get_json()
+    assert r["ok"] is False
+    assert get_settings(owner.id).handoff_line_id is None
+
+
+def test_an_agent_s_line_does_not_override_the_phone_page_s_choice(world):
+    owner, s, agent, fake, client = world
+    n2 = _second_line(owner)
+    client.post("/dialer/presence", json={"handoff_line_id": n2.id})
+    client.post(f"/dialer/agents/{agent.id}", follow_redirects=True,
+                data={"name": agent.name, "transfer_to_number": LINE,
+                      "transfer_handoff": "bridge"})
+    assert get_settings(owner.id).handoff_line_id == n2.id
+    assert bridge.handoff_line(owner.id, db.session.get(AiAgent, agent.id)).e164 == LINE

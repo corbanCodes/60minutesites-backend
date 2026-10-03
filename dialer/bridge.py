@@ -67,13 +67,9 @@ def _now():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def handoff_line(account_id):
-    """The account's own number a hand-off is sent to, or None.
-
-    It has to be a number whose voice webhook points at this app, which is
-    every rep-pool number. An AI-pool number's inbound goes to ElevenLabs,
-    so handing off to one of those would start a second AI conversation.
-    """
+def rep_lines(account_id):
+    """Every line a person can answer on: the active rep-pool numbers with
+    a real Twilio number behind them, oldest first."""
     rows = (PhoneNumber.query
             .filter_by(account_id=account_id, pool="rep", state="active")
             .filter(PhoneNumber.twilio_sid.isnot(None))
@@ -81,10 +77,48 @@ def handoff_line(account_id):
             .order_by(PhoneNumber.id.asc()).all())
     # Sample numbers have invented SIDs and sit at the lowest ids. Handing a
     # live prospect to one would have the vendor dial a 555 number.
-    return next((n for n in rows if not n.is_placeholder), None)
+    return [n for n in rows if not n.is_placeholder]
 
 
-def ensure_line(settings, account_id):
+def _e164(raw):
+    from dialer.compliance import normalize
+    e, _, ok = normalize(raw or "")
+    return e if ok else ""
+
+
+def handoff_line(account_id, agent=None):
+    """The account's own number a hand-off is sent to, or None.
+
+    It has to be a number whose voice webhook points at this app, which is
+    every rep-pool number. An AI-pool number's inbound goes to ElevenLabs,
+    so handing off to one of those would start a second AI conversation.
+
+    Which rep line: the one typed on the agent under "Where it rings" when
+    that is a rep line, else the one chosen on the phone page, else the
+    oldest. The owner bought numbers and sorted them into AI and rep
+    pools, so the rep number IS, to him, where a hand-off rings -- and it
+    is, as the line it arrives on. A person then picks it up in the
+    browser or on a mobile; the app never dials it as a phone.
+    """
+    rows = rep_lines(account_id)
+    if not rows:
+        return None
+    typed = _e164(getattr(agent, "transfer_to_number", "") if agent else "")
+    if typed:
+        for n in rows:
+            if n.e164 == typed:
+                return n
+    from dialer.settings_store import get_settings
+    s = get_settings(account_id, create=False)
+    want = getattr(s, "handoff_line_id", None) if s is not None else None
+    if want:
+        for n in rows:
+            if n.id == want:
+                return n
+    return rows[0]
+
+
+def ensure_line(settings, account_id, agent=None):
     """Point the hand-off line's Twilio voice webhook at this app.
 
     -> {"ok", "line", "error"}. The bridge is only as good as the webhook
@@ -97,7 +131,7 @@ def ensure_line(settings, account_id):
     request ever reached /voice. So the app sets it, every time the bridge
     is chosen, rather than hoping.
     """
-    line = handoff_line(account_id)
+    line = handoff_line(account_id, agent)
     if line is None:
         return {"ok": False, "line": None, "error": "no rep-pool number"}
     from dialer.providers import registry
@@ -161,8 +195,8 @@ def detect(account_id, caller, called):
 
     `caller` is Twilio's From on the inbound leg; `called` is our number.
     """
-    line = handoff_line(account_id)
-    if line is None or called != line.e164:
+    # Any rep line, not only the first: an agent may name the second one.
+    if called not in {n.e164 for n in rep_lines(account_id)}:
         return None
 
     from_ai_pool = (PhoneNumber.query
@@ -330,7 +364,7 @@ def handoff_owned(call, settings):
     line_url = (urls.handoff_line_media(agent.handoff_line_media_id)
                 if getattr(agent, "handoff_line_media_id", None) else "")
     twiml = owned_twiml(account_id, room, line_url)
-    line = handoff_line(account_id)
+    line = handoff_line(account_id, agent)
     caller_id = line.e164 if line else (call.from_number or "")
     r = ring_rep(settings, account_id, agent, room, caller_id=caller_id)
     dest, why = destination_explained(settings, account_id, agent)
@@ -432,9 +466,65 @@ def is_own_number(account_id, e164):
     line itself, so the bridge dialled the rep line FROM the rep line,
     reached its own voicemail greeting, and machine detection -- quite
     correctly -- called it a machine."""
-    from dialer.compliance import normalize
-    e, _, ok = normalize(e164 or "")
-    return bool(ok and e in own_numbers(account_id))
+    e = _e164(e164)
+    return bool(e and e in own_numbers(account_id))
+
+
+def own_pool(account_id, e164):
+    """"ai", "rep" or "": which pool one of the account's own numbers is in."""
+    e = _e164(e164)
+    if not e:
+        return ""
+    n = PhoneNumber.query.filter_by(account_id=account_id, e164=e).first()
+    return (n.pool or "") if n else ""
+
+
+def is_rep_line(account_id, e164):
+    """A rep line may be typed as where a hand-off rings. It is the line
+    the hand-off arrives on and the caller ID the prospect sees; a person
+    picks it up in the browser or on a mobile. It is never dialled by us
+    as a phone -- that would ring this app from this app."""
+    e = _e164(e164)
+    return bool(e and any(n.e164 == e for n in rep_lines(account_id)))
+
+
+def refusal(account_id, e164):
+    """Why this number cannot be where a hand-off rings, or "" when it
+    can: a real phone, or one of the account's active rep lines."""
+    pool = own_pool(account_id, e164)
+    if not pool:
+        return ""
+    if pool == "ai":
+        return (f"{e164} is your AI line, so it cannot be where a hand-off "
+                f"rings: a second AI would answer.")
+    if is_rep_line(account_id, e164):
+        return ""
+    return (f"{e164} is one of your own numbers but not an active rep "
+            f"line, so it cannot be where a hand-off rings.")
+
+
+def line_note(account_id, e164):
+    """What accepting a rep line means, in words for the screen."""
+    return (f"{_e164(e164) or e164} is your rep line. A hand-off arrives on "
+            f"it, shows it as the caller ID, and lands on the Phone page: "
+            f"the browser phone when it is open and available, otherwise "
+            f"the mobile set there.")
+
+
+def adopt_line(settings, account_id, e164):
+    """A rep line named on an agent becomes the account's line too, unless
+    the phone page already chose a live one. Keeps the two screens agreeing
+    on a one-line account without letting an agent override a choice."""
+    e = _e164(e164)
+    rows = rep_lines(account_id)
+    cur = getattr(settings, "handoff_line_id", None)
+    if cur and any(n.id == cur for n in rows):
+        return
+    for n in rows:
+        if n.e164 == e:
+            settings.handoff_line_id = n.id
+            db.session.commit()
+            return
 
 
 def _mark_busy(account_id, client, busy):
@@ -472,8 +562,12 @@ def rep_destination(settings, account_id, agent):
     own = (getattr(agent, "transfer_to_number", "") or "").strip()
     if own and not is_own_number(account_id, own):
         return own
-    from dialer.agents import human_number
-    number = human_number(settings, agent)
+    # Nothing typed, or a rep line typed (which is answered by a person,
+    # not dialled): the browser was not available, so the mobile set on
+    # the phone page, else the callback number -- never one of our own.
+    number = ((settings.transfer_number or "")
+              if (settings.transfer_mode or "") == "number" else "") \
+        or (settings.ai_callback_number or "")
     if number and is_own_number(account_id, number):
         return ""
     return number
@@ -484,17 +578,29 @@ def destination_explained(settings, account_id, agent):
     for the test page: the one question that cost a night of guessing."""
     dest = rep_destination(settings, account_id, agent)
     why = browser_status(account_id)
-    if dest.startswith("client:"):
-        return dest, "your browser phone \u2014 " + why
     own = (getattr(agent, "transfer_to_number", "") or "").strip()
+    line = handoff_line(account_id, agent)
+    as_line = f" as line {line.e164}" if line else ""
+    if dest.startswith("client:"):
+        return dest, f"your browser phone{as_line} \u2014 " + why
+    typed_line = bool(own) and is_rep_line(account_id, own)
     if dest:
-        src = ("the number typed on the agent" if own and dest == own
-               else "the account-wide number")
+        if own and dest == own:
+            src = "the number typed on the agent"
+        elif typed_line:
+            src = (f"the mobile set on the phone page, for your rep line "
+                   f"{_e164(own)}")
+        else:
+            src = "the account-wide number"
         return dest, f"{dest} ({src}); not the browser because {why}"
-    skipped = own and is_own_number(account_id, own)
-    return "", ("NOBODY \u2014 " + why
-                + (f"; {own} is one of your own numbers and is skipped"
-                   if skipped else "; and no real mobile is set"))
+    if typed_line:
+        tail = (f"; {own} is your rep line, which is answered on the phone "
+                f"page or by the mobile set there, and no mobile is set")
+    elif own and is_own_number(account_id, own):
+        tail = f"; {own} is one of your own numbers and is skipped"
+    else:
+        tail = "; and no real mobile is set"
+    return "", "NOBODY \u2014 " + why + tail
 
 
 def ring_rep(settings, account_id, agent, room, caller_id):
@@ -548,7 +654,7 @@ def try_bridge(account_id, settings, caller, called, call_sid):
                          f"{call.conference_name}", call_id=call.id)
             return prospect_twiml(call.conference_name, account_id)
     room = room_for(call_sid)
-    line = handoff_line(account_id)
+    line = handoff_line(account_id, agent)
     r = ring_rep(settings, account_id, agent, room,
                  caller_id=line.e164 if line else caller)
     if call is not None:

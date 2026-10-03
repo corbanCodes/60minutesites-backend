@@ -1165,27 +1165,32 @@ def playbook_napkin():
     agent.voice_delivery = agent.voice_delivery or "calm"
     # No ring and no hold music is the brief. The bridge delivers that and
     # needs a rep-pool number to land on; without one it is a normal ring.
-    from dialer.bridge import ensure_line, handoff_line
-    # Seamless is the brief: we hold the line, nothing is dialled on the
-    # prospect's side, nothing to hear. Needs a rep-pool number for the room.
-    agent.transfer_handoff = ("owned" if handoff_line(g.account_id)
-                              else (agent.transfer_handoff or "blind"))
-    line_err = ""
-    if agent.transfer_handoff in ("bridge", "owned"):
-        lr = ensure_line(s, g.account_id)
-        line_err = "" if lr.get("ok") else (lr.get("error") or "unknown")
-    # A pasted-in copy of an older prompt would freeze all of the above.
-    agent.prompt_override = ""
+    from dialer.bridge import (ensure_line, handoff_line, refusal,
+                               is_rep_line, line_note, adopt_line)
+    # Where it rings: a real mobile, or one of the rep lines -- which is
+    # the line the hand-off arrives on, picked up in the browser or on the
+    # mobile set on the phone page. Only the AI line is refused.
     dest = (request.form.get("transfer_to") or "").strip()[:32]
-    from dialer.bridge import is_own_number
-    if dest and is_own_number(g.account_id, dest):
-        flash(f"{dest} is one of your own numbers and cannot be where a "
-              f"hand-off rings; the browser phone will be rung instead.",
-              "error")
+    why_not = refusal(g.account_id, dest) if dest else ""
+    if why_not:
+        flash(why_not + " The browser phone will be rung instead.", "error")
         dest = ""
         agent.transfer_to_number = ""
     if dest:
         agent.transfer_to_number = dest
+        if is_rep_line(g.account_id, dest):
+            adopt_line(s, g.account_id, dest)
+            flash(line_note(g.account_id, dest), None)
+    # Seamless is the brief: we hold the line, nothing is dialled on the
+    # prospect's side, nothing to hear. Needs a rep-pool number for the room.
+    agent.transfer_handoff = ("owned" if handoff_line(g.account_id, agent)
+                              else (agent.transfer_handoff or "blind"))
+    line_err = ""
+    if agent.transfer_handoff in ("bridge", "owned"):
+        lr = ensure_line(s, g.account_id, agent)
+        line_err = "" if lr.get("ok") else (lr.get("error") or "unknown")
+    # A pasted-in copy of an older prompt would freeze all of the above.
+    agent.prompt_override = ""
     agent.background_preset = ((s.background_preset or "office1")
                                if s.background_noise else "")
     agent.max_duration_seconds = 240
@@ -1385,24 +1390,30 @@ def handoff_trace():
                            prog=prog, call=call, rows=rows, text=text)
 
 
+def _active_outbound_agent():
+    return (AiAgent.query.filter_by(account_id=g.account_id, direction="outbound",
+                                    active=True)
+            .order_by(AiAgent.id.desc()).first())
+
+
 @bp.route("/handoff/where")
 @require("calls.make")
 def handoff_where():
     """Where a hand-off would ring right now, for the phone page."""
-    from dialer.bridge import destination_explained, browser_status
+    from dialer.bridge import (destination_explained, browser_status,
+                               handoff_line)
     s = get_settings(g.account_id)
-    agent = (AiAgent.query.filter_by(account_id=g.account_id, direction="outbound",
-                                     active=True)
-             .order_by(AiAgent.id.desc()).first())
+    agent = _active_outbound_agent()
+    line = handoff_line(g.account_id, agent)
+    extra = dict(browser=browser_status(g.account_id),
+                 mobile=s.transfer_number or "",
+                 mode=s.transfer_mode or "browser",
+                 line=line.e164 if line else "",
+                 line_id=line.id if line else None)
     if agent is None:
-        return jsonify(ok=True, text="no active outbound agent yet",
-                       browser=browser_status(g.account_id),
-                       mobile=s.transfer_number or "")
+        return jsonify(ok=True, text="no active outbound agent yet", **extra)
     dest, why = destination_explained(s, g.account_id, agent)
-    return jsonify(ok=True, text=why, destination=dest,
-                   browser=browser_status(g.account_id),
-                   mobile=s.transfer_number or "",
-                   mode=s.transfer_mode or "browser")
+    return jsonify(ok=True, text=why, destination=dest, **extra)
 
 
 @bp.route("/handoff/current")
@@ -1629,20 +1640,22 @@ def agent_edit(agent_id):
         a.dtmf_enabled = bool(request.form.get("dtmf_enabled"))
         a.active = bool(request.form.get("active"))
         db.session.commit()
-        from dialer.bridge import is_own_number
-        if a.transfer_to_number and is_own_number(g.account_id,
-                                                   a.transfer_to_number):
-            flash(f"{a.transfer_to_number} is one of your own numbers, so "
-                  f"it cannot be where a hand-off rings: the AI line would "
-                  f"answer with a second AI and the rep line answers with "
-                  f"this app. Leave it empty to ring the browser phone, or "
-                  f"type a real mobile.", "error")
+        from dialer.bridge import (refusal, is_rep_line, line_note,
+                                   adopt_line, ensure_line)
+        why_not = (refusal(g.account_id, a.transfer_to_number)
+                   if a.transfer_to_number else "")
+        if why_not:
+            flash(why_not + " Leave it empty to ring the browser phone, "
+                  "type a real mobile, or type your rep line.", "error")
             a.transfer_to_number = ""
             db.session.commit()
+        elif a.transfer_to_number and is_rep_line(g.account_id,
+                                                  a.transfer_to_number):
+            adopt_line(s, g.account_id, a.transfer_to_number)
+            flash(line_note(g.account_id, a.transfer_to_number), None)
         bridged = (a.transfer_handoff or "") in ("bridge", "owned")
         if bridged:
-            from dialer.bridge import ensure_line
-            lr = ensure_line(s, g.account_id)
+            lr = ensure_line(s, g.account_id, a)
             if not lr.get("ok"):
                 flash(f"The hand-off line could not be pointed at this app: "
                       f"{lr.get('error')}. A hand-off will fail until it is.",
@@ -1672,7 +1685,7 @@ def agent_edit(agent_id):
         transfer_to=__import__("dialer.agents",
                                fromlist=["x"]).human_number(s, a),
         handoff_line=__import__("dialer.bridge",
-                                fromlist=["x"]).handoff_line(g.account_id),
+                                fromlist=["x"]).handoff_line(g.account_id, a),
         prompt_preview=build_prompt(a, s))
 
 
@@ -1937,14 +1950,15 @@ def phone():
               .filter(db.or_(Call.agent_user_id == uid,
                              Call.agent_user_id.is_(None)))
               .order_by(Call.started_at.desc()).limit(10).all())
+    from dialer import bridge as _bridge
     return render_template(
         "dialer/phone.html", s=s, ready=ready, prog=prog,
         presence=_presence(), campaign=None, recent=recent,
         campaigns=Campaign.query.filter_by(account_id=g.account_id,
                                            status="running", mode="power").all(),
-        my_numbers=[n for n in PhoneNumber.query.filter_by(
-            account_id=g.account_id, pool="rep", state="active").all()
-            if not n.is_placeholder],
+        my_numbers=_bridge.rep_lines(g.account_id),
+        handoff_line=_bridge.handoff_line(g.account_id,
+                                          _active_outbound_agent()),
         playbook=_active_playbook(None))
 
 
@@ -2003,12 +2017,30 @@ def presence_update():
             if not ok:
                 return jsonify(ok=False, error="That does not look like a phone number.")
             if is_own_number(g.account_id, e164):
-                return jsonify(ok=False, error=f"{e164} is one of your own numbers; "
-                               f"it cannot be where a hand-off rings.")
+                from dialer.bridge import own_pool
+                what = ("your rep line, not a mobile; it is already the line "
+                        "this phone answers. A mobile is a phone you carry."
+                        if own_pool(g.account_id, e164) == "rep" else
+                        "one of your own numbers; it cannot be where a "
+                        "hand-off rings.")
+                return jsonify(ok=False, error=f"{e164} is {what}")
             s_.transfer_number = e164
             s_.transfer_mode = "number"
         else:
             s_.transfer_mode = "browser"
+    if "handoff_line_id" in data:
+        # The phone page's "this phone is line ..." choice: which rep line
+        # a hand-off arrives on and presents from.
+        from dialer.bridge import rep_lines
+        from dialer.settings_store import get_settings
+        try:
+            want = int(data.get("handoff_line_id") or 0)
+        except (TypeError, ValueError):
+            want = 0
+        if want not in {n.id for n in rep_lines(g.account_id)}:
+            return jsonify(ok=False,
+                           error="That is not one of your active rep lines.")
+        get_settings(g.account_id).handoff_line_id = want
     if data.get("conference_name"):
         p.conference_name = str(data["conference_name"])[:120]
     if data.get("rep_call_sid"):

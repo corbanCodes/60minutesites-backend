@@ -144,6 +144,9 @@ class DialerSettings(db.Model):
     background_gain = db.Column(db.Float, default=0.15)
     transfer_mode = db.Column(db.String(20), default="browser")  # browser|number
     transfer_number = db.Column(db.String(32), default="")
+    # PhoneNumber.id of the rep line this account answers hand-offs on;
+    # chosen on the phone page. An agent may name a different rep line.
+    handoff_line_id = db.Column(db.Integer)
     amd_default = db.Column(db.Boolean, default=False)
     live_transcription = db.Column(db.Boolean, default=False)
     max_concurrent_ai = db.Column(db.Integer, default=2)

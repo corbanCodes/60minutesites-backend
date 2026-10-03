@@ -77,10 +77,13 @@
           <label for="ag-transfer-to" style="margin-top:14px">Where it rings</label>
           <input type="tel" id="ag-transfer-to" name="transfer_to_number" maxlength="32"
                  value="{{ a.transfer_to_number or '' }}" placeholder="+1 555 010 0000">
-          <span class="field-hint">The phone a qualified call is handed to. Leave it empty to use the
-            account-wide number{% if transfer_to %}, currently {{ transfer_to }}{% else %}, which is not set,
-            so this agent would qualify and never hand over{% endif %}. It must not be the phone you are
-            testing on — a hand-off to a line that is already on the call rolls to its own voicemail.</span>
+          <span class="field-hint">A real mobile, or one of your rep lines{% if handoff_line %} (yours:
+            {{ handoff_line.e164 }}){% endif %}. A rep line is where the hand-off arrives and what the
+            prospect sees; it is picked up on the Phone page, in the browser or on the mobile set there.
+            Leave it empty to use the account-wide number{% if transfer_to %}, currently {{ transfer_to }}{%
+            else %}, which is not set, so this agent would qualify and never hand over{% endif %}. Never
+            your AI line, and not the phone you are testing on — a hand-off to a line already on the call
+            rolls to its own voicemail.</span>
           <label for="ag-person" style="margin-top:14px">What it calls itself</label>
           <input type="text" id="ag-person" name="person_name" maxlength="60"
                  value="{{ a.person_name or '' }}" placeholder="John">

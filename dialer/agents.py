@@ -360,7 +360,7 @@ def transfer_number(settings, agent=None):
     if handoff_type(agent) == "bridge":
         from dialer.bridge import handoff_line
         line = handoff_line(getattr(agent, "account_id", None)
-                            or settings.account_id)
+                            or settings.account_id, agent)
         if line is not None:
             return line.e164
     return human_number(settings, agent)
