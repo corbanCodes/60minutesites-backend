@@ -244,9 +244,12 @@ class ElevenLabsAgent(VoiceAgent):
                         "hq_models": [str(m) for m in
                                       (v.get("high_quality_base_model_ids")
                                        or [])]})
-            if len(out) >= limit:
-                break
-        return ok(voices=out)
+        # The customer's own voices first -- a clone made a minute ago sits
+        # at the end of the API's list, behind every stock voice, and a
+        # cap applied in that order hid it. "premade" is the stock kind.
+        own = [v for v in out if v["category"] != "premade"]
+        stock = [v for v in out if v["category"] == "premade"]
+        return ok(voices=(own + stock)[:limit])
 
     def speak(self, text, voice_id, model_id="eleven_flash_v2_5"):
         """Text to speech -> mp3 bytes.

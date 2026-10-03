@@ -48,26 +48,34 @@ def client(monkeypatch):
 
 
 # -------------------------------------------------------------- the data
+def _by_id(voices):
+    return {v["voice_id"]: v for v in voices}
+
+
 def test_the_preview_url_survives_the_trip(client):
-    voices = client.list_voices()["voices"]
-    assert voices[0]["preview_url"] == "https://storage.example/charlie.mp3"
+    voices = _by_id(client.list_voices()["voices"])
+    assert voices["v1"]["preview_url"] == "https://storage.example/charlie.mp3"
 
 
 def test_the_category_survives_the_trip(client):
-    voices = client.list_voices()["voices"]
-    assert voices[0]["category"] == "premade"
-    assert voices[1]["category"] == "cloned"
+    voices = _by_id(client.list_voices()["voices"])
+    assert voices["v1"]["category"] == "premade"
+    assert voices["v2"]["category"] == "cloned"
+
+
+def test_the_customer_s_own_voice_is_listed_first(client):
+    assert client.list_voices()["voices"][0]["voice_id"] == "v2"
 
 
 def test_a_voice_with_no_preview_gets_an_empty_string_not_a_crash(client):
     """The template keys off truthiness to decide between a play button and a
     dead one, so None here would render a button that does nothing."""
-    voices = client.list_voices()["voices"]
-    assert voices[2]["preview_url"] == ""
+    voices = _by_id(client.list_voices()["voices"])
+    assert voices["v3"]["preview_url"] == ""
 
 
 def test_labels_are_still_flattened_for_display(client):
-    assert "australian" in client.list_voices()["voices"][0]["labels"]
+    assert "australian" in _by_id(client.list_voices()["voices"])["v1"]["labels"]
 
 
 # ------------------------------------------------------------ the wording
