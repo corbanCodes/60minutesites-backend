@@ -395,3 +395,17 @@ def test_the_choice_is_on_the_agent_page(world):
     owner, s, agent, tel, va, client = world
     body = client.get(f"/dialer/agents/{agent.id}").get_data(as_text=True)
     assert "we hold the line" in body
+
+
+
+def test_every_tool_property_sets_exactly_one_of_the_vendors_five_keys(world):
+    """ElevenLabs: "Can only set one of: description, dynamic_variable,
+    is_system_provided, constant_value, or is_omitted". Two on one
+    property rejected the whole agent on a live sync."""
+    from dialer.tools import TOOL_SPECS
+    keys = {"description", "dynamic_variable", "is_system_provided",
+            "constant_value", "is_omitted"}
+    for spec in TOOL_SPECS:
+        for name, prop in spec["parameters"]["properties"].items():
+            hits = keys & set(prop)
+            assert len(hits) == 1, f"{spec['name']}.{name} sets {sorted(hits)}"

@@ -186,8 +186,11 @@ CONVERSATION_ID = {
 # to us until a tool call or the post-call webhook carries it, so this is
 # the key every tool and the post-call hook look up first. dynamic_variable
 # means the platform fills it, not the model.
-HQ_CALL_ID = {"type": "string", "dynamic_variable": "hq_call_id",
-              "description": "Internal call id. Filled in by the system."}
+# Exactly ONE of description / dynamic_variable / is_system_provided /
+# constant_value / is_omitted per property, or ElevenLabs rejects the whole
+# agent: "Can only set one of". A description beside the dynamic_variable
+# did exactly that on a live sync.
+HQ_CALL_ID = {"type": "string", "dynamic_variable": "hq_call_id"}
 TOOL_SPECS = [
     {"name": "lookup_lead", "description":
      "Look up what we already know about the person you are speaking to. "
