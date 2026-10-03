@@ -371,6 +371,13 @@
           'Transfer tool         : ' + (d.has_transfer
                                         ? 'present, under ' + d.transfer_at
                                         : 'MISSING — it cannot hand over') + '\n' +
+          'Transfer rings        : ' + (d.transfer_to
+                                        ? d.transfer_to
+                                        : 'NOWHERE — no destination stored, so it can never hand over') + '\n' +
+          'Transfer type         : ' + (d.transfer_kind
+                                        ? d.transfer_kind + (d.transfer_kind === 'blind'
+                                            ? ' (no hold music)' : ' (Twilio hold music)')
+                                        : 'none stored') + '\n' +
           'Keys they return      : ' + (d.prompt_keys || []).join(', ') + '\n' +
           'Webhook tools         : ' + d.tool_count + '\n' +
           'Instructions          : ' + d.prompt_chars + ' characters';

@@ -199,8 +199,9 @@ def test_the_installed_guide_and_its_agent_point_at_each_other(account):
 
     pb = Playbook.query.filter_by(account_id=owner.id,
                                   name="NapkinAds — venue calling").one()
-    agent = AiAgent.query.filter_by(account_id=owner.id,
-                                    name="NapkinAds venue caller").one()
+    # Named after the speaker now. Two agents both called "NapkinAds venue
+    # caller" in one dropdown is what the old hard-coded name produced.
+    agent = AiAgent.query.filter_by(account_id=owner.id).one()
     assert agent.playbook_id == pb.id
     assert agent.active is True
 

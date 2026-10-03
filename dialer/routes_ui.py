@@ -1042,43 +1042,85 @@ def _repair_playbook_default(rows, demo_prefix):
 @bp.route("/playbooks/napkin", methods=["POST"])
 @require("playbooks.edit")
 def playbook_napkin():
-    """Install NapkinAds' own calling guide as a playbook and an agent.
+    """Install NapkinAds' calling guide as a playbook and an agent.
 
-    Their document is a specification: it mixes what the AI says with what
-    the system has to do afterwards. The saying becomes the playbook, the
-    doing is machinery that already exists here, and the prompt only has to
-    make the agent report outcomes in a shape that machinery reads.
+    Idempotent, and it has to be. The first version created a row every
+    time it ran, so pressing it twice produced two agents with the SAME
+    hard-coded name sitting next to each other in a dropdown, and no way
+    to tell which was which. Running it again now updates the pair it
+    made before and resets the script to the official wording, which is
+    what "install the guide" ought to mean.
 
-    Additive. It creates two rows and touches nothing already on the
-    account.
+    It only ever touches the rows it created itself, matched by name.
     """
     from dialer import napkin
     from dialer.agents import sync_agent
     s = get_settings(g.account_id)
-    back = request.form.get("back") or url_for("dialer.setup", step=9)
 
-    pb = napkin.build(g.account_id, s)
-    pb.is_default = Playbook.query.filter_by(
-        account_id=g.account_id, is_default=True).count() == 0
-    db.session.add(pb)
+    fresh = napkin.build(g.account_id, s)
+
+    # Earlier versions created a fresh pair on every press, so an account
+    # can hold several playbooks with this name and several agents on them.
+    # Keep the pair carrying the customer's work -- a hand-off destination
+    # typed in, then the most recently synced -- and switch our other
+    # duplicates off. Off keeps every setting and is one click to undo.
+    books = Playbook.query.filter_by(account_id=g.account_id,
+                                     name=napkin.NAME).all()
+    book_ids = {b.id for b in books}
+    ours = [a for a in AiAgent.query.filter_by(account_id=g.account_id).all()
+            if a.playbook_id in book_ids]
+    ours.sort(key=lambda a: (bool((a.transfer_to_number or "").strip()),
+                             a.synced_at or datetime(1970, 1, 1)),
+              reverse=True)
+    agent = ours[0] if ours else None
+    for dup in ours[1:]:
+        dup.active = False
+    quieted = len(ours[1:])
+
+    pb = (db.session.get(Playbook, agent.playbook_id) if agent
+          else (books[0] if books else None))
+    reused = pb is not None
+    if pb is None:
+        pb = fresh
+        pb.is_default = Playbook.query.filter_by(
+            account_id=g.account_id, is_default=True).count() == 0
+        db.session.add(pb)
+    else:
+        for field in ("description", "steps_json", "questions_json",
+                      "objections_json", "transfer_criteria", "never_do"):
+            setattr(pb, field, getattr(fresh, field))
     db.session.flush()
 
-    agent = AiAgent(
-        account_id=g.account_id, name="NapkinAds venue caller",
-        direction="outbound", playbook_id=pb.id,
-        voice_id=s.elevenlabs_default_voice_id or "",
-        company_facts="NapkinAds supplies restaurants and bars with free "
-                      "napkins carrying a local advert, at no cost to the "
-                      "venue.",
-        persona=napkin.PERSONA,
-        knowledge_text=napkin.extra_rules(s),
-        transfer_style="custom", transfer_line=napkin.TRANSFER_LINE,
-        transfer_to_number=(request.form.get("transfer_to") or "").strip()[:32],
-        opening_mode="wait",
-        background_preset=(s.background_preset or "office1")
-        if s.background_noise else "",
-        max_duration_seconds=240, active=True)
-    db.session.add(agent)
+    # Named after whoever it says it is, because "NapkinAds venue caller"
+    # next to "NapkinAds Official Playbook agent" tells you nothing.
+    person = (s.ai_person_name or "").strip()
+    agent_name = f"{person} \u2014 venue calls" if person else "Venue calls"
+
+    if agent is None:
+        agent = AiAgent(account_id=g.account_id, direction="outbound",
+                        playbook_id=pb.id)
+        db.session.add(agent)
+    agent.name = agent_name
+    agent.voice_id = agent.voice_id or s.elevenlabs_default_voice_id or ""
+    agent.company_facts = ("NapkinAds supplies restaurants and bars with "
+                           "free napkins carrying a local advert, at no "
+                           "cost to the venue.")
+    agent.persona = napkin.PERSONA
+    agent.knowledge_text = napkin.extra_rules(s)
+    agent.transfer_style = "custom"
+    agent.transfer_line = napkin.TRANSFER_LINE
+    agent.opening_mode = "wait"
+    agent.voice_delivery = agent.voice_delivery or "calm"
+    agent.transfer_handoff = agent.transfer_handoff or "blind"
+    # A pasted-in copy of an older prompt would freeze all of the above.
+    agent.prompt_override = ""
+    dest = (request.form.get("transfer_to") or "").strip()[:32]
+    if dest:
+        agent.transfer_to_number = dest
+    agent.background_preset = ((s.background_preset or "office1")
+                               if s.background_noise else "")
+    agent.max_duration_seconds = 240
+    agent.active = True
     db.session.flush()
 
     res = sync_agent(agent, s)
@@ -1086,14 +1128,20 @@ def playbook_napkin():
         user=g.member)
     db.session.commit()
 
+    what = "Updated" if reused else "Installed"
+    extra = (f" {quieted} older duplicate agent{'s' if quieted != 1 else ''} "
+             f"from earlier installs switched off."
+             if quieted else "")
     if res.get("ok"):
-        flash("NapkinAds' guide is installed as a playbook and an agent, "
-              "and the agent is live at ElevenLabs. Read the script before "
-              "you point it at a list — every line is editable.", "sticky")
+        flash(f"{what} \u201c{pb.name}\u201d and its agent "
+              f"\u201c{agent.name}\u201d, and the agent is live at "
+              f"ElevenLabs. That is the one to test. Any hand-written "
+              f"instructions on it were cleared so the official guide is "
+              f"what it reads.{extra}", "sticky")
     else:
-        flash(f"Installed here, but ElevenLabs would not take the agent: "
-              f"{agent.last_sync_error}. Open it and press “Try the sync "
-              f"again”.", "error")
+        flash(f"{what} here, but ElevenLabs would not take the agent: "
+              f"{agent.last_sync_error}. Open it and press \u201cTry the "
+              f"sync again\u201d.", "error")
     return redirect(url_for("dialer.playbook_edit", playbook_id=pb.id))
 
 

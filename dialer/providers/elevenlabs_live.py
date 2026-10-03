@@ -415,8 +415,35 @@ class ElevenLabsAgent(VoiceAgent):
                 if isinstance(t, dict) and t.get("name") == "transfer_to_number":
                     found_at = "prompt.tools"
                     break
+        # "It did not transfer at all" has three different causes and the
+        # tool being present rules out only one of them. The destination
+        # and the type are what separate "no tool", "tool with nowhere to
+        # go" and "tool whose transfer_type was silently dropped".
+        transfers = []
+        for _, holder in (("p", prompt_cfg.get("built_in_tools")),
+                          ("a", agent_cfg.get("built_in_tools")),
+                          ("c", conv.get("built_in_tools"))):
+            if isinstance(holder, dict):
+                tn = holder.get("transfer_to_number")
+                if isinstance(tn, dict):
+                    params = tn.get("params") or tn
+                    rows = params.get("transfers")
+                    if isinstance(rows, list):
+                        transfers = rows
+                        break
+        dests, kinds = [], []
+        for row in transfers:
+            if not isinstance(row, dict):
+                continue
+            d = row.get("transfer_destination") or {}
+            dests.append(str(d.get("phone_number") or d.get("sip_uri") or "?"))
+            kinds.append(str(row.get("transfer_type") or "?"))
+
         return ok(
             name=data.get("name", ""),
+            transfer_to=", ".join(dests),
+            transfer_kind=", ".join(kinds),
+            transfer_rules=len(transfers),
             first_message=agent_cfg.get("first_message", ""),
             voice_id=((conv.get("tts") or {}).get("voice_id") or ""),
             llm=prompt_cfg.get("llm", ""),

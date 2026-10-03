@@ -232,3 +232,156 @@ def test_the_company_placeholder_never_survives_into_the_prompt(account):
                           get_settings(owner.id))
     assert "{ai_name}" not in prompt
     assert "NapkinAds" in prompt
+
+
+# ------------------------------------------------- pressing it a second time
+def test_installing_twice_does_not_make_two_agents_with_one_name(account):
+    """What actually happened. The name was hard-coded, so a second press
+    produced "NapkinAds venue caller" sitting next to "NapkinAds venue
+    caller" in the test-call dropdown with nothing to tell them apart."""
+    owner, client = account
+    install(client)
+    install(client)
+
+    agents = AiAgent.query.filter_by(account_id=owner.id).all()
+    assert len(agents) == 1
+    assert len({a.name for a in agents}) == 1
+
+
+def test_installing_twice_does_not_make_two_playbooks(account):
+    owner, client = account
+    install(client)
+    install(client)
+    assert Playbook.query.filter_by(account_id=owner.id).count() == 1
+
+
+def test_the_second_install_resets_the_script_to_the_official_wording(account):
+    owner, client = account
+    install(client)
+    pb = Playbook.query.filter_by(account_id=owner.id).one()
+    pb.never_do = "whatever I felt like"
+    db.session.commit()
+
+    install(client)
+
+    assert db.session.get(Playbook, pb.id).never_do == napkin.NEVER_DO
+
+
+def test_the_agent_is_named_after_whoever_it_says_it_is(account):
+    """"NapkinAds venue caller" next to "NapkinAds Official Playbook agent"
+    tells you nothing about which one to test."""
+    owner, client = account
+    s = get_settings(owner.id)
+    s.ai_person_name = "John"
+    db.session.commit()
+    install(client)
+    assert AiAgent.query.filter_by(account_id=owner.id).one().name == \
+        "John — venue calls"
+
+
+def test_a_second_install_picks_up_a_renamed_speaker(account):
+    owner, client = account
+    install(client)
+    s = get_settings(owner.id)
+    s.ai_person_name = "Dave"
+    db.session.commit()
+    install(client)
+    assert AiAgent.query.filter_by(account_id=owner.id).one().name == \
+        "Dave — venue calls"
+
+
+def test_installing_clears_a_stale_hand_written_prompt(account):
+    """An override is a frozen copy of an older prompt, so it would keep
+    every fix out of the agent for good."""
+    owner, client = account
+    install(client)
+    a = AiAgent.query.filter_by(account_id=owner.id).one()
+    a.prompt_override = "an old pasted copy with the broken transfer line"
+    db.session.commit()
+
+    install(client)
+
+    assert db.session.get(AiAgent, a.id).prompt_override == ""
+
+
+def test_a_second_install_keeps_the_transfer_destination(account):
+    """Re-installing to refresh the script must not quietly unset where it
+    hands off to, because that is the setting that makes it work at all."""
+    owner, client = account
+    install(client, transfer_to="+14235550147")
+    install(client)
+    assert AiAgent.query.filter_by(
+        account_id=owner.id).one().transfer_to_number == "+14235550147"
+
+
+def test_someone_else_s_identically_named_playbook_is_untouched(account, ctx):
+    owner, client = account
+    other = make_user(name="Else", email="x@n.test", dialer=True)
+    theirs = Playbook(account_id=other.id, name=napkin.NAME,
+                      steps_json="[]", questions_json="[]",
+                      objections_json="[]", never_do="theirs")
+    db.session.add(theirs)
+    db.session.commit()
+
+    install(client)
+
+    assert db.session.get(Playbook, theirs.id).never_do == "theirs"
+
+
+def test_the_pair_carrying_his_work_is_the_one_kept(account):
+    """His actual account: two installs from the old code, two playbooks
+    with this name, two agents both called "NapkinAds venue caller". He
+    typed the hand-off number into one of them. Re-installing must update
+    THAT one and quiet the other, not pick whichever row is first."""
+    owner, client = account
+    stale = Playbook(account_id=owner.id, name=napkin.NAME, steps_json="[]",
+                     questions_json="[]", objections_json="[]")
+    worked = Playbook(account_id=owner.id, name=napkin.NAME, steps_json="[]",
+                      questions_json="[]", objections_json="[]")
+    db.session.add_all([stale, worked])
+    db.session.flush()
+    a_stale = AiAgent(account_id=owner.id, name="NapkinAds venue caller",
+                      direction="outbound", playbook_id=stale.id, active=True)
+    a_worked = AiAgent(account_id=owner.id, name="NapkinAds venue caller",
+                       direction="outbound", playbook_id=worked.id,
+                       active=True, transfer_to_number="+14235550147")
+    db.session.add_all([a_stale, a_worked])
+    db.session.commit()
+
+    install(client)
+
+    kept = db.session.get(AiAgent, a_worked.id)
+    assert kept.active is True
+    assert kept.transfer_to_number == "+14235550147"
+    assert kept.name != "NapkinAds venue caller"
+    assert db.session.get(AiAgent, a_stale.id).active is False, \
+        "the duplicate is switched off, never deleted"
+    assert AiAgent.query.filter_by(account_id=owner.id).count() == 2
+    assert db.session.get(Playbook, worked.id).never_do == napkin.NEVER_DO
+
+
+def test_quieting_duplicates_is_reported(account):
+    owner, client = account
+    for _ in range(2):
+        pb = Playbook(account_id=owner.id, name=napkin.NAME, steps_json="[]",
+                      questions_json="[]", objections_json="[]")
+        db.session.add(pb)
+        db.session.flush()
+        db.session.add(AiAgent(account_id=owner.id, name="NapkinAds venue caller",
+                               direction="outbound", playbook_id=pb.id,
+                               active=True))
+    db.session.commit()
+    body = install(client).get_data(as_text=True)
+    assert "1 older duplicate agent" in body
+
+
+def test_the_tool_s_spoken_line_is_not_the_fetching_line(account):
+    """"Great, thank you" is what step 2 says while staff fetch the
+    manager. If the tool says it too, the prospect hears it twice in a row
+    -- the "x2" from a live test."""
+    owner, client = account
+    install(client)
+    pb = Playbook.query.filter_by(account_id=owner.id).one()
+    fetching = [s for s in pb.steps if s["title"] == "If they are coming"][0]
+    assert napkin.TRANSFER_LINE != fetching["say"]
+    assert napkin.TRANSFER_LINE == "Oh, okay. Thanks."

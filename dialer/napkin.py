@@ -168,7 +168,11 @@ PERSONA = (
     "are, you hand over. If they are not, you find out when and you stop."
 )
 
-TRANSFER_LINE = "Great, thank you."
+# The words the tool speaks as it hands over. NOT "Great, thank you" -- that
+# is what step 2 says when staff go to fetch the manager, and the same
+# sentence twice in a row is the "it said great thank you x2" from a live
+# test. His wording, as asked for.
+TRANSFER_LINE = "Oh, okay. Thanks."
 
 EXTRA_RULES = """
 # Getting a callback time, which is the second-best outcome
