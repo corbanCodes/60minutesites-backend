@@ -298,6 +298,11 @@
   function buildReal(token) {
     return loadSdk().then(function (T) {
       device = new T.Device(token, { codecPreferences: ['opus', 'pcmu'], logLevel: 'error' });
+      // The SDK plays its own ringtone the instant a call arrives, and a
+      // hand-off is answered a few hundred milliseconds later -- so what the
+      // rep heard was a ring cut off mid-note. There is nothing to ring for:
+      // the call answers itself. The outgoing and hang-up sounds stay.
+      try { if (device.audio && device.audio.incoming) device.audio.incoming(false); } catch (e) {}
       wireDevice();
       return device.register().then(function () { return device; });
     }).catch(function (e) {
