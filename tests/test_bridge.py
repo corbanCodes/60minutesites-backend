@@ -32,6 +32,7 @@ class FakeTelephony:
     def __init__(self):
         self.created = []
         self.redirected = []
+        self.configured = []
 
     def create_call(self, to, from_, url=None, status_callback=None, **kw):
         self.created.append({"to": to, "from_": from_, "url": url,
@@ -40,6 +41,11 @@ class FakeTelephony:
 
     def redirect_call(self, sid, twiml):
         self.redirected.append({"sid": sid, "twiml": twiml})
+        return {"ok": True}
+
+    def configure_number(self, sid, voice_url, status_callback):
+        self.configured.append({"sid": sid, "voice_url": voice_url,
+                                "status_callback": status_callback})
         return {"ok": True}
 
 
@@ -249,6 +255,74 @@ def test_no_person_to_ring_does_not_strand_them_in_a_silent_room(world):
     body = handoff(client, owner)
     assert bridge.NO_ANSWER_LINE in body
     assert "<Conference" not in body
+
+
+# ----------------------------------------------- the webhook on the line
+def test_ensure_line_points_the_rep_lines_webhook_at_this_app(world):
+    """The first live test: transfer fired, ElevenLabs dialled the rep
+    line, Twilio said "an application error has occurred", and no request
+    ever reached /voice. The number's webhook was not ours. It is set by
+    the app now, not assumed."""
+    owner, s, agent, fake, client = world
+    r = bridge.ensure_line(s, owner.id)
+    assert r["ok"] is True
+    assert r["line"].e164 == LINE
+    assert len(fake.configured) == 1
+    c = fake.configured[0]
+    assert c["sid"] == "PN" + "a" * 32
+    assert c["voice_url"].endswith(f"/dialer/hooks/twilio/{owner.id}/voice")
+    assert c["status_callback"].endswith(
+        f"/dialer/hooks/twilio/{owner.id}/status")
+
+
+def test_ensure_line_never_touches_an_ai_number(world):
+    owner, s, agent, fake, client = world
+    bridge.ensure_line(s, owner.id)
+    assert all(c["sid"] != "PN" + "b" * 32 for c in fake.configured)
+
+
+def test_ensure_line_with_no_rep_number_says_so(world):
+    owner, s, agent, fake, client = world
+    PhoneNumber.query.filter_by(e164=LINE).delete()
+    db.session.commit()
+    r = bridge.ensure_line(s, owner.id)
+    assert r["ok"] is False and r["line"] is None
+    assert fake.configured == []
+
+
+def test_saving_an_agent_on_the_bridge_repoints_the_line(world):
+    owner, s, agent, fake, client = world
+    client.post(f"/dialer/agents/{agent.id}", follow_redirects=True,
+                data={"name": agent.name, "transfer_handoff": "bridge"})
+    assert any(c["sid"] == "PN" + "a" * 32 for c in fake.configured)
+
+
+def test_saving_an_agent_on_blind_leaves_the_line_alone(world):
+    owner, s, agent, fake, client = world
+    client.post(f"/dialer/agents/{agent.id}", follow_redirects=True,
+                data={"name": agent.name, "transfer_handoff": "blind"})
+    assert fake.configured == []
+
+
+def test_installing_the_guide_repoints_the_line(world):
+    owner, s, agent, fake, client = world
+    client.post("/dialer/playbooks/napkin", follow_redirects=True,
+                data={"transfer_to": HUMAN})
+    assert any(c["sid"] == "PN" + "a" * 32 for c in fake.configured)
+
+
+def test_moving_a_number_into_the_rep_pool_repoints_its_webhook(world):
+    """The root cause. A number imported to ElevenLabs for the AI pool had
+    its voice URL rewritten to ElevenLabs, and moving it back to reps left
+    that in place, so every inbound call on it -- hand-off or not -- went
+    to the wrong place."""
+    owner, s, agent, fake, client = world
+    n = PhoneNumber.query.filter_by(e164=AI).one()
+    client.post(f"/dialer/numbers/{n.id}/pool", follow_redirects=True,
+                data={"pool": "rep"})
+    assert any(c["sid"] == "PN" + "b" * 32 and
+               c["voice_url"].endswith(f"/twilio/{owner.id}/voice")
+               for c in fake.configured)
 
 
 # ------------------------------------------------------------ the install

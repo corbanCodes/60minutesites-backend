@@ -65,6 +65,31 @@ def handoff_line(account_id):
             .order_by(PhoneNumber.id.asc()).first())
 
 
+def ensure_line(settings, account_id):
+    """Point the hand-off line's Twilio voice webhook at this app.
+
+    -> {"ok", "line", "error"}. The bridge is only as good as the webhook
+    on the number it lands on, and that webhook is not ours to assume: a
+    number that was ever in the AI pool had its voice URL rewritten to
+    ElevenLabs when it was imported, and a pool move back to reps did not
+    rewrite it. On the first live test the transfer fired, ElevenLabs
+    dialled the rep line, and Twilio played "an application error has
+    occurred" because the URL on that number was not this app's. No
+    request ever reached /voice. So the app sets it, every time the bridge
+    is chosen, rather than hoping.
+    """
+    line = handoff_line(account_id)
+    if line is None:
+        return {"ok": False, "line": None, "error": "no rep-pool number"}
+    from dialer.providers import registry
+    from dialer import urls
+    r = registry.telephony(settings).configure_number(
+        line.twilio_sid, urls.twilio_voice(account_id),
+        urls.twilio_status(account_id))
+    return {"ok": bool(r.get("ok")), "line": line,
+            "error": r.get("error") or ""}
+
+
 def room_for(prospect_call_sid):
     return f"{ROOM_PREFIX}{prospect_call_sid}"
 

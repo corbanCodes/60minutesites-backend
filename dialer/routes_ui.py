@@ -521,6 +521,21 @@ def number_action(number_id, action):
         n.pool = request.form.get("pool", "rep")
         if n.pool == "ai":
             _link_number_to_elevenlabs(s, n)
+        elif n.twilio_sid and not n.is_placeholder:
+            # In practice mode the stand-in carrier absorbs this; a sample
+            # number is skipped because Twilio never issued its SID.
+            # Importing a number to ElevenLabs rewrites its Twilio voice URL
+            # to theirs. Moving it back to reps left that in place, so every
+            # inbound call on it -- a hand-off included -- went to the wrong
+            # place and Twilio read out "an application error has occurred".
+            from dialer import urls
+            r = registry.telephony(s).configure_number(
+                n.twilio_sid, urls.twilio_voice(g.account_id),
+                urls.twilio_status(g.account_id))
+            if not r.get("ok"):
+                flash(f"{n.pretty} moved, but Twilio would not let us point "
+                      f"it back at this app: {r.get('error')}. Calls to it "
+                      f"will not reach you until that is fixed.", "error")
         flash(f"{n.pretty} is now in the {n.pool} pool.")
     elif action == "cap":
         n.daily_cap = max(1, min(request.form.get("daily_cap", type=int) or 120,
@@ -1125,9 +1140,13 @@ def playbook_napkin():
     agent.voice_delivery = agent.voice_delivery or "calm"
     # No ring and no hold music is the brief. The bridge delivers that and
     # needs a rep-pool number to land on; without one it is a normal ring.
-    from dialer.bridge import handoff_line
+    from dialer.bridge import ensure_line, handoff_line
     agent.transfer_handoff = ("bridge" if handoff_line(g.account_id)
                               else (agent.transfer_handoff or "blind"))
+    line_err = ""
+    if agent.transfer_handoff == "bridge":
+        lr = ensure_line(s, g.account_id)
+        line_err = "" if lr.get("ok") else (lr.get("error") or "unknown")
     # A pasted-in copy of an older prompt would freeze all of the above.
     agent.prompt_override = ""
     dest = (request.form.get("transfer_to") or "").strip()[:32]
@@ -1148,6 +1167,11 @@ def playbook_napkin():
     extra = (f" {quieted} older duplicate agent{'s' if quieted != 1 else ''} "
              f"from earlier installs switched off."
              if quieted else "")
+    if line_err:
+        extra += (f" WARNING: the hand-off line could not be pointed at this "
+                  f"app ({line_err}), so a hand-off will fail until it is.")
+    elif agent.transfer_handoff == "bridge":
+        extra += " Your rep line now answers hand-offs here."
     if res.get("ok"):
         flash(f"{what} \u201c{pb.name}\u201d and its agent "
               f"\u201c{agent.name}\u201d, and the agent is live at "
@@ -1459,6 +1483,13 @@ def agent_edit(agent_id):
         a.dtmf_enabled = bool(request.form.get("dtmf_enabled"))
         a.active = bool(request.form.get("active"))
         db.session.commit()
+        if (a.transfer_handoff or "") == "bridge":
+            from dialer.bridge import ensure_line
+            lr = ensure_line(s, g.account_id)
+            if not lr.get("ok"):
+                flash(f"The hand-off line could not be pointed at this app: "
+                      f"{lr.get('error')}. A hand-off will fail until it is.",
+                      "error")
         if request.form.get("sync"):
             res = sync_agent(a, s)
             flash("Agent synced to ElevenLabs." if res.get("ok")
