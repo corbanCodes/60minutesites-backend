@@ -114,8 +114,8 @@ def test_it_captures_the_managers_name_for_next_time(account):
     install(client)
     prompt = build_prompt(AiAgent.query.filter_by(account_id=owner.id).first(),
                           get_settings(owner.id))
-    assert "{name}" in prompt, "it should reuse a name it already has"
-    assert "decision maker's name" in prompt
+    assert "{{decision_maker}}" in prompt, "it should reuse a name it already has"
+    assert "manager_name" in prompt, "and capture one it hears, structurally"
 
 
 def test_staff_saying_no_is_not_the_venue_saying_no(account):

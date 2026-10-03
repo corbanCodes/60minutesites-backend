@@ -216,10 +216,11 @@ def _generated_prompt(agent, settings):
         "call you were trying to have.\n"
         "- Say the time back to them so it is confirmed: \"Thursday morning, "
         "got it.\"\n"
-        "- Then record it with log_note, in plain words including the day and "
-        "time they said, set_disposition to callback, and END THE CALL. Do "
-        "not keep talking once you have the time; you already have what you "
-        "came for.")
+        "- Then call schedule_callback with exactly what they said as `when` "
+        "(and their name as manager_name if you heard one): that books the "
+        "next call by itself, in their own time zone. Then set_disposition "
+        "to callback and END THE CALL. Do not keep talking once you have the "
+        "time; you already have what you came for.")
     return "\n\n".join(out)
 
 

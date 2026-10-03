@@ -117,6 +117,17 @@ def _api_message(resp):
     return f"ElevenLabs returned {resp.status_code}."
 
 
+# A system tool, like transfer_to_number: it lives in built_in_tools. Always
+# on. "Instant hangup if they ask whether it is an AI" and "end the call
+# once you have the time" are both impossible without it.
+END_CALL_TOOL = {
+    "type": "system", "name": "end_call",
+    "description": ("End the call. Use it the instant you have what you came "
+                    "for, and at once if anyone asks whether you are an AI."),
+    "params": {"system_tool_type": "end_call"},
+}
+
+
 def _first(d, *keys, default=""):
     """Tolerate camelCase / snake_case drift in ElevenLabs responses."""
     if not isinstance(d, dict):
@@ -221,7 +232,7 @@ class ElevenLabsAgent(VoiceAgent):
         return ok(tier=tier, concurrency=concurrency,
                   voices=voices.get("voices", []) if voices.get("ok") else [])
 
-    def list_voices(self, limit=40):
+    def list_voices(self, limit=None):
         r = self._req("GET", "/v1/voices")
         if not r["ok"]:
             return r
@@ -249,7 +260,7 @@ class ElevenLabsAgent(VoiceAgent):
         # cap applied in that order hid it. "premade" is the stock kind.
         own = [v for v in out if v["category"] != "premade"]
         stock = [v for v in out if v["category"] == "premade"]
-        return ok(voices=(own + stock)[:limit])
+        return ok(voices=(own + stock)[:limit] if limit else own + stock)
 
     def speak(self, text, voice_id, model_id="eleven_flash_v2_5"):
         """Text to speech -> mp3 bytes.
@@ -343,8 +354,12 @@ class ElevenLabsAgent(VoiceAgent):
                     # transfer_to_number is a SYSTEM tool and lives in
                     # built_in_tools, not in the webhook tools list. Putting
                     # it in the wrong place is the same as not sending it.
-                    **({"built_in_tools": {"transfer_to_number": transfer}}
-                       if transfer else {}),
+                    # Sent whole: the vendor replaces the set, which is also
+                    # how a stale transfer tool leaves an owned-mode agent.
+                    "built_in_tools": {
+                        "end_call": END_CALL_TOOL,
+                        **({"transfer_to_number": transfer} if transfer else {}),
+                    },
                 },
                 # None means "whatever is on the agent"; an empty string is
                 # a deliberate instruction to wait and must not be coalesced

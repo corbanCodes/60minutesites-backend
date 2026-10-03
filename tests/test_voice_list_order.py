@@ -36,7 +36,7 @@ def test_a_clone_behind_fifty_stock_voices_is_listed_first(monkeypatch):
     r = elevenlabs_live.ElevenLabsAgent(Settings()).list_voices()
     assert r["ok"]
     assert r["voices"][0]["voice_id"] == "mine"
-    assert len(r["voices"]) == 40
+    assert len(r["voices"]) == 51, "no cap: every voice he owns"
 
 
 def test_every_own_kind_outranks_stock(monkeypatch):

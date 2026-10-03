@@ -436,10 +436,8 @@ def elevenlabs_init():
         body = request.get_json(silent=True) or {}
         caller = body.get("caller_id") or body.get("from_number") or ""
         called = body.get("called_number") or body.get("to_number") or ""
-        base = {"lead_name": "there", "first_name": "there", "business": "",
-                "business_type": "", "city": "", "state": "",
-                "prior_calls": "0", "last_note": "", "lead_status": "New",
-                "is_known": "false"}
+        from dialer.context import lead_vars
+        base = lead_vars(None)
         number = PhoneNumber.query.filter_by(e164=called).first()
         if number is not None:
             from dialer.compliance import normalize
@@ -449,24 +447,13 @@ def elevenlabs_init():
                 lead = Lead.query.filter_by(owner_id=number.account_id,
                                             phone_key=key).first()
                 if lead is not None:
-                    base.update({
-                        "lead_name": lead.name or "there",
-                        "first_name": (lead.name or "there").split(" ")[0],
-                        "business": lead.business or "",
-                        "business_type": lead.business_type or "",
-                        "state": lead.state_code or "",
-                        "prior_calls": str(lead.call_count or 0),
-                        "lead_status": lead.status or "New",
-                        "is_known": "true"})
+                    base = lead_vars(lead)
         return {"type": "conversation_initiation_client_data",
                 "dynamic_variables": base}
     except Exception:
         return {"type": "conversation_initiation_client_data",
-                "dynamic_variables": {
-                    "lead_name": "there", "first_name": "there", "business": "",
-                    "business_type": "", "city": "", "state": "",
-                    "prior_calls": "0", "last_note": "", "lead_status": "New",
-                    "is_known": "false"}}
+                "dynamic_variables": dict(
+                    __import__("dialer.context", fromlist=["x"]).BASE)}
 
 
 @hooks_bp.route("/elevenlabs/tools/<name>", methods=["POST"])

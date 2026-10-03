@@ -31,6 +31,9 @@ DISPOSITIONS = [
     ("voicemail_left", "Voicemail left", "bi-voicemail",        "7"),
     ("wrong_number",  "Wrong number",    "bi-telephone-x",      "8"),
     ("dnc",           "Do not call",     "bi-slash-circle",     "9"),
+    # The NapkinAds guide's two extra endings. No hotkey: the AI sets them.
+    ("manager_busy",  "Manager busy — retry soon", "bi-hourglass-split", ""),
+    ("business_closed", "Business closed", "bi-shop-window",   ""),
 ]
 DISPOSITION_KEYS = [d[0] for d in DISPOSITIONS]
 DISPOSITION_LABELS = {d[0]: d[1] for d in DISPOSITIONS}
@@ -42,6 +45,7 @@ DEFAULT_STAGE_MAP = {
     "dm_reached": "Contacted", "gatekeeper": "Contacted", "callback": "Contacted",
     "voicemail_left": "Contacted", "meeting_set": "Qualified", "qualified": "Qualified",
     "not_interested": "Dead", "wrong_number": "", "dnc": "Dead",
+    "manager_busy": "Contacted", "business_closed": "Dead",
 }
 # stages we will only ever move a lead FORWARD from (never demote a Client)
 PROTECTED_STAGES = {"Client", "Built", "Booked"}
@@ -559,6 +563,8 @@ class Call(db.Model):
     handoff_transcript = db.Column(db.Text, default="")
     handoff_score = db.Column(db.Integer)
     handoff_coaching_json = db.Column(db.Text, default="")
+    # "Call back at 4": the next call, booked on this one by the AI.
+    callback_at = db.Column(db.DateTime)
     revocation_detected = db.Column(db.Boolean, default=False)
 
     transferred_to = db.Column(db.String(120), default="")

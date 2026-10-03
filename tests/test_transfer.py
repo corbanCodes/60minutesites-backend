@@ -155,7 +155,9 @@ def test_no_transfer_means_no_empty_key_sent(setup, monkeypatch):
         sent.update(body=kw.get("json")) or {"ok": True, "data": {"agent_id": "a"}}))
     owner, s = setup
     cls.__new__(cls).upsert_agent(agent_with(owner.id), "p", [], transfer=None)
-    assert "built_in_tools" not in sent["body"]["conversation_config"]["agent"]["prompt"]
+    bit = sent["body"]["conversation_config"]["agent"]["prompt"]["built_in_tools"]
+    assert "transfer_to_number" not in bit, "no transfer means no transfer slot"
+    assert "end_call" in bit, "but end_call is always on"
 
 
 # -------------------------------------- the lane, and explaining any of it

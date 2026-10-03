@@ -151,10 +151,5 @@ def _ai_or_voicemail(account_id, settings, lead):
 
 
 def _vars(lead):
-    if lead is None:
-        return {}
-    return {"lead_name": lead.name or "there",
-            "first_name": (lead.name or "there").split(" ")[0],
-            "business": lead.business or "", "is_known": "true",
-            "lead_status": lead.status or "New",
-            "prior_calls": str(lead.call_count or 0)}
+    from dialer.context import lead_vars
+    return lead_vars(lead)

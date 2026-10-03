@@ -238,6 +238,10 @@ class Lead(db.Model):
     call_count = db.Column(db.Integer, default=0)
     last_outcome = db.Column(db.String(30), default="")
     tags = db.Column(db.String(500), default="")
+    # What the AI learned about reaching the decision maker (dialer).
+    decision_maker = db.Column(db.String(120), default="")
+    callback_at = db.Column(db.DateTime, nullable=True)
+    callback_said = db.Column(db.String(200), default="")
 
     @property
     def tag_list(self):
@@ -483,7 +487,7 @@ def _ensure_schema_inner():
                      "handoff_line_key": "VARCHAR(80)",
                      "prompt_override": "TEXT"},
         "call": {"handoff_transcript": "TEXT", "handoff_score": "INTEGER",
-                 "handoff_coaching_json": "TEXT"},
+                 "handoff_coaching_json": "TEXT", "callback_at": "TIMESTAMP"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---
         "task": {"assignee_id": "INTEGER"},
@@ -498,6 +502,8 @@ def _ensure_schema_inner():
                  "line_type_checked_at": "TIMESTAMP", "line_type_raw": "TEXT",
                  "carrier": "VARCHAR(120)", "timezone": "VARCHAR(40)",
                  "state_code": "VARCHAR(2)", "consent_status": "VARCHAR(20)",
+                 "decision_maker": "VARCHAR(120)", "callback_at": "TIMESTAMP",
+                 "callback_said": "VARCHAR(200)",
                  "consent_source": "VARCHAR(120)", "consent_at": "TIMESTAMP",
                  "do_not_call": "BOOLEAN", "opt_out_at": "TIMESTAMP",
                  "opt_out_source": "VARCHAR(60)", "last_called_at": "TIMESTAMP",

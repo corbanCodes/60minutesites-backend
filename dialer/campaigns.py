@@ -365,19 +365,8 @@ def _place(call, campaign, settings, number, lead):
 
 def _variables(lead, call):
     """CRM context the AI gets before it says hello."""
-    from app import Note
-    notes = (Note.query.filter_by(lead_id=lead.id)
-             .order_by(Note.created_at.desc()).limit(3).all())
-    return {
-        "lead_name": lead.name or "there",
-        "first_name": (lead.name or "").split(" ")[0],
-        "business": lead.business or "",
-        "business_type": lead.business_type or "",
-        "city": "", "state": lead.state_code or "",
-        "prior_calls": str(lead.call_count or 0),
-        "last_note": (notes[0].body[:300] if notes else ""),
-        "lead_status": lead.status or "New",
-    }
+    from dialer.context import lead_vars
+    return lead_vars(lead)
 
 
 def registry_simulating(settings):
@@ -409,8 +398,20 @@ def close_queue_row(call):
     cl.outcome = call.disposition or outcome
     policy = settings.retry_policy.get(outcome)
     terminal = call.disposition in ("dnc", "not_interested", "meeting_set",
-                                    "qualified", "wrong_number")
-    if terminal or not policy or (cl.attempts or 0) >= policy["attempts"]:
+                                    "qualified", "wrong_number",
+                                    "business_closed")
+    if terminal:
+        cl.state = "done"
+    elif call.callback_at:
+        # "Call at 4" IS the next call. The row waits for that minute,
+        # whatever the retry policy says, and is not counted against the
+        # attempts cap: a time a person gave us is not a redial.
+        cl.state = "deferred"
+        cl.next_attempt_at = call.callback_at
+    elif call.disposition == "manager_busy":
+        cl.state = "deferred"
+        cl.next_attempt_at = _now() + timedelta(minutes=30)
+    elif not policy or (cl.attempts or 0) >= policy["attempts"]:
         cl.state = "done"
     else:
         cl.state = "deferred"

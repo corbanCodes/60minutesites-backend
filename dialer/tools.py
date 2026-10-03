@@ -39,7 +39,8 @@ def run_tool(name, body, token):
     if account_id is None:
         return {"ok": False, "error": "unauthorized"}, 403
     fn = {"lookup_lead": _lookup, "log_note": _note, "book_followup": _followup,
-          "set_disposition": _disposition}.get(name)
+          "set_disposition": _disposition,
+          "schedule_callback": _schedule}.get(name)
     if fn is None:
         return {"ok": False, "error": "unknown tool"}, 404
     try:
@@ -136,6 +137,71 @@ def _followup(account_id, body):
     return {"ok": True, "due": due.isoformat()}
 
 
+PRIORITY = {"manager": -30, "specific": -20, "soon": -20, "window": -10,
+            "day": -5, "vague": 0}
+
+
+def _schedule(account_id, body):
+    """"Call back around 4" becomes the next call, not a line in a note.
+
+    The guide's one hard requirement: a time a venue gives us must create
+    the next outbound call, in the venue's own time zone. The campaign row
+    is parked until that minute and outranks a plain redial; the lead
+    keeps the manager's name and the words they used; a task shows it on
+    the CRM. A test call with no campaign gets the task and the lead
+    fields, which is what the next test call reads.
+    """
+    from dialer import tz, when
+    from dialer.models import CampaignLead
+    call = _call_from(account_id, body)
+    lead = _find_lead(account_id, body)
+    if lead is None:
+        return {"ok": False, "error": "no lead"}
+    said = (body.get("when") or "").strip()[:200]
+    name = (body.get("manager_name") or "").strip()[:120]
+    by = "manager" if (body.get("asked_by") or "").strip() == "manager" else "staff"
+    zone = (lead.timezone or "").strip() or tz.zone_for(lead.phone_e164 or lead.phone)
+    at, kind, pretty = when.resolve(said, zone)
+    if name:
+        lead.decision_maker = name
+    lead.callback_said = said
+    if at is None:
+        db.session.add(Note(lead_id=lead.id, kind="ai_summary",
+                            body=f"[AI, during the call] No clear time for a "
+                                 f"callback; they said \"{said}\""
+                                 + (f"; decision maker: {name}" if name else "")))
+        db.session.commit()
+        return {"ok": True, "scheduled": False,
+                "message": "No clear time in that. If you have not already, "
+                           "ask once for a time of day; otherwise say we will "
+                           "try again another time, and end the call."}
+    lead.callback_at = at
+    if call is not None:
+        call.callback_at = at
+    who = name or lead.decision_maker or "the manager"
+    where = lead.business or lead.name or ""
+    db.session.add(Task(owner_id=account_id, lead_id=lead.id, kind="Call",
+                        due_at=at,
+                        title=(f"Call {who} back" + (f" at {where}" if where else "")
+                               + f" \u2014 they said: {said}")[:240]))
+    db.session.add(Note(lead_id=lead.id, kind="ai_summary",
+                        body=f"[AI, during the call] Callback booked for {pretty}: "
+                             f"they said \"{said}\""
+                             + (f"; decision maker: {name}" if name else "")
+                             + (" (asked for by the manager)" if by == "manager" else "")))
+    if call is not None and call.campaign_lead_id:
+        cl = db.session.get(CampaignLead, call.campaign_lead_id)
+        if cl is not None:
+            cl.state = "deferred"
+            cl.next_attempt_at = at
+            cl.position = PRIORITY["manager" if by == "manager" else kind]
+            cl.skip_reason = f"callback: {said}"[:120]
+    db.session.commit()
+    return {"ok": True, "scheduled": True, "for": pretty, "kind": kind,
+            "message": f"Booked for {pretty}. Say the time back once, thank "
+                       f"them, set the disposition, and end the call."}
+
+
 def _disposition(account_id, body):
     from dialer import calls as calls_mod
     from dialer.settings_store import get_settings
@@ -160,8 +226,11 @@ def _disposition(account_id, body):
             return {"ok": True, "disposition": "transferred",
                     "message": "Handing over now. Say nothing more."}
         return {"ok": False, "error": r.get("error", "hand-off failed"),
-                "message": "The hand-off could not be made. Apologise once, "
-                           "get the best time to call back, and book it."}
+                "message": "Nobody on the team is free. Say: \"It looks like "
+                           "our team is tied up at the moment. What's the "
+                           "best time for someone from our team to call you "
+                           "back?\" Then schedule_callback with asked_by "
+                           "manager, set_disposition callback, and end."}
     calls_mod.set_disposition(call, disp, settings=settings)
     db.session.commit()
     return {"ok": True, "disposition": call.disposition}
@@ -220,6 +289,26 @@ TOOL_SPECS = [
                      "description": "How many days from today, as a whole "
                                     "number. Use 1 for tomorrow."},
          "conversation_id": CONVERSATION_ID, "hq_call_id": HQ_CALL_ID}, "required": ["title"]}},
+    {"name": "schedule_callback", "description":
+     "Book the next call for when the manager or owner will be in. Call this "
+     "the moment they give you a day or time, in their words: it creates the "
+     "next call by itself, in the venue's own time zone.",
+     "parameters": {"type": "object", "properties": {
+         "when": {"type": "string",
+                  "description": "Exactly what they said about when, in their "
+                                 "words: \"around 4\", \"after 5\", "
+                                 "\"tomorrow at noon\", \"in 30 minutes\", "
+                                 "\"Thursday morning\", \"between 3 and 6\"."},
+         "manager_name": {"type": "string",
+                          "description": "The manager or owner's name if anyone "
+                                         "said it; otherwise leave it empty."},
+         "asked_by": {"type": "string",
+                      "description": "Who gave the time: manager if the decision "
+                                     "maker asked for the call back themselves, "
+                                     "otherwise staff.",
+                      "enum": ["manager", "staff"]},
+         "conversation_id": CONVERSATION_ID, "hq_call_id": HQ_CALL_ID},
+         "required": ["when"]}},
     {"name": "set_disposition", "description":
      "Record the outcome. Use dnc immediately if they ask not to be called "
      "again.",
@@ -232,9 +321,12 @@ TOOL_SPECS = [
                             "more. Use callback when they asked to be "
                             "reached another time, qualified when they are "
                             "the right person and interested, and dnc the "
-                            "moment they ask not to be called.",
+                            "moment they ask not to be called. manager_busy "
+                            "when they are in but cannot talk now; "
+                            "business_closed when the business has shut down.",
              "enum": ["handoff", "dm_reached", "gatekeeper", "callback",
                       "meeting_set", "qualified", "not_interested",
-                      "voicemail_left", "wrong_number", "dnc"]},
+                      "voicemail_left", "wrong_number", "dnc",
+                      "manager_busy", "business_closed"]},
          "conversation_id": CONVERSATION_ID, "hq_call_id": HQ_CALL_ID}, "required": ["disposition"]}},
 ]
