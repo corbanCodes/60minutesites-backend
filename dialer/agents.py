@@ -380,10 +380,11 @@ def delivery_tts(agent):
     """Prosody settings for the voice.
 
     We sent nothing but a voice_id, so every agent ran on ElevenLabs'
-    defaults -- and expressive_mode defaults to TRUE. On a deliberately flat
-    line like "Great, thank you" that produces something closer to delight
-    than to a person making a routine call, which is the single clearest
-    tell that nobody is really there.
+    defaults. The lever that definitely works is stability: higher is
+    flatter and more consistent. expressive_mode is "automatically disabled
+    for non-v3 models" per their spec, so with the TTS model pinned to v4
+    turbo its effect is undocumented; it is sent anyway because it is a
+    documented boolean and harmless. Do not credit it for the change.
     """
     want = (getattr(agent, "voice_delivery", "") or "calm").strip()
     return DELIVERIES.get(want, DELIVERIES["calm"])["tts"]
@@ -392,10 +393,12 @@ def delivery_tts(agent):
 HANDOFFS = {
     "blind": {
         "label": "Straight through \u2014 no hold music",
-        "hint": "The leg is handed over as it is. They hear a normal ring, "
-                "your caller ID is preserved, and the AI is gone the instant "
-                "it fires. If nobody picks up they reach that phone's "
-                "voicemail, and the AI cannot come back.",
+        "hint": "The leg is handed over as it is: a normal ring, your "
+                "caller ID preserved, and the AI gone the instant it fires. "
+                "Two things ElevenLabs does NOT document for blind: whether "
+                "the spoken line plays at all, and the colleague never gets "
+                "a hand-off summary. If nobody picks up they reach that "
+                "phone's voicemail and the AI cannot come back.",
     },
     "conference": {
         "label": "Park them while it rings you",
@@ -489,6 +492,9 @@ def transfer_config(agent, settings):
                 "condition": condition[:900],
                 "transfer_type": handoff_type(agent),
             }],
+            # Documented default is true; sent explicitly because the line
+            # the tool speaks is the whole of what the prospect hears.
+            "enable_client_message": True,
         },
     }
 
@@ -508,6 +514,19 @@ def voicemail_text(agent, settings):
         msg += f"Give us a call back on {num} and a person will pick up. "
     msg += "Thanks for your time."
     return msg
+
+
+# Stored LLM ids that are no longer members of ElevenLabs' enum, mapped to
+# what they meant. "claude-3-5-haiku" was in our own dropdown and is not a
+# valid id, so an agent that picked it 422'd on every sync from then on.
+LLM_RENAMES = {"claude-3-5-haiku": "claude-haiku-4-5",
+               "claude-sonnet-4": "claude-sonnet-4-5"}
+
+
+def normalise_llm(value):
+    """The id to send, or "" to let the vendor default (gemini-2.5-flash)."""
+    v = (value or "").strip()
+    return LLM_RENAMES.get(v, v)
 
 
 def sync_agent(agent, settings):
@@ -544,12 +563,25 @@ def sync_agent(agent, settings):
     if not agent.voicemail_message:
         agent.voicemail_message = voicemail_text(agent, settings)
 
-    r = va.upsert_agent(agent, prompt, tools,
-                        webhook_id=settings.elevenlabs_webhook_id or None,
-                        transfer=transfer_config(agent, settings),
-                        first_message=opening_for_vendor)
+    created = not (agent.elevenlabs_agent_id or "").strip()
+    kwargs = dict(webhook_id=settings.elevenlabs_webhook_id or None,
+                  transfer=transfer_config(agent, settings),
+                  first_message=opening_for_vendor)
+    r = va.upsert_agent(agent, prompt, tools, **kwargs)
     if r.get("ok"):
         agent.elevenlabs_agent_id = (r.get("agent_id") or "")[:64]
+        if created and agent.elevenlabs_agent_id:
+            # A create has to carry the webhook tools, and the only place
+            # they can go on a create is the deprecated `tools` array --
+            # which ElevenLabs rebuilds the WHOLE tool set from, so a
+            # brand-new agent can come back with built_in_tools empty and
+            # no way to hand over until somebody happens to save it again.
+            # One follow-up update, which sends no `tools`, lands the
+            # transfer tool. It costs one request and only ever runs once.
+            r2 = va.upsert_agent(agent, prompt, tools, **kwargs)
+            if not r2.get("ok"):
+                r = r2
+    if r.get("ok"):
         agent.synced_at = _now()
         agent.last_sync_error = ""
     else:

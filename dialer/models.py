@@ -318,7 +318,11 @@ class AiAgent(db.Model):
     elevenlabs_agent_id = db.Column(db.String(64), default="")
     voice_id = db.Column(db.String(64), default="")
     voice_name = db.Column(db.String(80), default="")
-    llm_model = db.Column(db.String(60), default="gemini-2.0-flash")
+    # Was "gemini-2.0-flash", which is the model ElevenLabs' tools docs say
+    # to avoid, and the comment on the edit page blamed ElevenLabs for it.
+    # It was ours, pushed on every sync. Empty means the vendor default,
+    # which is gemini-2.5-flash.
+    llm_model = db.Column(db.String(60), default="")
     language = db.Column(db.String(10), default="en")
     first_message = db.Column(db.Text, default="")
     persona = db.Column(db.Text, default="")

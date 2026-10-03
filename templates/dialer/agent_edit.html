@@ -54,9 +54,9 @@
             <option value="{{ a.llm_model }}" selected>{{ a.llm_model }} (set by ElevenLabs)</option>
             {% endif %}
           </select>
-          <span class="field-hint">This is the brain behind the voice, and it is ElevenLabs' list, not
-            ours — which is where a name like gemini-2.0-flash comes from if you never picked one. A faster
-            model interrupts less. Leave it on the default unless the agent sounds slow.</span>
+          <span class="field-hint">The brain behind the voice. The hand-off is a tool call with three
+            parameters in one turn, and ElevenLabs' own docs say to avoid gemini-2.0-flash for exactly that —
+            it was our old default, not theirs. Leave it on the first entry unless the agent sounds slow.</span>
         </div>
         <div class="ag-transfer">
           <label for="ag-transfer-style">Handing over to a person</label>

@@ -45,10 +45,17 @@ def ctx():
 # ElevenLabs picks the brain when you do not, which is where a name like
 # gemini-2.0-flash appears from having never chosen. These are theirs, not
 # ours, and the empty default is the right answer for almost everyone.
+# Verified against api.elevenlabs.io/openapi.json (components.schemas.LLM)
+# on 2026-10-02. "claude-3-5-haiku" was in this list and is NOT a member of
+# that enum, so picking it made every sync 422. gemini-2.0-flash is still
+# accepted but ElevenLabs' own tools docs say to avoid it: it "can struggle
+# with extracting the relevant parameters", and the hand-off is exactly a
+# tool call with three parameters in one turn. First entry is the default.
 ELEVEN_MODELS = [
-    "gemini-2.0-flash", "gemini-2.5-flash", "gpt-4o-mini", "gpt-4o",
-    "claude-3-5-haiku", "claude-sonnet-4",
+    "gemini-2.5-flash", "gpt-4.1", "claude-sonnet-4-5", "claude-haiku-4-5",
+    "gpt-4o", "gpt-4o-mini", "gemini-2.5-flash-lite", "gemini-2.0-flash",
 ]
+
 
 
 VOICE_KINDS = {
@@ -1102,6 +1109,11 @@ def playbook_napkin():
         db.session.add(agent)
     agent.name = agent_name
     agent.voice_id = agent.voice_id or s.elevenlabs_default_voice_id or ""
+    # The hand-off is a tool call with three parameters in one turn, and
+    # gemini-2.0-flash is the model ElevenLabs says to avoid for exactly
+    # that. Only the weak default is replaced; a model someone chose stays.
+    if (agent.llm_model or "") in ("", "gemini-2.0-flash"):
+        agent.llm_model = ELEVEN_MODELS[0]
     agent.company_facts = ("NapkinAds supplies restaurants and bars with "
                            "free napkins carrying a local advert, at no "
                            "cost to the venue.")

@@ -15,6 +15,20 @@ import requests
 from dialer.providers.base import VoiceAgent, err, ok
 
 
+# Pinned, because the vendor default is not stable across their own sources
+# (rendered docs say eleven_flash_v2, the live spec says eleven_v4_turbo) and
+# expressive_mode is "automatically disabled for non-v3 models", so an
+# unpinned model makes the delivery setting mean something different on
+# different days. v4 turbo is what the live spec defaults to today.
+TTS_MODEL = "eleven_v4_turbo"
+
+
+def _llm(agent):
+    """The LLM id to send, with ids that left the enum mapped forward."""
+    from dialer.agents import normalise_llm
+    return normalise_llm(getattr(agent, "llm_model", ""))
+
+
 def _delivery(agent):
     """Prosody for this agent's voice. Imported locally because
     dialer.agents reaches the providers through the registry, so a
@@ -209,7 +223,7 @@ class ElevenLabsAgent(VoiceAgent):
                 break
         return ok(voices=out)
 
-    def speak(self, text, voice_id, model_id="eleven_turbo_v2_5"):
+    def speak(self, text, voice_id, model_id="eleven_flash_v2_5"):
         """Text to speech -> mp3 bytes.
 
         Used to turn the sample voicemail wording into something you can
@@ -283,8 +297,7 @@ class ElevenLabsAgent(VoiceAgent):
                     # An empty llm is not a valid enum member. Omitting the
                     # key keeps whatever model the agent already has;
                     # sending "" was relying on undefined behaviour.
-                    **({"llm": agent.llm_model}
-                       if getattr(agent, "llm_model", "") else {}),
+                    **({"llm": _llm(agent)} if _llm(agent) else {}),
                     # `tools` is DEPRECATED and sending it is what was
                     # destroying the transfer tool. ElevenLabs silently
                     # migrates a legacy tools array by rebuilding the whole
@@ -313,6 +326,7 @@ class ElevenLabsAgent(VoiceAgent):
             # defaults to True -- which is why a flat line came out sounding
             # thrilled.
             "tts": {"voice_id": getattr(agent, "voice_id", "") or "",
+                    "model_id": TTS_MODEL,
                     **_delivery(agent)},
             "turn": {"turn_timeout": 10},
         }
