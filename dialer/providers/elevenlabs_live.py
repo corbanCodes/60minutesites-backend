@@ -128,6 +128,31 @@ def _first(d, *keys, default=""):
     return default
 
 
+def _twiml_in(r):
+    """The TwiML in a register-call reply, whatever shape it arrived in.
+
+    The reference says the endpoint "returns a string containing TwiML",
+    and the first owned-mode live test proved what that costs when the
+    reader expects a JSON object: ElevenLabs answered 200 in 115 ms, the
+    reader found no "twiml" key, and the hook hung up on the prospect the
+    moment he said hello. A text/xml body fails resp.json() and arrives
+    as text; a JSON-encoded string arrives as str; a dict is tolerated in
+    case the shape ever changes. The answer has to look like TwiML.
+    """
+    data = r.get("data")
+    cands = []
+    if isinstance(data, str):
+        cands.append(data)
+    elif isinstance(data, dict):
+        cands.append(_first(data, "twiml", "twilio_response", "response"))
+    cands.append(r.get("text") or "")
+    for c in cands:
+        c = str(c or "").strip()
+        if "<Response" in c:
+            return c
+    return ""
+
+
 def _merge(base, extra):
     """Recursive dict merge that does not clobber sibling keys."""
     for k, v in (extra or {}).items():
@@ -580,10 +605,10 @@ class ElevenLabsAgent(VoiceAgent):
         r = self._req("POST", "/v1/convai/twilio/register-call", json=body)
         if not r["ok"]:
             return r
-        data = r["data"] or {}
-        twiml = _first(data, "twiml", "twilio_response", "response")
+        twiml = _twiml_in(r)
         if not twiml:
-            return err("ElevenLabs returned no TwiML for this call.",
+            got = str(r.get("data") or r.get("text") or "")[:120]
+            return err(f"ElevenLabs returned no TwiML for this call: {got!r}",
                        "api_error")
         return ok(twiml=twiml)
 
