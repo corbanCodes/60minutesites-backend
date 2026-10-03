@@ -5,7 +5,7 @@ voicemail. After hours it goes straight to the AI, which can still qualify and
 book a callback. A number that was used for outbound and later parked keeps
 answering, because the people who were called have it in their phone.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import url_for
 
@@ -69,6 +69,16 @@ def route_inbound(account_id, settings, number, caller, called, call_sid):
     if bridged:
         return bridged
 
+    # Circuit breaker. On one live night something dialled the rep line
+    # every thirteen seconds for over ten minutes, heard two seconds of the
+    # voicemail greeting, hung up and dialled again -- an automated caller
+    # retrying on a failure it could not see. Every one of those was a
+    # billed inbound minute and a recording. A caller that is back for the
+    # Nth time inside a minute and is not a hand-off gets <Reject/>, which
+    # Twilio does not bill and which gives a retry loop nothing to chew on.
+    if _hammering(account_id, caller, called):
+        return "<Response><Reject/></Response>"
+
     lead = find_or_create_lead(account_id, caller, called)
     purpose = (number.purpose if number else "both")
     parked = bool(number and number.state == "parked")
@@ -87,6 +97,30 @@ def route_inbound(account_id, settings, number, caller, called, call_sid):
                     f'{_ai_or_voicemail(account_id, settings, lead)}</Response>')
 
     return f"<Response>{_ai_or_voicemail(account_id, settings, lead)}</Response>"
+
+
+HAMMER_WINDOW = timedelta(seconds=60)
+HAMMER_LIMIT = 3
+
+
+def _hammering(account_id, caller, called):
+    """True when this From has hit this To more than HAMMER_LIMIT times in
+    the last minute. Read from the webhook inbox, which every inbound
+    call is written to before routing, so no new state is needed."""
+    from dialer.models import WebhookInbox
+    if not caller:
+        return False
+    since = _now() - HAMMER_WINDOW
+    rows = (WebhookInbox.query
+            .filter_by(account_id=account_id, source="twilio", kind="inbound")
+            .filter(WebhookInbox.received_at >= since)
+            .order_by(WebhookInbox.received_at.desc()).limit(40).all())
+    hits = 0
+    for r in rows:
+        payload = r.payload or ""
+        if f'"From": "{caller}"' in payload and f'"To": "{called}"' in payload:
+            hits += 1
+    return hits > HAMMER_LIMIT
 
 
 def _ai_or_voicemail(account_id, settings, lead):

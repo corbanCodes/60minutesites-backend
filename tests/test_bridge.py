@@ -741,3 +741,36 @@ def test_a_sample_number_is_never_the_handoff_line(world):
     real = PhoneNumber.query.filter_by(e164="+14405550101").one()
     assert sample.id < real.id
     assert bridge.handoff_line(owner.id).e164 == "+14405550101"
+
+
+
+# ------------------------------------------------------ the circuit breaker
+def test_a_caller_hammering_the_rep_line_is_rejected_unbilled(world):
+    """Something dialled the rep line every thirteen seconds for over ten
+    minutes, heard two seconds of greeting, hung up, dialled again. Every
+    one was a billed minute. <Reject/> is not billed."""
+    owner, s, agent, fake, client = world
+    bodies = [handoff(client, owner, sid=f"CAloop{i}", frm="+12125550000")
+              for i in range(6)]
+    assert "<Reject/>" not in bodies[0]
+    assert "Thanks for calling" in bodies[0]
+    assert "<Reject/>" in bodies[-1]
+    assert "<Record" not in bodies[-1]
+
+
+def test_the_breaker_never_catches_a_handoff(world):
+    """Retried hand-off legs join the room; they are never rejected."""
+    owner, s, agent, fake, client = world
+    live_call(owner, s, agent)
+    bodies = [handoff(client, owner, sid=f"CAh{i}", frm="+12125550000")
+              for i in range(6)]
+    assert all("<Conference" in b for b in bodies)
+    assert not any("<Reject/>" in b for b in bodies)
+
+
+def test_the_breaker_is_per_caller(world):
+    owner, s, agent, fake, client = world
+    for i in range(6):
+        handoff(client, owner, sid=f"CAx{i}", frm="+12125550000")
+    body = handoff(client, owner, sid="CAother", frm="+13135550000")
+    assert "<Reject/>" not in body
