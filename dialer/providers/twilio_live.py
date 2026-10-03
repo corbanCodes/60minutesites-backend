@@ -348,6 +348,20 @@ class TwilioTelephony(Telephony):
             return err(e, "twilio_error")
         return ok()
 
+    def fetch_number(self, sid):
+        """What a number's voice webhook currently is. Read before write."""
+        client, bad = self._client()
+        if bad:
+            return bad
+        try:
+            n = client.incoming_phone_numbers(sid).fetch()
+        except TwilioRestException as e:
+            return _rest_err(e)
+        except Exception as e:
+            return err(e, "twilio_error")
+        return ok(voice_url=getattr(n, "voice_url", "") or "",
+                  status_callback=getattr(n, "status_callback", "") or "")
+
     def configure_number(self, sid, voice_url, status_callback):
         """Point an owned number at our webhooks -- called after a domain
         change as well as after a purchase."""

@@ -30,16 +30,32 @@ call on this account.
 """
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import or_
+
 from app import db
 
-from dialer.models import AiAgent, Call, PhoneNumber
+from dialer.models import AiAgent, Call, CallEvent, PhoneNumber
 
 # The room name carries the prospect's call SID, so the rep leg's status
 # callback can find the prospect without any stored mapping -- there are
 # several gunicorn workers and nothing in memory survives between them.
 ROOM_PREFIX = "handoff-"
-REP_RING_SECONDS = 20
+# 15, not 20: a carrier rolls an unanswered mobile to voicemail at 15-30s,
+# and Twilio may add a 5s buffer. The ring must give up first.
+REP_RING_SECONDS = 15
 LIVE_WINDOW = timedelta(minutes=20)
+# A blind transfer ENDS the ElevenLabs conversation the instant it fires,
+# so their post-call webhook can land -- and mark the Call completed --
+# before Twilio has even reached our voice hook with the transferred leg.
+# A call that ended within this grace is still "live" for detection.
+ENDED_GRACE = timedelta(minutes=2)
+TERMINAL = ("completed", "failed", "canceled", "busy", "no-answer")
+# A second transferred leg for the SAME call inside this window joins the
+# room already made for it and does not ring the rep again. Twilio retries
+# a webhook, and a vendor that believes its transfer failed retries the
+# transfer -- on one live test that was a new leg every thirteen seconds
+# for eight minutes. One rep leg per hand-off, full stop.
+REPEAT_WINDOW = timedelta(seconds=90)
 
 # Said only if the rep does not pick up. Short, plain, and it books a
 # callback rather than leaving someone in a silent room.
@@ -86,11 +102,28 @@ def ensure_line(settings, account_id):
         return {"ok": False, "line": None, "error": "no rep-pool number"}
     from dialer.providers import registry
     from dialer import urls
-    r = registry.telephony(settings).configure_number(
-        line.twilio_sid, urls.twilio_voice(account_id),
-        urls.twilio_status(account_id))
+    tel = registry.telephony(settings)
+    want = urls.twilio_voice(account_id)
+    # Look first. A number imported from an existing Twilio account may be
+    # the customer's main line running their own IVR; overwriting that in
+    # silence on an agent save would be a disaster with no undo. If it is
+    # already ours, nothing to do; if it is somebody's, the old URL is kept
+    # on the row so it can be put back.
+    cur = tel.fetch_number(line.twilio_sid) if hasattr(tel, "fetch_number") \
+        else {"ok": False}
+    if cur.get("ok") and (cur.get("voice_url") or "") == want:
+        return {"ok": True, "line": line, "error": "", "changed": False}
+    old_url = (cur.get("voice_url") or "") if cur.get("ok") else ""
+    if old_url:
+        stamp = _now().strftime("%Y-%m-%d %H:%M")
+        line.notes = ((line.notes or "").rstrip() +
+                      f"\n[{stamp}] voice webhook was {old_url} before the "
+                      f"hand-off bridge pointed it at this app.").strip()
+        db.session.commit()
+    r = tel.configure_number(line.twilio_sid, want,
+                             urls.twilio_status(account_id))
     return {"ok": bool(r.get("ok")), "line": line,
-            "error": r.get("error") or ""}
+            "error": r.get("error") or "", "changed": True}
 
 
 def room_for(prospect_call_sid):
@@ -101,15 +134,25 @@ def prospect_sid_from(room):
     return room[len(ROOM_PREFIX):] if room.startswith(ROOM_PREFIX) else ""
 
 
-def live_ai_call(account_id, caller_e164):
-    """The in-progress AI call whose prospect is this number, if any."""
-    since = _now() - LIVE_WINDOW
+def _live_calls(account_id):
+    """AI calls that are, for hand-off purposes, still happening.
+
+    Non-terminal, OR ended within ENDED_GRACE: the vendor marks the call
+    over the moment the transfer fires, which is before the transferred
+    leg reaches us.
+    """
+    now = _now()
     return (Call.query
             .filter_by(account_id=account_id, mode="ai_outbound")
+            .filter(Call.started_at >= now - LIVE_WINDOW)
+            .filter(or_(Call.status.notin_(TERMINAL),
+                        Call.ended_at >= now - ENDED_GRACE)))
+
+
+def live_ai_call(account_id, caller_e164):
+    """The live AI call whose prospect is this number, if any."""
+    return (_live_calls(account_id)
             .filter(Call.to_number == caller_e164)
-            .filter(Call.started_at >= since)
-            .filter(Call.status.notin_(("completed", "failed", "canceled",
-                                        "busy", "no-answer")))
             .order_by(Call.started_at.desc()).first())
 
 
@@ -129,14 +172,8 @@ def detect(account_id, caller, called):
     if from_ai_pool:
         # Caller ID preserved: From is the AI's number. The prospect is
         # whoever that number is currently talking to.
-        since = _now() - LIVE_WINDOW
-        call = (Call.query
-                .filter_by(account_id=account_id, mode="ai_outbound",
-                           from_number=caller)
-                .filter(Call.started_at >= since)
-                .filter(Call.status.notin_(("completed", "failed",
-                                            "canceled", "busy",
-                                            "no-answer")))
+        call = (_live_calls(account_id)
+                .filter(Call.from_number == caller)
                 .order_by(Call.started_at.desc()).first())
     else:
         call = live_ai_call(account_id, caller)
@@ -169,23 +206,28 @@ def detect(account_id, caller, called):
     return agent, call
 
 
-RECENT_WINDOW = timedelta(minutes=5)
-
-
 def live_bridge_call(account_id):
-    """The most recent live AI call on an agent set to the bridge."""
-    since = _now() - RECENT_WINDOW
+    """The one live AI call on an agent set to the bridge, or None.
+
+    Exactly one. With two live calls there is no honest way to say which
+    prospect this leg is without a caller ID that matches, and bridging
+    a guess would hand a stranger to the rep as if they were the prospect.
+    The 20-minute window is the same one the caller-ID signals use; a
+    5-minute one measured from row creation cut off any conversation that
+    reached the decision maker after minute four and a half.
+    """
     bridge_agents = [a.id for a in AiAgent.query.filter_by(
         account_id=account_id).filter(AiAgent.transfer_handoff == "bridge")]
     if not bridge_agents:
         return None
-    return (Call.query
-            .filter_by(account_id=account_id, mode="ai_outbound")
+    rows = (_live_calls(account_id)
             .filter(Call.ai_agent_id.in_(bridge_agents))
-            .filter(Call.started_at >= since)
-            .filter(Call.status.notin_(("completed", "failed", "canceled",
-                                        "busy", "no-answer")))
-            .order_by(Call.started_at.desc()).first())
+            .order_by(Call.started_at.desc()).limit(2).all())
+    if len(rows) != 1:
+        if rows:
+            _warn(f"{len(rows)} live bridge calls; refusing to guess")
+        return None
+    return rows[0]
 
 
 def _warn(msg):
@@ -285,10 +327,20 @@ def ring_rep(settings, account_id, agent, room, caller_id):
     to = rep_destination(settings, account_id, agent)
     if not to:
         return {"ok": False, "error": "no human destination"}
+    extra = {}
+    if not to.startswith("client:"):
+        # A phone that is off, in Do Not Disturb or out of coverage rolls
+        # to voicemail, and voicemail ANSWERS -- which would start the
+        # room and play the rep's greeting to the prospect. Asynchronous
+        # machine detection lets a human join at once and lets us pull
+        # the prospect out if a machine picked up instead.
+        extra = {"machine_detection": "Enable", "async_amd": True,
+                 "amd_status_callback": urls.twilio_bridge_amd(account_id,
+                                                               room)}
     return registry.telephony(settings).create_call(
         to=to, from_=caller_id, twiml=rep_twiml(room),
         timeout=REP_RING_SECONDS,
-        status_callback=urls.twilio_bridge_rep(account_id, room))
+        status_callback=urls.twilio_bridge_rep(account_id, room), **extra)
 
 
 def try_bridge(account_id, settings, caller, called, call_sid):
@@ -301,14 +353,31 @@ def try_bridge(account_id, settings, caller, called, call_sid):
     if found is None:
         return None
     agent, call = found
+    if call is not None and call.conference_name:
+        last = (CallEvent.query
+                .filter_by(call_id=call.id, kind="handoff")
+                .order_by(CallEvent.at.desc()).first())
+        if last is not None and last.at >= _now() - REPEAT_WINDOW:
+            from dialer.calls import event
+            event(call, "handoff_repeat",
+                  f"another leg from {caller or '?'} for a hand-off already "
+                  f"in progress; joined {call.conference_name}, rep not rung "
+                  f"again")
+            db.session.commit()
+            return prospect_twiml(call.conference_name, account_id)
     room = room_for(call_sid)
     line = handoff_line(account_id)
     r = ring_rep(settings, account_id, agent, room,
                  caller_id=line.e164 if line else caller)
     if call is not None:
         from dialer.calls import event
+        # The room on the row is how the rep leg's callbacks find THIS
+        # call later. Guessing "the most recent AI call" instead stamped
+        # a failed hand-off onto whichever lead happened to be newest.
+        call.conference_name = room
         event(call, "handoff",
-              f"bridged into {room}; rep leg "
+              f"from {caller or '?'} bridged into {room}; rep leg to "
+              f"{rep_destination(settings, account_id, agent)} "
               f"{'placed' if r.get('ok') else 'FAILED: ' + str(r.get('error'))}")
         db.session.commit()
     if not r.get("ok"):
@@ -326,29 +395,46 @@ def rep_leg_ended(settings, account_id, room, status):
     """The rep's leg finished without connecting: free the prospect.
 
     Twilio reports no-answer, busy, failed or canceled for a leg that never
-    bridged. The prospect is still in the room hearing office ambience, so
-    they are redirected to one short line and a hang-up, and the AI call is
-    marked for a callback.
+    bridged. The prospect is still in the room hearing office ambience.
     """
     if status not in ("no-answer", "busy", "failed", "canceled"):
         return False
+    return free_prospect(settings, account_id, room, f"rep leg {status}")
+
+
+def machine_answered(settings, account_id, room, answered_by, rep_sid):
+    """Asynchronous machine detection says voicemail picked up the rep leg.
+
+    The prospect is pulled out of the room FIRST, then the rep leg is hung
+    up. The other order would end the room under the prospect (the rep leg
+    carries endConferenceOnExit) before the apology could be said.
+    """
+    if not (answered_by or "").startswith("machine"):
+        return False
+    freed = free_prospect(settings, account_id, room,
+                          f"rep leg answered by {answered_by}")
+    if rep_sid:
+        from dialer.providers import registry
+        registry.telephony(settings).hangup(rep_sid)
+    return freed
+
+
+def free_prospect(settings, account_id, room, reason):
+    """Say one short line to the parked prospect and let them go, and book
+    the callback on the call that was actually handed off."""
     sid = prospect_sid_from(room)
     if not sid:
         return False
     from dialer.providers import registry
     registry.telephony(settings).redirect_call(sid, no_answer_twiml())
-    call = Call.query.filter_by(account_id=account_id, twilio_sid=sid).first()
+    call = Call.query.filter_by(account_id=account_id,
+                                conference_name=room).first()
     if call is None:
-        # The AI call row holds ElevenLabs' SID, not the transferred leg's.
-        call = (Call.query
-                .filter_by(account_id=account_id, mode="ai_outbound")
-                .filter(Call.started_at >= _now() - LIVE_WINDOW)
-                .order_by(Call.started_at.desc()).first())
-    if call is not None:
-        from dialer.calls import event
-        event(call, "handoff_failed", f"rep leg {status}; prospect told we "
-                                      f"will call back")
-        if not call.disposition:
-            call.disposition = "callback"
-        db.session.commit()
+        _warn(f"no call carries room {room}; prospect freed, nothing booked")
+        return True
+    from dialer.calls import event, set_disposition
+    event(call, "handoff_failed", f"{reason}; prospect told we will call back")
+    if not call.disposition:
+        set_disposition(call, "callback", settings=settings)
+    db.session.commit()
     return True

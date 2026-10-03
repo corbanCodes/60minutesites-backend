@@ -1483,14 +1483,19 @@ def agent_edit(agent_id):
         a.dtmf_enabled = bool(request.form.get("dtmf_enabled"))
         a.active = bool(request.form.get("active"))
         db.session.commit()
-        if (a.transfer_handoff or "") == "bridge":
+        bridged = (a.transfer_handoff or "") == "bridge"
+        if bridged:
             from dialer.bridge import ensure_line
             lr = ensure_line(s, g.account_id)
             if not lr.get("ok"):
                 flash(f"The hand-off line could not be pointed at this app: "
                       f"{lr.get('error')}. A hand-off will fail until it is.",
                       "error")
-        if request.form.get("sync"):
+        # The transfer destination lives at the vendor and only sync puts
+        # it there. Choosing the bridge and pressing plain Save left
+        # ElevenLabs dialling the old destination, so the bridge syncs
+        # whether or not the sync button was the one pressed.
+        if request.form.get("sync") or bridged:
             res = sync_agent(a, s)
             flash("Agent synced to ElevenLabs." if res.get("ok")
                   else f"Saved here, but ElevenLabs rejected it: "

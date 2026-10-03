@@ -153,6 +153,27 @@ def twilio_bridge_wait(account_id):
     return _xml(wait_twiml())
 
 
+@hooks_bp.route("/twilio/<int:account_id>/bridge/<room>/amd",
+                methods=["POST", "GET"])
+def twilio_bridge_amd(account_id, room):
+    """Machine detection on the rep's leg of a silent hand-off.
+
+    Voicemail answers a call like a person does, and would start the room
+    and read the rep's greeting to the prospect. If a machine picked up,
+    the prospect is let go politely and the rep leg is dropped.
+    """
+    s = _settings(account_id)
+    if not _verify_twilio(s):
+        abort(403)
+    answered_by = request.values.get("AnsweredBy", "")
+    _inbox(account_id, "twilio", "bridge_amd", f"amd:{room}:{answered_by}",
+           request.values.to_dict())
+    from dialer.bridge import machine_answered
+    machine_answered(s, account_id, room, answered_by,
+                     request.values.get("CallSid", ""))
+    return _xml("<Response/>")
+
+
 @hooks_bp.route("/twilio/<int:account_id>/bridge/<room>/rep",
                 methods=["POST", "GET"])
 def twilio_bridge_rep(account_id, room):

@@ -54,6 +54,11 @@ def twilio_bridge_rep(account_id, room):
     return hook(f"/twilio/{account_id}/bridge/{room}/rep")
 
 
+def twilio_bridge_amd(account_id, room):
+    """Asynchronous machine-detection result for the rep's leg."""
+    return hook(f"/twilio/{account_id}/bridge/{room}/amd")
+
+
 def handoff_wait(account_id):
     """The looping wait-audio TwiML a parked prospect hears."""
     return hook(f"/twilio/{account_id}/bridge/wait")

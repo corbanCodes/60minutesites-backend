@@ -33,6 +33,7 @@ class FakeTelephony:
         self.created = []
         self.redirected = []
         self.configured = []
+        self.hungup = []
 
     def create_call(self, to, from_, url=None, status_callback=None, **kw):
         self.created.append({"to": to, "from_": from_, "url": url,
@@ -46,6 +47,16 @@ class FakeTelephony:
     def configure_number(self, sid, voice_url, status_callback):
         self.configured.append({"sid": sid, "voice_url": voice_url,
                                 "status_callback": status_callback})
+        return {"ok": True}
+
+    current_voice_url = ""
+
+    def fetch_number(self, sid):
+        return {"ok": True, "voice_url": self.current_voice_url,
+                "status_callback": ""}
+
+    def hangup(self, sid):
+        self.hungup.append(sid)
         return {"ok": True}
 
 
@@ -169,12 +180,76 @@ def test_the_fallback_ignores_agents_not_on_the_bridge(world):
     assert bridge.detect(owner.id, "+12125550000", LINE) is None
 
 
-def test_the_fallback_window_is_short(world):
+def test_the_fallback_window_covers_a_whole_conversation(world):
+    """A 5-minute window measured from row creation cut off any call that
+    reached the decision maker after minute four and a half. started_at is
+    stamped before the vendor even dials."""
     owner, s, agent, fake, client = world
     call = live_call(owner, s, agent)
-    call.started_at = bridge._now() - bridge.RECENT_WINDOW * 2
+    call.started_at = bridge._now() - bridge.LIVE_WINDOW / 2
+    db.session.commit()
+    assert bridge.detect(owner.id, "+12125550000", LINE) is not None
+    call.started_at = bridge._now() - bridge.LIVE_WINDOW * 2
     db.session.commit()
     assert bridge.detect(owner.id, "+12125550000", LINE) is None
+
+
+def test_two_live_bridge_calls_means_no_guessing(world):
+    """Bridging a guess would hand a stranger to the rep as the prospect."""
+    owner, s, agent, fake, client = world
+    live_call(owner, s, agent)
+    lead2 = make_lead(owner_id=owner.id, phone="+18655557777")
+    c2 = calls_mod.start_call(owner.id, lead2, "ai_outbound", s,
+                              from_number=AI, ai_agent=agent)
+    c2.status = "in-progress"
+    db.session.commit()
+    assert bridge.detect(owner.id, "+12125550000", LINE) is None
+    # ...but a caller ID that matches one of them still works.
+    assert bridge.detect(owner.id, PROSPECT, LINE)[1].to_number == PROSPECT
+
+
+def test_a_call_the_vendor_already_marked_completed_is_still_a_handoff(world):
+    """The race behind "Thanks for calling NapkinAds". A blind transfer ends
+    the ElevenLabs conversation the instant it fires; their post-call
+    webhook marks the Call completed before Twilio reaches /voice with the
+    transferred leg. Every signal used to exclude completed calls."""
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    call.status = "completed"
+    call.ended_at = bridge._now()
+    db.session.commit()
+    assert bridge.detect(owner.id, "+12125550000", LINE) is not None
+    assert bridge.detect(owner.id, PROSPECT, LINE) is not None
+    assert bridge.detect(owner.id, AI, LINE) is not None
+
+
+def test_a_call_that_ended_a_while_ago_is_not_a_handoff(world):
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    call.status = "completed"
+    call.ended_at = bridge._now() - bridge.ENDED_GRACE * 3
+    db.session.commit()
+    assert bridge.detect(owner.id, "+12125550000", LINE) is None
+
+
+def test_the_post_call_webhook_landing_first_does_not_lose_the_handoff(world):
+    """End to end: the vendor's post-call hook is processed, THEN the
+    transferred leg arrives."""
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    call.elevenlabs_conversation_id = "conv1"
+    db.session.commit()
+    client.post("/dialer/hooks/elevenlabs/post-call", json={"data": {
+        "conversation_id": "conv1", "agent_id": "ag_1",
+        "transcript": [{"role": "agent", "message": "Oh, okay. Thanks."}],
+        "metadata": {"call_duration_secs": 40}}})
+    from dialer import processor
+    processor.process_all(account_id=owner.id)
+    assert db.session.get(Call, call.id).status == "completed"
+
+    body = handoff(client, owner, frm="+12125550000")
+    assert "<Conference" in body
+    assert "Thanks for calling" not in body
 
 
 def test_the_full_hook_bridges_an_unknown_caller_id(world):
@@ -248,6 +323,102 @@ def test_the_rep_is_rung_into_the_same_room_in_the_same_request(world):
     assert 'endConferenceOnExit="true"' in leg["twiml"]
     assert leg["status_callback"].endswith(
         f"/twilio/{owner.id}/bridge/handoff-CAprospect1/rep")
+
+
+def test_a_phone_rep_leg_carries_machine_detection(world):
+    """Voicemail answers like a person would, and would start the room and
+    read the rep's greeting to the prospect."""
+    owner, s, agent, fake, client = world
+    live_call(owner, s, agent)
+    handoff(client, owner)
+    leg = fake.created[0]
+    assert leg["machine_detection"] == "Enable"
+    assert leg["async_amd"] is True
+    assert leg["amd_status_callback"].endswith(
+        f"/twilio/{owner.id}/bridge/handoff-CAprospect1/amd")
+    assert leg["timeout"] == 15
+
+
+def test_a_browser_rep_leg_has_no_machine_detection(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = ""
+    db.session.commit()
+    present(owner.id, owner.id)
+    live_call(owner, s, agent)
+    handoff(client, owner)
+    assert "machine_detection" not in fake.created[0]
+
+
+def test_the_room_is_stored_on_the_call_that_was_handed_off(world):
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    handoff(client, owner)
+    assert db.session.get(Call, call.id).conference_name == "handoff-CAprospect1"
+
+
+def test_voicemail_picking_up_the_rep_frees_the_prospect_and_drops_the_leg(world):
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    handoff(client, owner)
+    client.post(f"/dialer/hooks/twilio/{owner.id}/bridge/handoff-CAprospect1/amd",
+                data={"AnsweredBy": "machine_start", "CallSid": "CArep1"})
+    assert fake.redirected[0]["sid"] == "CAprospect1"
+    assert bridge.NO_ANSWER_LINE in fake.redirected[0]["twiml"]
+    assert fake.hungup == ["CArep1"]
+    assert db.session.get(Call, call.id).disposition == "callback"
+
+
+def test_a_human_answering_the_rep_leg_is_left_alone(world):
+    owner, s, agent, fake, client = world
+    live_call(owner, s, agent)
+    handoff(client, owner)
+    client.post(f"/dialer/hooks/twilio/{owner.id}/bridge/handoff-CAprospect1/amd",
+                data={"AnsweredBy": "human", "CallSid": "CArep1"})
+    assert fake.redirected == [] and fake.hungup == []
+
+
+def test_a_failed_handoff_is_booked_on_the_right_call_not_the_newest(world):
+    """The old fallback stamped the callback on whichever AI call was
+    newest. With two live calls that is somebody else's lead."""
+    owner, s, agent, fake, client = world
+    first = live_call(owner, s, agent)
+    handoff(client, owner, sid="CAfirst")            # room handoff-CAfirst
+    lead2 = make_lead(owner_id=owner.id, phone="+18655557777")
+    newer = calls_mod.start_call(owner.id, lead2, "ai_outbound", s,
+                                 from_number=AI, ai_agent=agent)
+    newer.status = "in-progress"
+    db.session.commit()
+    client.post(f"/dialer/hooks/twilio/{owner.id}/bridge/handoff-CAfirst/rep",
+                data={"CallStatus": "no-answer", "CallSid": "CArep1"})
+    assert db.session.get(Call, first.id).disposition == "callback"
+    assert not db.session.get(Call, newer.id).disposition
+
+
+def test_a_second_leg_for_the_same_call_does_not_ring_the_rep_again(world):
+    """A vendor that believes its transfer failed retries it, and Twilio
+    retries webhooks. On one live test that was a new leg every thirteen
+    seconds for eight minutes. One rep leg per hand-off."""
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    first = handoff(client, owner, sid="CAfirst")
+    again = handoff(client, owner, sid="CAsecond")
+    assert len(fake.created) == 1, "the rep was rung twice"
+    assert "handoff-CAfirst" in first
+    assert "handoff-CAfirst" in again, "the retry joins the existing room"
+    kinds = [e.kind for e in CallEvent.query.filter_by(call_id=call.id)]
+    assert "handoff_repeat" in kinds
+
+
+def test_a_leg_long_after_the_first_handoff_rings_again(world):
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    handoff(client, owner, sid="CAfirst")
+    ev = (CallEvent.query.filter_by(call_id=call.id, kind="handoff")
+          .order_by(CallEvent.at.desc()).first())
+    ev.at = bridge._now() - bridge.REPEAT_WINDOW * 2
+    db.session.commit()
+    handoff(client, owner, sid="CAsecond")
+    assert len(fake.created) == 2
 
 
 def test_the_handoff_is_recorded_on_the_ai_call(world):
@@ -401,6 +572,26 @@ def test_ensure_line_points_the_rep_lines_webhook_at_this_app(world):
         f"/dialer/hooks/twilio/{owner.id}/status")
 
 
+def test_ensure_line_leaves_a_line_already_pointed_here_alone(world):
+    owner, s, agent, fake, client = world
+    from dialer import urls
+    fake.current_voice_url = urls.twilio_voice(owner.id)
+    r = bridge.ensure_line(s, owner.id)
+    assert r["ok"] is True and r["changed"] is False
+    assert fake.configured == []
+
+
+def test_ensure_line_keeps_the_old_webhook_on_the_row(world):
+    """An imported number may be the customer's main line running their
+    own IVR. The URL it had is kept so it can be put back."""
+    owner, s, agent, fake, client = world
+    fake.current_voice_url = "https://their-ivr.example.com/answer"
+    bridge.ensure_line(s, owner.id)
+    line = PhoneNumber.query.filter_by(e164=LINE).one()
+    assert "their-ivr.example.com/answer" in (line.notes or "")
+    assert len(fake.configured) == 1
+
+
 def test_ensure_line_never_touches_an_ai_number(world):
     owner, s, agent, fake, client = world
     bridge.ensure_line(s, owner.id)
@@ -421,6 +612,38 @@ def test_saving_an_agent_on_the_bridge_repoints_the_line(world):
     client.post(f"/dialer/agents/{agent.id}", follow_redirects=True,
                 data={"name": agent.name, "transfer_handoff": "bridge"})
     assert any(c["sid"] == "PN" + "a" * 32 for c in fake.configured)
+
+
+class FakeVoiceAgent:
+    def __init__(self):
+        self.upserts = []
+
+    def upsert_agent(self, agent, prompt, tools, **kw):
+        self.upserts.append(kw)
+        return {"ok": True, "agent_id": agent.elevenlabs_agent_id or "ag_new"}
+
+    def list_voices(self, limit=40):
+        return {"ok": True, "voices": []}
+
+    def get_agent(self, agent_id):
+        return {"ok": True}
+
+
+def test_choosing_the_bridge_on_plain_save_still_tells_the_vendor(world, monkeypatch):
+    """The destination lives at ElevenLabs and only a sync puts it there.
+    Switching to the bridge and pressing Save left the vendor dialling the
+    old destination: a normal ring, hold music, no bridge."""
+    owner, s, agent, fake, client = world
+    va = FakeVoiceAgent()
+    monkeypatch.setattr(registry, "voice_agent", lambda settings: va)
+    agent.transfer_handoff = "blind"
+    db.session.commit()
+    client.post(f"/dialer/agents/{agent.id}", follow_redirects=True,
+                data={"name": agent.name, "transfer_handoff": "bridge"})
+    assert va.upserts, "no sync reached the vendor"
+    dest = va.upserts[-1]["transfer"]["params"]["transfers"][0]
+    assert dest["transfer_destination"]["phone_number"] == LINE
+    assert dest["transfer_type"] == "blind"
 
 
 def test_saving_an_agent_on_blind_leaves_the_line_alone(world):

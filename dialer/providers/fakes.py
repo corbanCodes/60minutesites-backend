@@ -81,6 +81,9 @@ class FakeTelephony(Telephony):
     def release_number(self, sid):
         return ok()
 
+    def fetch_number(self, sid):
+        return {"ok": True, "voice_url": "", "status_callback": ""}
+
     def configure_number(self, sid, voice_url, status_callback):
         return ok()
 
