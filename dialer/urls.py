@@ -59,9 +59,11 @@ def twilio_bridge_amd(account_id, room):
     return hook(f"/twilio/{account_id}/bridge/{room}/amd")
 
 
-def handoff_wait(account_id):
-    """The looping wait-audio TwiML a parked prospect hears."""
-    return hook(f"/twilio/{account_id}/bridge/wait")
+def handoff_wait(account_id, room=""):
+    """The looping wait-audio TwiML a parked prospect hears. The room is
+    carried so the fetch can be traced back to the call it belongs to."""
+    url = hook(f"/twilio/{account_id}/bridge/wait")
+    return f"{url}?room={room}" if room else url
 
 
 def twilio_amd(call_id):

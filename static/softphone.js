@@ -175,6 +175,32 @@
     return { ok: false, error: 'Lost the connection to HQ. Check your network and try again.' };
   }
 
+  // ------------------------------------------------------------------ trace
+  // What this browser saw, on its own clock, batched to the server so the
+  // hand-off page can show it beside what Twilio and the server did.
+  var traceBuf = [], traceTimer = null;
+  function trace(kind, detail, data) {
+    try {
+      traceBuf.push({ kind: kind, detail: detail || '', data: data || null,
+                      t: new Date().toISOString(), perf: Math.round(performance.now()) });
+    } catch (e) {}
+    if (!traceTimer) traceTimer = setTimeout(flushTrace, 700);
+  }
+  function flushTrace() {
+    traceTimer = null;
+    if (!traceBuf.length) return;
+    var batch = traceBuf.splice(0, 60);
+    try {
+      if (document.visibilityState === 'hidden' && navigator.sendBeacon) {
+        navigator.sendBeacon('/dialer/phone/trace',
+          new Blob([JSON.stringify({ events: batch })], { type: 'application/json' }));
+      } else {
+        post('/dialer/phone/trace', { events: batch });
+      }
+    } catch (e) {}
+  }
+  try { window.addEventListener('pagehide', flushTrace); } catch (e) {}
+
   // ------------------------------------------------------------ Twilio SDK
   var sdkPromise = null;
 
@@ -310,6 +336,8 @@
         sounds: { incoming: SILENT_WAV }
       });
       silenceIncoming();
+      trace('device_created', 'sdk ' + ((T.Device && T.Device.version) || T.VERSION || '?'), {
+        ua: navigator.userAgent, incomingSoundEnabled: audioIncomingState() });
       wireDevice();
       return device.register().then(function () { return device; });
     }).catch(function (e) {
@@ -321,6 +349,10 @@
     });
   }
 
+  function audioIncomingState() {
+    try { return device && device.audio && device.audio.incoming ? device.audio.incoming() : 'n/a'; } catch (e) { return 'err:' + e; }
+  }
+
   var SILENT_WAV = 'data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YUAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
   function silenceIncoming() {
     try { if (device && device.audio && device.audio.incoming) device.audio.incoming(false); } catch (e) {}
@@ -329,6 +361,7 @@
   function wireDevice() {
     device.on('registered', function () {
       silenceIncoming();
+      trace('registered', '', { incomingSoundEnabled: audioIncomingState(), available: S.available });
       startHeartbeat();
       S.ready = true;
       if (S.status === 'connecting' || S.status === 'offline') S.status = 'idle';
@@ -336,6 +369,7 @@
       publish();
     });
     device.on('error', function (err) {
+      trace('device_error', friendlyDeviceError(err), { code: err && err.code, message: err && err.message });
       S.error = friendlyDeviceError(err);
       S.status = 'error';
       publish();
@@ -349,16 +383,29 @@
       // that. The page is told who it is so a card can show the lead.
       activeCall = call;
       var from = (call.parameters && call.parameters.From) || '';
+      trace('incoming', 'from ' + from, { params: call.parameters || null, available: S.available,
+                                         incomingSoundEnabled: audioIncomingState() });
       emit('incoming', { from: from });
-      call.on('cancel', function () { emit('incoming', null); emit('handoff', null); activeCall = null; });
-      call.on('disconnect', function () { emit('handoff', null); onMediaEnded(); });
+      call.on('cancel', function () { trace('call_cancel', from); emit('incoming', null); emit('handoff', null); activeCall = null; });
+      call.on('disconnect', function () { trace('call_disconnect', from); emit('handoff', null); onMediaEnded(); });
+      call.on('reject', function () { trace('call_reject', from); });
+      call.on('error', function (e) { trace('call_error', String(e && (e.message || e)), { code: e && e.code }); });
+      call.on('warning', function (name, data) { trace('call_warning', name, data || null); });
+      call.on('warning-cleared', function (name) { trace('call_warning_cleared', name); });
       call.on('accept', function () {
+        trace('call_accept', from, { sid: call.parameters && call.parameters.CallSid });
         S.status = 'in-call'; S.callStartedAt = Date.now(); publish();
         emit('handoff', { from: from, answered: true });
       });
       if (S.available) {
-        try { call.accept(); } catch (e) { emit('handoff', { from: from, answered: false, error: String(e) }); }
+        trace('auto_answer', 'accept() called');
+        try { call.accept(); } catch (e) {
+          trace('auto_answer_failed', String(e));
+          emit('handoff', { from: from, answered: false, error: String(e) });
+        }
         emit('incoming', null);
+      } else {
+        trace('not_auto_answered', 'Available is off in this page');
       }
     });
     // Tokens last an hour; swap in a fresh one rather than dropping the rep.
@@ -630,6 +677,7 @@
   }
 
   function hangup() {
+    trace('hangup', 'rep pressed hang up');
     var id = S.callId;
     if (activeCall) { try { activeCall.disconnect(); } catch (e) {} }
     if (device && device.disconnectAll) { try { device.disconnectAll(); } catch (e) {} }
@@ -788,6 +836,7 @@
   }
 
   function setAvailable(flag) {
+    trace('set_available', String(!!flag));
     S.available = !!flag;
     publish();
     return post('/dialer/presence', { available: !!flag });
@@ -882,6 +931,7 @@
     stopSession: stopSession,
     answerIncoming: answerIncoming,
     rejectIncoming: rejectIncoming,
+    trace: trace,
 
     popOut: popOut,
     sendToPhone: sendToPhone,

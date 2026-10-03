@@ -169,6 +169,7 @@ def detect(account_id, caller, called):
                     .filter_by(account_id=account_id, pool="ai",
                                e164=caller).first() is not None)
     call = None
+    signal = "from_is_ai_number" if from_ai_pool else "from_is_prospect"
     if from_ai_pool:
         # Caller ID preserved: From is the AI's number. The prospect is
         # whoever that number is currently talking to.
@@ -188,9 +189,13 @@ def detect(account_id, caller, called):
         # window is short so an unrelated inbound call minutes later is
         # not mistaken for one.
         call = live_bridge_call(account_id)
+        signal = "one_live_bridge_call"
         if call is None:
             _warn(f"call to hand-off line {called} from {caller} matched "
                   f"no live AI call; treated as ordinary inbound")
+            from dialer import trace
+            trace.record(account_id, "detect_miss",
+                         f"from={caller} to={called}: no live AI call")
             return None
 
     agent = db.session.get(AiAgent, call.ai_agent_id) if (
@@ -202,7 +207,15 @@ def detect(account_id, caller, called):
                  .filter(AiAgent.transfer_handoff == "bridge")
                  .first())
     if agent is None:
+        from dialer import trace
+        trace.record(account_id, "detect_miss",
+                     f"from={caller} to={called}: call {call.id if call else '?'} "
+                     f"matched by {signal} but no agent", call_id=call.id if call else None)
         return None
+    from dialer import trace
+    trace.record(account_id, "detect",
+                 f"signal={signal} from={caller} to={called} call={call.id if call else '?'} "
+                 f"agent={agent.id}", call_id=call.id if call else None)
     return agent, call
 
 
@@ -244,7 +257,7 @@ def ambience_url():
     return f"{urls.origin()}/static-admin/handoff-office.mp3"
 
 
-def wait_url(account_id):
+def wait_url(account_id, room=""):
     """What waitUrl points at: a TwiML document, NOT the file.
 
     Twilio documents looping only one way: a TwiML document that ends in a
@@ -253,7 +266,7 @@ def wait_url(account_id):
     would go dead quiet. Verified against the <Conference> docs.
     """
     from dialer import urls
-    return urls.handoff_wait(account_id)
+    return urls.handoff_wait(account_id, room)
 
 
 def wait_twiml():
@@ -271,7 +284,7 @@ def prospect_twiml(room, account_id):
     """
     return (f'<Response><Dial><Conference beep="false" '
             f'startConferenceOnEnter="false" endConferenceOnExit="false" '
-            f'waitUrl="{wait_url(account_id)}" waitMethod="GET">'
+            f'waitUrl="{wait_url(account_id, room)}" waitMethod="GET">'
             f'{room}</Conference></Dial></Response>')
 
 
@@ -463,6 +476,9 @@ def try_bridge(account_id, settings, caller, called, call_sid):
                   f"in progress; joined {call.conference_name}, rep not rung "
                   f"again")
             db.session.commit()
+            from dialer import trace
+            trace.record(account_id, "repeat", f"sid={call_sid} joined "
+                         f"{call.conference_name}", call_id=call.id)
             return prospect_twiml(call.conference_name, account_id)
     room = room_for(call_sid)
     line = handoff_line(account_id)
@@ -479,10 +495,21 @@ def try_bridge(account_id, settings, caller, called, call_sid):
               f"{rep_destination(settings, account_id, agent)} "
               f"{'placed' if r.get('ok') else 'FAILED: ' + str(r.get('error'))}")
         db.session.commit()
+    from dialer import trace
+    dest, why = destination_explained(settings, account_id, agent)
+    trace.record(account_id, "rep_leg",
+                 f"to={dest or 'NOBODY'} ok={r.get('ok')} sid={r.get('sid', '')} "
+                 f"why={why}", payload=r, call_id=call.id if call else None)
     if not r.get("ok"):
         # Nobody to dial. Do not leave them in a silent room.
-        return no_answer_twiml()
-    return prospect_twiml(room, account_id)
+        twiml = no_answer_twiml()
+        trace.record(account_id, "park", f"NOT parked: {r.get('error')}",
+                     payload=twiml, call_id=call.id if call else None)
+        return twiml
+    twiml = prospect_twiml(room, account_id)
+    trace.record(account_id, "park", f"sid={call_sid} room={room}",
+                 payload=twiml, call_id=call.id if call else None)
+    return twiml
 
 
 def no_answer_twiml():
@@ -522,6 +549,11 @@ def machine_answered(settings, account_id, room, answered_by, rep_sid):
     up. The other order would end the room under the prospect (the rep leg
     carries endConferenceOnExit) before the apology could be said.
     """
+    from dialer import trace
+    call = Call.query.filter_by(account_id=account_id,
+                                conference_name=room).first()
+    trace.record(account_id, "amd", f"room={room} answered_by={answered_by} "
+                 f"rep_sid={rep_sid}", call_id=call.id if call else None)
     if not (answered_by or "").startswith("machine"):
         return False
     freed = free_prospect(settings, account_id, room,
@@ -539,9 +571,13 @@ def free_prospect(settings, account_id, room, reason):
     if not sid:
         return False
     from dialer.providers import registry
-    registry.telephony(settings).redirect_call(sid, no_answer_twiml())
+    rr = registry.telephony(settings).redirect_call(sid, no_answer_twiml())
     call = Call.query.filter_by(account_id=account_id,
                                 conference_name=room).first()
+    from dialer import trace
+    trace.record(account_id, "freed", f"room={room} reason={reason} "
+                 f"redirect_ok={rr.get('ok') if isinstance(rr, dict) else rr}",
+                 call_id=call.id if call else None)
     if call is None:
         _warn(f"no call carries room {room}; prospect freed, nothing booked")
         return True

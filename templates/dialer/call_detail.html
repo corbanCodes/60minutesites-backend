@@ -161,6 +161,7 @@
     {# ---------------------------------------------------- raw events #}
     <details class="guide" style="margin-top:14px">
       <summary><i class="bi bi-list-nested"></i> Raw event timeline
+        <a class="chip-btn" href="/dialer/handoff/trace?call={{ call.id }}" style="margin-left:8px">Full hand-off trace</a>
         <span class="guide-status ref">{{ events | length }} event{{ '' if events | length == 1 else 's' }}</span>
       </summary>
       <div class="guide-body">

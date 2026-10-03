@@ -133,10 +133,22 @@ def twilio_voice(account_id):
     _inbox(account_id, "twilio", "inbound",
            f"inbound:{request.values.get('CallSid', '')}",
            request.values.to_dict())
+    from dialer import trace
+    params = request.values.to_dict()
+    trace.record(account_id, "voice_in",
+                 f"from={caller} to={called} sid={params.get('CallSid', '')} "
+                 f"dir={params.get('Direction', '')} "
+                 f"parent={params.get('ParentCallSid', '')} "
+                 f"fwd={params.get('ForwardedFrom', '')}", payload=params)
 
     from dialer.inbound import route_inbound
-    return _xml(route_inbound(account_id, s, number, caller, called,
-                              request.values.get("CallSid", "")))
+    twiml = route_inbound(account_id, s, number, caller, called,
+                          params.get("CallSid", ""))
+    trace.record(account_id, "voice_out",
+                 f"sid={params.get('CallSid', '')} "
+                 f"{'bridge' if '<Conference' in twiml else 'ordinary'}",
+                 payload=twiml[:1500])
+    return _xml(twiml)
 
 
 @hooks_bp.route("/twilio/<int:account_id>/bridge/wait",
@@ -150,7 +162,19 @@ def twilio_bridge_wait(account_id):
     a public audio file -- but it WOULD drop a live hand-off on the floor.
     """
     from dialer.bridge import wait_twiml
+    from dialer import trace
+    room = request.values.get("room", "")
+    trace.record(account_id, "wait_fetched", f"room={room}",
+                 call_id=_call_id_for_room(account_id, room))
     return _xml(wait_twiml())
+
+
+def _call_id_for_room(account_id, room):
+    if not room:
+        return None
+    c = Call.query.filter_by(account_id=account_id,
+                             conference_name=room).first()
+    return c.id if c else None
 
 
 @hooks_bp.route("/twilio/<int:account_id>/bridge/<room>/amd",
@@ -168,6 +192,10 @@ def twilio_bridge_amd(account_id, room):
     answered_by = request.values.get("AnsweredBy", "")
     _inbox(account_id, "twilio", "bridge_amd", f"amd:{room}:{answered_by}",
            request.values.to_dict())
+    from dialer import trace
+    trace.record(account_id, "amd_hook", f"room={room} AnsweredBy={answered_by}",
+                 payload=request.values.to_dict(),
+                 call_id=_call_id_for_room(account_id, room))
     from dialer.bridge import machine_answered
     machine_answered(s, account_id, room, answered_by,
                      request.values.get("CallSid", ""))
@@ -188,6 +216,12 @@ def twilio_bridge_rep(account_id, room):
     status = request.values.get("CallStatus", "")
     _inbox(account_id, "twilio", "bridge_rep", f"bridge:{room}:{status}",
            request.values.to_dict())
+    from dialer import trace
+    trace.record(account_id, "rep_status", f"room={room} CallStatus={status} "
+                 f"to={request.values.get('To', '')} "
+                 f"dur={request.values.get('CallDuration', '')}",
+                 payload=request.values.to_dict(),
+                 call_id=_call_id_for_room(account_id, room))
     from dialer.bridge import rep_leg_ended
     rep_leg_ended(s, account_id, room, status)
     return _xml("<Response/>")

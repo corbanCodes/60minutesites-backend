@@ -204,7 +204,8 @@
     <p class="muted" id="ph-handoff-note" style="margin:0">You are live. They have been hearing office
       ambience, not ringing — just start talking.</p>
     <p style="margin:8px 0 0"><a id="ph-handoff-call" href="#" target="_blank">Call record &amp; notes</a>
-      · <a id="ph-handoff-crm" href="#" target="_blank">CRM record</a></p>
+      · <a id="ph-handoff-crm" href="#" target="_blank">CRM record</a>
+      · <a href="/dialer/handoff/trace" target="_blank">Trace</a></p>
   </section>
 
   {# ---------------------------------------------------------- transfers #}
@@ -221,7 +222,7 @@
 </main>
 
 <script type="application/json" id="hq-config">{{ CFG | tojson }}</script>
-<script src="/static-admin/softphone.js?v=20261003c" defer></script>
+<script src="/static-admin/softphone.js?v=20261003d" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   var CFG = {};
@@ -283,6 +284,14 @@ document.addEventListener('DOMContentLoaded', function () {
     $('dl-timer').textContent = v;
     $('dl-timer-live').textContent = v;
   }
+
+  // Anything the page itself throws goes into the hand-off trace too.
+  window.addEventListener('error', function (e) {
+    if (window.HQPhone && HQPhone.trace) HQPhone.trace('js_error', String(e.message || e), { src: e.filename, line: e.lineno });
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    if (window.HQPhone && HQPhone.trace) HQPhone.trace('js_rejection', String(e.reason && (e.reason.message || e.reason)));
+  });
 
   HQPhone.on('state', render);
   HQPhone.on('message', toast);

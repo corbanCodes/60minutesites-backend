@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set active = 'dialer' %}
+{% block title %}Hand-off trace | Calling | 60MS HQ{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static-admin/manage.css">
+<div class="mg-head">
+  <div class="mg-head-text">
+    <h1>Hand-off trace</h1>
+    <p class="mg-sub">Every step of the most recent hand-off — our server, Twilio's callbacks and the rep's
+      browser — on one clock, to the millisecond. The <b>rel</b> column counts from the moment the
+      transferred leg reached us. Line your recording up on that row.</p>
+  </div>
+  <div class="mg-actions">
+    {% if call %}<a class="btn ghost sm" href="/dialer/calls/{{ call.id }}"><i class="bi bi-telephone"></i> Call record</a>{% endif %}
+    <a class="btn ghost sm" href="/dialer/handoff/trace{% if call %}?call={{ call.id }}{% endif %}"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+    <a class="btn ghost sm" href="/dialer/handoff/trace?format=text{% if call %}&call={{ call.id }}{% endif %}" target="_blank"><i class="bi bi-file-text"></i> Plain text</a>
+    <button class="btn sm" type="button" id="tr-copy"><i class="bi bi-clipboard"></i> Copy everything</button>
+  </div>
+</div>
+
+{% if not rows %}
+<div class="mg-empty"><i class="bi bi-activity"></i><h3>Nothing traced yet</h3>
+  <p>Place a test call that reaches a decision maker; this page fills in as it happens.</p></div>
+{% else %}
+<table class="mg-cards" style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px">
+  <tr class="mg-hrow"><th>time (UTC)</th><th>rel</th><th>src</th><th>what</th><th>detail</th></tr>
+  {% for r in rows %}
+  <tr>
+    <td class="mg-nowrap">{{ r.at.strftime('%H:%M:%S.%f')[:-3] if r.at else '?' }}</td>
+    <td class="mg-nowrap">{% if r.rel is not none %}{{ '%+.3f' % r.rel }}s{% endif %}</td>
+    <td><span class="pill {{ 'ok-pill' if r.src == 'browser' else 'st-neutral' }}">{{ r.src }}</span></td>
+    <td class="mg-nowrap">{{ r.kind }}</td>
+    <td>{{ r.detail }}{% if r.payload %}<details><summary class="muted">payload</summary>
+      <pre style="white-space:pre-wrap;max-width:720px">{{ r.payload[:2000] }}</pre></details>{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<textarea id="tr-text" readonly style="width:100%;height:220px;margin-top:14px;font-family:ui-monospace,Menlo,monospace;font-size:12px">{{ text }}</textarea>
+<script>
+  document.getElementById('tr-copy').addEventListener('click', function () {
+    var t = document.getElementById('tr-text'); t.select();
+    try { navigator.clipboard.writeText(t.value); this.textContent = 'Copied'; } catch (e) { document.execCommand('copy'); }
+  });
+</script>
+{% endblock %}

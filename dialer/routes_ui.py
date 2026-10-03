@@ -11,7 +11,7 @@ from teams import perms
 from teams.models import log
 
 from dialer import bp, readiness, wizard
-from dialer.models import (AiAgent, Call, Campaign, PhoneNumber, Playbook,
+from dialer.models import (CallEvent, AiAgent, Call, Campaign, PhoneNumber, Playbook,
                            VoicemailDrop)
 from dialer.providers import registry
 from dialer.settings_store import get_settings
@@ -1309,6 +1309,66 @@ def _rows(form, prefix, fields, split=None):
             out.append(row)
         i += 1
     return json.dumps(out)
+
+
+@bp.route("/phone/trace", methods=["POST"])
+@require("calls.make")
+def phone_trace():
+    """What the rep's browser saw, in its own words and on its own clock.
+
+    The SDK knows nothing of our call ids, so rows land on whichever call
+    was handed off most recently. The browser's timestamp is kept as the
+    row time: the batch can arrive a second after the fact, and the point
+    of the trace is order.
+    """
+    from dialer import trace
+    data = request.get_json(silent=True) or {}
+    call = trace.current_handoff_call(g.account_id)
+    stored = 0
+    for ev in (data.get("events") or [])[:60]:
+        if not isinstance(ev, dict):
+            continue
+        at = None
+        try:
+            at = datetime.fromisoformat(str(ev.get("t", "")).replace("Z", "+00:00"))
+            at = at.astimezone(timezone.utc).replace(tzinfo=None)
+        except (ValueError, TypeError):
+            at = None
+        row = CallEvent(
+            call_id=call.id if call else None, account_id=g.account_id,
+            kind=f"trace:browser:{str(ev.get('kind', ''))[:24]}",
+            detail=str(ev.get("detail", ""))[:300],
+            payload=json.dumps({"data": ev.get("data"),
+                                "perf_ms": ev.get("perf"),
+                                "received": _now().isoformat()}, default=str)[:6000])
+        if at is not None:
+            row.at = at
+        db.session.add(row)
+        stored += 1
+    db.session.commit()
+    return jsonify(ok=True, stored=stored)
+
+
+@bp.route("/handoff/trace")
+@require("calls.make")
+def handoff_trace():
+    """Everything a hand-off did, server and browser, on one clock."""
+    from flask import Response as _Resp
+    from dialer import trace
+    call = None
+    call_id = request.args.get("call", type=int)
+    if call_id:
+        call = db.session.get(Call, call_id)
+        if call is not None and call.account_id != g.account_id:
+            abort(403)
+    call = call or trace.current_handoff_call(g.account_id)
+    rows = trace.timeline(g.account_id, call)
+    text = trace.as_text(rows)
+    if request.args.get("format") == "text":
+        return _Resp(text, mimetype="text/plain")
+    s, ready, prog = ctx()
+    return render_template("dialer/handoff_trace.html", s=s, ready=ready,
+                           prog=prog, call=call, rows=rows, text=text)
 
 
 @bp.route("/handoff/current")
