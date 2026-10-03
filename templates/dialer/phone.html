@@ -193,6 +193,20 @@
   </details>
   {% endif %}
 
+  {# ----------------------------------------------------------- hand-off #}
+  <section class="ph-card" id="ph-handoff" hidden
+           style="border:2px solid #E8562A;background:#FFF6F2">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <b id="ph-handoff-title"><i class="bi bi-telephone-inbound-fill"></i> Hand-off from the AI</b>
+      <button class="btn danger sm" type="button" id="ph-handoff-hangup"><i class="bi bi-telephone-x"></i> Hang up</button>
+    </div>
+    <p id="ph-handoff-who" style="margin:8px 0 4px;font-size:1.05em"></p>
+    <p class="muted" id="ph-handoff-note" style="margin:0">You are live. They have been hearing office
+      ambience, not ringing — just start talking.</p>
+    <p style="margin:8px 0 0"><a id="ph-handoff-call" href="#" target="_blank">Call record &amp; notes</a>
+      · <a id="ph-handoff-crm" href="#" target="_blank">CRM record</a></p>
+  </section>
+
   {# ---------------------------------------------------------- transfers #}
   <section class="ph-card ph-avail">
     <label class="ph-toggle">
@@ -295,6 +309,30 @@ document.addEventListener('DOMContentLoaded', function () {
   HQPhone.on('notes-saved', function (r) {
     $('notes-state').textContent = r.ok ? 'saved' : 'not saved — check your connection';
   });
+
+  // A hand-off was auto-answered: show who it is, and a way out.
+  HQPhone.on('handoff', function (h) {
+    var card = $('ph-handoff');
+    if (!h) { card.hidden = true; return; }
+    card.hidden = false;
+    $('ph-handoff-who').textContent = 'Connecting…';
+    if (h.answered === false) {
+      $('ph-handoff-note').textContent = 'Could not answer: ' + (h.error || 'unknown') +
+        '. Allow the microphone for this site and reload.';
+    }
+    fetch('/dialer/handoff/current', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var x = d && d.handoff;
+        if (!x) { $('ph-handoff-who').textContent = 'Caller ' + (h.from || ''); return; }
+        var who = x.lead_name || ('Caller ' + (x.phone || h.from || ''));
+        if (x.business) who += ' · ' + x.business;
+        $('ph-handoff-who').textContent = who;
+        $('ph-handoff-call').href = x.call_url || '#';
+        $('ph-handoff-crm').href = x.crm_url || '#';
+      }).catch(function () { $('ph-handoff-who').textContent = 'Caller ' + (h.from || ''); });
+  });
+  $('ph-handoff-hangup').addEventListener('click', function () { HQPhone.hangup(); });
 
   HQPhone.init({
     simulating: !!CFG.simulating,

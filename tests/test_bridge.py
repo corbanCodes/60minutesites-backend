@@ -459,10 +459,15 @@ def present(owner_id, user_id, fresh=True, available=True):
     return p
 
 
-def test_a_typed_number_always_wins(world):
+def test_a_typed_number_is_used_when_no_browser_phone_is_open(world):
+    """The browser comes first when it is there: it is what shows the lead
+    and the notes, and for a one-person account it IS the second phone.
+    The typed number is for when nobody has the phone page open."""
     owner, s, agent, fake, client = world
-    present(owner.id, owner.id)
     assert bridge.rep_destination(s, owner.id, agent) == HUMAN
+    present(owner.id, owner.id)
+    assert bridge.rep_destination(s, owner.id, agent) == \
+        f"client:t{owner.id}_u{owner.id}"
 
 
 def test_with_no_number_the_browser_phone_rings_when_someone_is_there(world):
@@ -774,3 +779,105 @@ def test_the_breaker_is_per_caller(world):
         handoff(client, owner, sid=f"CAx{i}", frm="+12125550000")
     body = handoff(client, owner, sid="CAother", frm="+13135550000")
     assert "<Reject/>" not in body
+
+
+
+# -------------------------------------------- never dial our own numbers
+def test_the_rep_line_typed_as_the_destination_is_never_dialled(world):
+    """The live failure: the destination was the rep line itself, so the
+    bridge dialled the rep line from the rep line and reached its own
+    voicemail greeting."""
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = LINE
+    s.ai_callback_number = ""
+    db.session.commit()
+    assert bridge.rep_destination(s, owner.id, agent) == ""
+    live_call(owner, s, agent)
+    body = handoff(client, owner)
+    assert fake.created == [], "it dialled itself"
+    assert bridge.NO_ANSWER_LINE in body
+
+
+def test_the_ai_line_as_the_destination_is_never_dialled_either(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = AI
+    s.ai_callback_number = ""
+    db.session.commit()
+    assert bridge.rep_destination(s, owner.id, agent) == ""
+
+
+def test_an_own_number_in_any_formatting_is_caught(world):
+    owner, s, agent, fake, client = world
+    assert bridge.is_own_number(owner.id, "(865) 555-0101") is True
+    assert bridge.is_own_number(owner.id, "8655550101") is True
+    assert bridge.is_own_number(owner.id, HUMAN) is False
+
+
+def test_saving_an_own_number_as_the_destination_is_refused_with_a_reason(world):
+    owner, s, agent, fake, client = world
+    body = client.post(f"/dialer/agents/{agent.id}", follow_redirects=True,
+                       data={"name": agent.name, "transfer_to_number": LINE,
+                             "transfer_handoff": "bridge"}
+                       ).get_data(as_text=True)
+    assert "one of your own numbers" in body
+    assert db.session.get(AiAgent, agent.id).transfer_to_number == ""
+
+
+def test_installing_with_an_own_number_falls_back_to_the_browser(world):
+    owner, s, agent, fake, client = world
+    body = client.post("/dialer/playbooks/napkin", follow_redirects=True,
+                       data={"transfer_to": LINE}).get_data(as_text=True)
+    assert "browser phone will be rung instead" in body
+    from dialer import napkin
+    pb = Playbook.query.filter_by(account_id=owner.id, name=napkin.NAME).one()
+    assert AiAgent.query.filter_by(playbook_id=pb.id).one().transfer_to_number == ""
+
+
+# ------------------------------------------ the browser is the second phone
+def test_an_open_browser_phone_is_preferred_over_a_typed_number(world):
+    """For a one-person account the browser IS the second phone, and it is
+    the thing that shows the lead and the notes as the call arrives."""
+    owner, s, agent, fake, client = world
+    present(owner.id, owner.id)
+    assert bridge.rep_destination(s, owner.id, agent) == \
+        f"client:t{owner.id}_u{owner.id}"
+
+
+def test_ringing_the_browser_holds_that_rep_until_the_leg_ends(world):
+    """One hand-off per person at a time."""
+    owner, s, agent, fake, client = world
+    from dialer.models import RepPresence
+    present(owner.id, owner.id)
+    live_call(owner, s, agent)
+    handoff(client, owner)
+    rep = RepPresence.query.filter_by(user_id=owner.id).one()
+    assert rep.current_call_id == -1
+    assert bridge.softphone_target(owner.id) == "", "held reps are not rung twice"
+    client.post(f"/dialer/hooks/twilio/{owner.id}/bridge/handoff-CAprospect1/rep",
+                data={"CallStatus": "completed", "CallSid": "CArep1"})
+    assert RepPresence.query.filter_by(user_id=owner.id).one().current_call_id is None
+
+
+def test_the_browser_card_knows_who_just_landed(world):
+    owner, s, agent, fake, client = world
+    present(owner.id, owner.id)
+    call = live_call(owner, s, agent)
+    handoff(client, owner)
+    r = client.get("/dialer/handoff/current").get_json()
+    assert r["ok"] and r["handoff"]
+    assert r["handoff"]["call_id"] == call.id
+    assert r["handoff"]["phone"] == PROSPECT
+    assert r["handoff"]["call_url"].endswith(f"/dialer/calls/{call.id}")
+
+
+def test_the_browser_card_is_empty_when_nothing_landed(world):
+    owner, s, agent, fake, client = world
+    r = client.get("/dialer/handoff/current").get_json()
+    assert r["ok"] and r["handoff"] is None
+
+
+def test_the_test_page_says_the_browser_is_where_a_handoff_lands(world):
+    owner, s, agent, fake, client = world
+    body = client.get("/dialer/setup/12").get_data(as_text=True)
+    assert "your browser phone" in body
+    assert "/dialer/phone" in body

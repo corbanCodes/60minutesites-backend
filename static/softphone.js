@@ -311,6 +311,7 @@
 
   function wireDevice() {
     device.on('registered', function () {
+      startHeartbeat();
       S.ready = true;
       if (S.status === 'connecting' || S.status === 'offline') S.status = 'idle';
       S.error = '';
@@ -323,11 +324,24 @@
       say('error', S.error);
     });
     device.on('incoming', function (call) {
-      // A transfer from the AI, or a callback landing on the rep pool.
+      // A hand-off from the AI, or a callback landing on the rep pool.
+      // For a one-person account this browser IS the second phone, so the
+      // call is answered at once: the prospect is sitting in a room with
+      // office ambience and every second of ringing here is a second of
+      // that. The page is told who it is so a card can show the lead.
       activeCall = call;
-      emit('incoming', { from: (call.parameters && call.parameters.From) || '' });
-      call.on('cancel', function () { emit('incoming', null); activeCall = null; });
-      call.on('disconnect', onMediaEnded);
+      var from = (call.parameters && call.parameters.From) || '';
+      emit('incoming', { from: from });
+      call.on('cancel', function () { emit('incoming', null); emit('handoff', null); activeCall = null; });
+      call.on('disconnect', function () { emit('handoff', null); onMediaEnded(); });
+      call.on('accept', function () {
+        S.status = 'in-call'; S.callStartedAt = Date.now(); publish();
+        emit('handoff', { from: from, answered: true });
+      });
+      if (S.available) {
+        try { call.accept(); } catch (e) { emit('handoff', { from: from, answered: false, error: String(e) }); }
+        emit('incoming', null);
+      }
     });
     // Tokens last an hour; swap in a fresh one rather than dropping the rep.
     device.on('tokenWillExpire', function () {
@@ -738,6 +752,23 @@
   function clearDigits() { S.digits = ''; publish(); }
 
   // -------------------------------------------------------------- presence
+  // ------------------------------------------------------------ heartbeat
+  // The server rings this browser only if it has been seen in the last two
+  // minutes. A tab closed yesterday still has a presence row, and ringing
+  // it would ring nothing for fifteen seconds and then apologise to the
+  // prospect -- so liveness is a real signal, posted while the phone is
+  // registered and again whenever the tab comes back into view.
+  var hbTimer = null;
+  function startHeartbeat() {
+    if (hbTimer) return;
+    var beat = function () { post('/dialer/presence', {}); };
+    beat();
+    hbTimer = setInterval(beat, 30000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') beat();
+    });
+  }
+
   function setAvailable(flag) {
     S.available = !!flag;
     publish();

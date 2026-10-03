@@ -1150,6 +1150,13 @@ def playbook_napkin():
     # A pasted-in copy of an older prompt would freeze all of the above.
     agent.prompt_override = ""
     dest = (request.form.get("transfer_to") or "").strip()[:32]
+    from dialer.bridge import is_own_number
+    if dest and is_own_number(g.account_id, dest):
+        flash(f"{dest} is one of your own numbers and cannot be where a "
+              f"hand-off rings; the browser phone will be rung instead.",
+              "error")
+        dest = ""
+        agent.transfer_to_number = ""
     if dest:
         agent.transfer_to_number = dest
     agent.background_preset = ((s.background_preset or "office1")
@@ -1289,6 +1296,38 @@ def _rows(form, prefix, fields, split=None):
             out.append(row)
         i += 1
     return json.dumps(out)
+
+
+@bp.route("/handoff/current")
+@require("calls.make")
+def handoff_current():
+    """The hand-off that just landed on this account, for the browser card.
+
+    The softphone auto-answers the rep leg; this is what it shows next to
+    the audio -- who is on the line and where their notes live -- so the
+    rep is not talking to a nameless caller.
+    """
+    from datetime import timedelta
+    from dialer.models import Call, CallEvent
+    from app import Lead
+    since = datetime.utcnow() - timedelta(minutes=3)
+    ev = (CallEvent.query
+          .filter_by(account_id=g.account_id, kind="handoff")
+          .filter(CallEvent.at >= since)
+          .order_by(CallEvent.at.desc()).first())
+    if ev is None:
+        return jsonify(ok=True, handoff=None)
+    call = db.session.get(Call, ev.call_id)
+    lead = db.session.get(Lead, call.lead_id) if call and call.lead_id else None
+    return jsonify(ok=True, handoff={
+        "call_id": call.id if call else None,
+        "call_url": url_for("dialer.call_detail", call_id=call.id) if call else "",
+        "lead_name": (lead.name if lead else "") or "",
+        "business": (getattr(lead, "business", "") if lead else "") or "",
+        "phone": (call.to_number if call else "") or "",
+        "crm_url": (f"/admin/crm/{lead.id}" if lead else ""),
+        "at": ev.at.isoformat() if ev.at else "",
+    })
 
 
 @bp.route("/playbooks/<int:playbook_id>/default", methods=["POST"])
@@ -1483,6 +1522,16 @@ def agent_edit(agent_id):
         a.dtmf_enabled = bool(request.form.get("dtmf_enabled"))
         a.active = bool(request.form.get("active"))
         db.session.commit()
+        from dialer.bridge import is_own_number
+        if a.transfer_to_number and is_own_number(g.account_id,
+                                                   a.transfer_to_number):
+            flash(f"{a.transfer_to_number} is one of your own numbers, so "
+                  f"it cannot be where a hand-off rings: the AI line would "
+                  f"answer with a second AI and the rep line answers with "
+                  f"this app. Leave it empty to ring the browser phone, or "
+                  f"type a real mobile.", "error")
+            a.transfer_to_number = ""
+            db.session.commit()
         bridged = (a.transfer_handoff or "") == "bridge"
         if bridged:
             from dialer.bridge import ensure_line

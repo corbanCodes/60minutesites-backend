@@ -300,24 +300,61 @@ def softphone_target(account_id):
     return f"client:t{account_id}_u{rep.user_id}" if rep else ""
 
 
+def own_numbers(account_id):
+    """Every E.164 this account holds at Twilio, any pool, any state."""
+    return {n.e164 for n in PhoneNumber.query.filter_by(account_id=account_id)
+            if n.e164}
+
+
+def is_own_number(account_id, e164):
+    """A hand-off destination that is one of the account's own numbers
+    cannot work: the AI line answers with a second AI, the rep line
+    answers with this app. On a live test the destination was the rep
+    line itself, so the bridge dialled the rep line FROM the rep line,
+    reached its own voicemail greeting, and machine detection -- quite
+    correctly -- called it a machine."""
+    from dialer.compliance import normalize
+    e, _, ok = normalize(e164 or "")
+    return bool(ok and e in own_numbers(account_id))
+
+
+def _mark_busy(account_id, client, busy):
+    """Hold or release the browser rep so two hand-offs never land on one
+    person at once. The identity is t<account>_u<user>."""
+    from dialer.models import RepPresence
+    try:
+        uid = int(client.rsplit("_u", 1)[1])
+    except (IndexError, ValueError):
+        return
+    rep = RepPresence.query.filter_by(account_id=account_id, user_id=uid).first()
+    if rep is None:
+        return
+    rep.current_call_id = -1 if busy else None
+    db.session.commit()
+
+
 def rep_destination(settings, account_id, agent):
     """Where the rep leg goes.
 
-    A number typed on the agent wins -- that is an explicit instruction.
-    Otherwise, whoever is on shift in the browser phone, if anyone is;
-    otherwise the account-wide number. The browser is what shows the
-    rep the lead and the transcript as the call arrives, so it is
-    preferred whenever it is actually there to answer.
+    The browser phone first, whenever one is open, available and seen in
+    the last two minutes: it is what shows the rep the lead and the
+    transcript as the call arrives, and for a one-person account it IS
+    the second phone. Then a number typed on the agent, then the
+    account-wide number. One of the account's own numbers is never a
+    destination, typed or not.
     """
-    own = (getattr(agent, "transfer_to_number", "") or "").strip()
-    if own:
-        return own
     if (settings.transfer_mode or "") != "number":
         client = softphone_target(account_id)
         if client:
             return client
+    own = (getattr(agent, "transfer_to_number", "") or "").strip()
+    if own and not is_own_number(account_id, own):
+        return own
     from dialer.agents import human_number
-    return human_number(settings, agent)
+    number = human_number(settings, agent)
+    if number and is_own_number(account_id, number):
+        return ""
+    return number
 
 
 def ring_rep(settings, account_id, agent, room, caller_id):
@@ -327,6 +364,8 @@ def ring_rep(settings, account_id, agent, room, caller_id):
     to = rep_destination(settings, account_id, agent)
     if not to:
         return {"ok": False, "error": "no human destination"}
+    if to.startswith("client:"):
+        _mark_busy(account_id, to, True)
     extra = {}
     if not to.startswith("client:"):
         # A phone that is off, in Do Not Disturb or out of coverage rolls
@@ -397,9 +436,23 @@ def rep_leg_ended(settings, account_id, room, status):
     Twilio reports no-answer, busy, failed or canceled for a leg that never
     bridged. The prospect is still in the room hearing office ambience.
     """
+    if status in ("completed", "no-answer", "busy", "failed", "canceled"):
+        _release_all_busy(account_id)
     if status not in ("no-answer", "busy", "failed", "canceled"):
         return False
     return free_prospect(settings, account_id, room, f"rep leg {status}")
+
+
+def _release_all_busy(account_id):
+    """The rep leg carries no identity in its callback, and a one-person
+    account has one rep; releasing every bridge-held rep on the account
+    is correct for that and harmless otherwise, because the hold only
+    ever lasts the length of one leg."""
+    from dialer.models import RepPresence
+    for rep in RepPresence.query.filter_by(account_id=account_id,
+                                           current_call_id=-1):
+        rep.current_call_id = None
+    db.session.commit()
 
 
 def machine_answered(settings, account_id, room, answered_by, rep_sid):
