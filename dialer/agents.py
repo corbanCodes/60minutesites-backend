@@ -19,6 +19,11 @@ def _now():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _napkin_name():
+    from dialer import napkin
+    return napkin.NAME
+
+
 def build_prompt(agent, settings):
     """The full system prompt, in the order the agent should think in.
 
@@ -171,8 +176,16 @@ def _generated_prompt(agent, settings):
             out.append(f"# Never\n{pb.never_do}")
     if agent.transfer_rules:
         out.append(f"# Extra transfer rules\n{agent.transfer_rules}")
-    if agent.knowledge_text:
-        out.append(f"# Background you can draw on\n{agent.knowledge_text}")
+    knowledge = agent.knowledge_text or ""
+    if pb is not None and pb.name == _napkin_name():
+        # The guide's behaviour rules were copied onto the agent at install
+        # and frozen there, so a change to the rules reached nobody until
+        # the guide was installed again. For the NapkinAds playbook they
+        # are read live at every sync.
+        from dialer import napkin
+        knowledge = napkin.extra_rules(settings)
+    if knowledge:
+        out.append(f"# Background you can draw on\n{knowledge}")
 
     # 4. CRM context the platform injects per call
     out.append(

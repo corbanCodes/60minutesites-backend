@@ -251,3 +251,18 @@ def test_the_schedule_tool_is_in_the_vendors_tool_set(world):
     disp = next(t for t in TOOL_SPECS if t["name"] == "set_disposition")
     enum = disp["parameters"]["properties"]["disposition"]["enum"]
     assert "manager_busy" in enum and "business_closed" in enum
+
+
+def test_the_guides_rules_are_read_live_not_frozen_at_install(world, monkeypatch):
+    """Before: the rules were copied onto the agent at install. A change to
+    them reached nobody until the guide was installed again."""
+    owner, s, agent, tel, va, client = world
+    from dialer import napkin
+    from dialer.models import AiAgent, Playbook
+    client.post("/dialer/playbooks/napkin", follow_redirects=True, data={})
+    pb = Playbook.query.filter_by(account_id=owner.id, name=napkin.NAME).one()
+    a = AiAgent.query.filter_by(playbook_id=pb.id).one()
+    monkeypatch.setattr(napkin, "EXTRA_RULES", "# A brand new rule\nSay hello twice.")
+    assert "Say hello twice." in build_prompt(a, s)
+    assert "Say hello twice." not in (a.knowledge_text or "")
+
