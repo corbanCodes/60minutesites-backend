@@ -1385,6 +1385,26 @@ def handoff_trace():
                            prog=prog, call=call, rows=rows, text=text)
 
 
+@bp.route("/handoff/where")
+@require("calls.make")
+def handoff_where():
+    """Where a hand-off would ring right now, for the phone page."""
+    from dialer.bridge import destination_explained, browser_status
+    s = get_settings(g.account_id)
+    agent = (AiAgent.query.filter_by(account_id=g.account_id, direction="outbound",
+                                     active=True)
+             .order_by(AiAgent.id.desc()).first())
+    if agent is None:
+        return jsonify(ok=True, text="no active outbound agent yet",
+                       browser=browser_status(g.account_id),
+                       mobile=s.transfer_number or "")
+    dest, why = destination_explained(s, g.account_id, agent)
+    return jsonify(ok=True, text=why, destination=dest,
+                   browser=browser_status(g.account_id),
+                   mobile=s.transfer_number or "",
+                   mode=s.transfer_mode or "browser")
+
+
 @bp.route("/handoff/current")
 @require("calls.make")
 def handoff_current():
@@ -1968,6 +1988,27 @@ def presence_update():
     if "available" in data:
         p.available_for_transfers = str(data.get("available")).lower() in (
             "1", "true", "yes", "on")
+    if "handoff_mobile" in data:
+        # The phone page's "ring my mobile instead" choice. Account-wide,
+        # because it is the number a person answers on, not an agent's
+        # setting; one of the account's own numbers is refused here for
+        # the same reason as everywhere else.
+        from dialer.bridge import is_own_number
+        from dialer.compliance import normalize
+        from dialer.settings_store import get_settings
+        raw = str(data.get("handoff_mobile") or "").strip()
+        s_ = get_settings(g.account_id)
+        if raw:
+            e164, _, ok = normalize(raw)
+            if not ok:
+                return jsonify(ok=False, error="That does not look like a phone number.")
+            if is_own_number(g.account_id, e164):
+                return jsonify(ok=False, error=f"{e164} is one of your own numbers; "
+                               f"it cannot be where a hand-off rings.")
+            s_.transfer_number = e164
+            s_.transfer_mode = "number"
+        else:
+            s_.transfer_mode = "browser"
     if data.get("conference_name"):
         p.conference_name = str(data["conference_name"])[:120]
     if data.get("rep_call_sid"):

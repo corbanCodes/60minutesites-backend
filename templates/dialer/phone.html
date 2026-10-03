@@ -210,11 +210,26 @@
 
   {# ---------------------------------------------------------- transfers #}
   <section class="ph-card ph-avail">
+    <b>When the AI hands a call over, ring:</b>
+    <label class="ph-toggle" style="margin-top:8px">
+      <input type="radio" name="ph-ring" id="ph-ring-browser" value="browser"
+             {{ 'checked' if (s.transfer_mode or 'browser') != 'number' }}>
+      <span>this browser &mdash; it answers by itself and shows who is on the line</span>
+    </label>
     <label class="ph-toggle">
+      <input type="radio" name="ph-ring" id="ph-ring-mobile" value="mobile"
+             {{ 'checked' if (s.transfer_mode or 'browser') == 'number' }}>
+      <span>my mobile:</span>
+      <input type="tel" id="ph-ring-number" value="{{ s.transfer_number or '' }}" placeholder="+1 555 010 0000"
+             style="width:170px;margin-left:6px">
+    </label>
+    <label class="ph-toggle" style="margin-top:6px">
       <input type="checkbox" id="ph-available" {{ 'checked' if presence and presence.available_for_transfers }}>
       <span>Available for transfers</span>
     </label>
-    <p class="muted">While this is on, the AI can hand a hot lead straight to you.</p>
+    <p class="muted" id="ph-ring-now" style="margin:6px 0 0">Right now a hand-off rings: checking&hellip;</p>
+    <p class="muted" style="margin:4px 0 0">Not your Twilio numbers: those are lines the app answers for you.
+      This is where <i>you</i> pick up.</p>
   </section>
 
   <p class="ph-foot">Keep this window open and the call survives anything you do in HQ.<span class="dl-kbd-only"><br>
@@ -389,7 +404,31 @@ document.addEventListener('DOMContentLoaded', function () {
     k.addEventListener('click', function () { HQPhone.sendDigit(k.dataset.digit); });
   });
   $('dl-digits-clear').addEventListener('click', function () { HQPhone.clearDigits(); });
-  $('ph-available').addEventListener('change', function () { HQPhone.setAvailable(this.checked); });
+  $('ph-available').addEventListener('change', function () { HQPhone.setAvailable(this.checked).then(ringNow); });
+
+  // Where hand-offs ring: browser (the default) or a real mobile.
+  function ringNow() {
+    fetch('/dialer/handoff/where', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { $('ph-ring-now').textContent = 'Right now a hand-off rings: ' + (d.text || '?'); })
+      .catch(function () {});
+  }
+  function saveRing() {
+    var mobile = $('ph-ring-mobile').checked ? $('ph-ring-number').value.trim() : '';
+    if ($('ph-ring-mobile').checked && !mobile) { $('ph-ring-now').textContent = 'Type the mobile number first.'; return; }
+    if ($('ph-ring-browser').checked && !$('ph-available').checked) { $('ph-available').checked = true; HQPhone.setAvailable(true); }
+    fetch('/dialer/presence', { method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handoff_mobile: mobile }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d && d.ok === false) { $('ph-ring-now').textContent = d.error || 'Could not save.'; } else { ringNow(); } })
+      .catch(function () {});
+  }
+  $('ph-ring-browser').addEventListener('change', saveRing);
+  $('ph-ring-mobile').addEventListener('change', saveRing);
+  $('ph-ring-number').addEventListener('change', saveRing);
+  ringNow();
+  setInterval(ringNow, 20000);
 
   // ------------------------------------------------------ recents + search
   function addRecent(lead) {

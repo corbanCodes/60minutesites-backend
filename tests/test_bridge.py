@@ -978,3 +978,44 @@ def test_the_test_page_says_when_the_browser_will_not_be_rung(world):
     present(owner.id, owner.id, fresh=False)
     body = client.get("/dialer/setup/12").get_data(as_text=True)
     assert "last seen" in body
+
+
+
+# ------------------------------------------ choosing where it rings, on the phone page
+def test_the_phone_page_lets_you_choose_browser_or_mobile(world):
+    owner, s, agent, fake, client = world
+    body = client.get("/dialer/phone").get_data(as_text=True)
+    assert 'id="ph-ring-browser"' in body and 'id="ph-ring-mobile"' in body
+    assert "Not your Twilio numbers" in body
+
+
+def test_choosing_a_mobile_from_the_phone_page_is_what_rings(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = ""
+    db.session.commit()
+    r = client.post("/dialer/presence", json={"handoff_mobile": "(423) 555-0199"}).get_json()
+    assert r["ok"]
+    s2 = get_settings(owner.id)
+    assert s2.transfer_number == "+14235550199" and s2.transfer_mode == "number"
+    assert bridge.rep_destination(s2, owner.id, agent) == "+14235550199"
+
+
+def test_an_own_number_is_refused_from_the_phone_page_too(world):
+    owner, s, agent, fake, client = world
+    r = client.post("/dialer/presence", json={"handoff_mobile": LINE}).get_json()
+    assert r["ok"] is False and "own numbers" in r["error"]
+
+
+def test_choosing_the_browser_again_clears_number_mode(world):
+    owner, s, agent, fake, client = world
+    client.post("/dialer/presence", json={"handoff_mobile": "+14235550199"})
+    client.post("/dialer/presence", json={"handoff_mobile": ""})
+    assert get_settings(owner.id).transfer_mode == "browser"
+
+
+def test_the_phone_page_can_ask_where_a_handoff_rings_right_now(world):
+    owner, s, agent, fake, client = world
+    present(owner.id, owner.id)
+    r = client.get("/dialer/handoff/where").get_json()
+    assert r["ok"] and "browser" in r["text"]
+    assert r["destination"].startswith("client:")

@@ -161,6 +161,10 @@ def test_a_description_is_a_sentence_not_a_placeholder():
     from dialer.tools import TOOL_SPECS
     for tool in TOOL_SPECS:
         for field, spec in (tool["parameters"].get("properties") or {}).items():
+            if "dynamic_variable" in spec:
+                # The platform fills these, and the vendor forbids a
+                # description beside a dynamic_variable ("can only set one").
+                continue
             text = spec.get("description", "")
             assert len(text) > 25, f"{tool['name']}.{field}: {text!r}"
 
