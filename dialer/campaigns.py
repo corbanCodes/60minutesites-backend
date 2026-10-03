@@ -308,6 +308,20 @@ def _place(call, campaign, settings, number, lead):
         if agent is None or not agent.elevenlabs_agent_id:
             call.error = "No AI agent is set up for this campaign."
             return False
+        from dialer.agents import owned
+        if owned(agent):
+            # We place it; the agent rides it. See routes_hooks.twilio_ai_connect.
+            r = tel.create_call(
+                to=call.to_number, from_=number.e164,
+                url=urls.twilio_ai_connect(call.id),
+                status_callback=status_cb,
+                time_limit=settings.max_call_seconds or 600)
+            if not r.get("ok"):
+                call.error = r.get("error", "")[:400]
+                return False
+            call.twilio_sid = (r.get("sid") or "")[:64]
+            call.status = "initiated"
+            return True
         va = registry_voice(settings)
         r = va.outbound_call(agent.elevenlabs_agent_id,
                              number.elevenlabs_phone_id or number.twilio_sid,

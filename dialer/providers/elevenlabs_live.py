@@ -285,9 +285,12 @@ class ElevenLabsAgent(VoiceAgent):
 
     # -------------------------------------------------------------- agents
     def upsert_agent(self, agent, prompt, tools, webhook_id=None,
-                     transfer=None, first_message=None):
+                     transfer=None, first_message=None, force_tools=False):
         # Needed before the body is built: an update must not resend the
-        # deprecated tools array, which would wipe the system tools.
+        # deprecated tools array, which would wipe the system tools --
+        # UNLESS wiping them is the point. In owned mode the hand-off is
+        # one of our own webhook tools and the vendor's transfer tool must
+        # go, so the array is sent on update too and rebuilds the set.
         existing = (getattr(agent, "elevenlabs_agent_id", "") or "").strip()
         """Create (POST) or update (PATCH) the ElevenLabs-side agent."""
         conversation_config = {
@@ -307,7 +310,8 @@ class ElevenLabsAgent(VoiceAgent):
                     # way to hand a call over. Webhook tools are sent only
                     # on CREATE, where there is no existing set to clobber;
                     # on update they are left alone.
-                    **({"tools": tools or []} if not existing else {}),
+                    **({"tools": tools or []}
+                       if (not existing or force_tools) else {}),
                     # transfer_to_number is a SYSTEM tool and lives in
                     # built_in_tools, not in the webhook tools list. Putting
                     # it in the wrong place is the same as not sending it.

@@ -368,6 +368,12 @@ class AiAgent(db.Model):
     voice_delivery = db.Column(db.String(20), default="calm")
     # What this agent calls itself out loud. Falls back to the account's.
     person_name = db.Column(db.String(60), default="")
+    # The hand-off line, pre-synthesised in this agent's voice, so a
+    # seamless hand-off can play it the instant the call moves rooms
+    # without waiting on a model to say it. The key is what it was made
+    # from, so a changed voice or wording makes a new one.
+    handoff_line_media_id = db.Column(db.Integer)
+    handoff_line_key = db.Column(db.String(80), default="")
     # A hand-written system prompt that replaces the generated one entirely.
     # Empty means "use the assembled one", which is the right default and
     # not a restriction.

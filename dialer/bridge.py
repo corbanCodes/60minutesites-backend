@@ -288,6 +288,73 @@ def prospect_twiml(room, account_id):
             f'{room}</Conference></Dial></Response>')
 
 
+def owned_twiml(account_id, room, line_url=""):
+    """Move an already-answered prospect call into the room.
+
+    A redirect of a live call produces no ringback: there is nothing being
+    dialled. The pre-synthesised line plays first, in the AI's own voice,
+    then the ambience until the rep joins.
+    """
+    play = f"<Play>{line_url}</Play>" if line_url else ""
+    return (f'<Response>{play}<Dial><Conference beep="false" '
+            f'startConferenceOnEnter="false" endConferenceOnExit="false" '
+            f'waitUrl="{wait_url(account_id, room)}" waitMethod="GET">'
+            f'{room}</Conference></Dial></Response>')
+
+
+def handoff_owned(call, settings):
+    """The seamless hand-off: our tool fired on a call we placed.
+
+    -> {"ok", "room", "to", "error"}. The prospect's leg is ours (we
+    created it), so it is redirected into the room with one API call and
+    the rep is rung into the same room. The vendor's stream ends when the
+    call leaves its TwiML, which is what ends the conversation.
+    """
+    from dialer import urls
+    from dialer.calls import event
+    from dialer.providers import registry
+    from dialer import trace
+    agent = db.session.get(AiAgent, call.ai_agent_id) if call.ai_agent_id else None
+    account_id = call.account_id
+    if agent is None or not call.twilio_sid:
+        trace.record(account_id, "handoff_owned",
+                     f"refused: agent={bool(agent)} sid={call.twilio_sid}",
+                     call_id=call.id)
+        return {"ok": False, "error": "no agent or no call sid"}
+    if call.conference_name:
+        # The tool fired twice. The room exists; do not ring the rep again.
+        trace.record(account_id, "handoff_owned", "repeat; room already open",
+                     call_id=call.id)
+        return {"ok": True, "room": call.conference_name, "repeat": True}
+    room = room_for(call.twilio_sid)
+    line_url = (urls.handoff_line_media(agent.handoff_line_media_id)
+                if getattr(agent, "handoff_line_media_id", None) else "")
+    twiml = owned_twiml(account_id, room, line_url)
+    line = handoff_line(account_id)
+    caller_id = line.e164 if line else (call.from_number or "")
+    r = ring_rep(settings, account_id, agent, room, caller_id=caller_id)
+    dest, why = destination_explained(settings, account_id, agent)
+    trace.record(account_id, "rep_leg",
+                 f"to={dest or 'NOBODY'} ok={r.get('ok')} sid={r.get('sid', '')} "
+                 f"why={why}", payload=r, call_id=call.id)
+    if not r.get("ok"):
+        twiml = no_answer_twiml()
+    rr = registry.telephony(settings).redirect_call(call.twilio_sid, twiml)
+    trace.record(account_id, "handoff_owned",
+                 f"room={room} redirect_ok={rr.get('ok') if isinstance(rr, dict) else rr} "
+                 f"line={'yes' if line_url else 'no'}",
+                 payload=twiml, call_id=call.id)
+    if not (isinstance(rr, dict) and rr.get("ok")):
+        return {"ok": False, "error": (rr or {}).get("error", "redirect failed")
+                if isinstance(rr, dict) else "redirect failed"}
+    call.conference_name = room
+    event(call, "handoff", f"owned: moved {call.twilio_sid} into {room}; "
+                           f"rep leg to {dest} "
+                           f"{'placed' if r.get('ok') else 'FAILED'}")
+    db.session.commit()
+    return {"ok": True, "room": room, "to": dest}
+
+
 def rep_twiml(room):
     """The rep's leg: join the room, start it, and end it on hang-up."""
     return (f'<Response><Dial><Conference beep="false" '

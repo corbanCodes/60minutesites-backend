@@ -670,14 +670,17 @@ def test_moving_a_number_into_the_rep_pool_repoints_its_webhook(world):
 
 
 # ------------------------------------------------------------ the install
-def test_installing_the_guide_chooses_the_bridge_when_a_line_exists(world):
+def test_installing_the_guide_chooses_a_quiet_handoff_when_a_line_exists(world):
+    """Owned is the quietest shape there is -- nothing dialled on the
+    prospect's side -- and it needs the rep line for its room, so a line
+    existing is what makes it the default."""
     owner, s, agent, fake, client = world
     client.post("/dialer/playbooks/napkin", follow_redirects=True,
                 data={"transfer_to": HUMAN})
     from dialer import napkin
     pb = Playbook.query.filter_by(account_id=owner.id, name=napkin.NAME).one()
     a = AiAgent.query.filter_by(playbook_id=pb.id).one()
-    assert a.transfer_handoff == "bridge"
+    assert a.transfer_handoff == "owned"
 
 
 # ------------------------------------------------------------ the ambience

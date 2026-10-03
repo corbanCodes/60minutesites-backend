@@ -478,6 +478,8 @@ def _ensure_schema_inner():
                      "transfer_handoff": "VARCHAR(20)",
                      "voice_delivery": "VARCHAR(20)",
                      "person_name": "VARCHAR(60)",
+                     "handoff_line_media_id": "INTEGER",
+                     "handoff_line_key": "VARCHAR(80)",
                      "prompt_override": "TEXT"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---

@@ -104,6 +104,18 @@ def _elevenlabs(row, body):
     call = Call.query.filter_by(elevenlabs_conversation_id=conv).first() \
         if conv else None
     if call is None:
+        # A call WE placed never learned the vendor's conversation id up
+        # front; the webhook echoes the dynamic variables we handed over,
+        # and our own call id is one of them.
+        cid = (((data.get("conversation_initiation_client_data") or {})
+                .get("dynamic_variables") or {}).get("hq_call_id"))
+        try:
+            call = db.session.get(Call, int(cid)) if cid else None
+        except (TypeError, ValueError):
+            call = None
+        if call is not None and conv and not call.elevenlabs_conversation_id:
+            call.elevenlabs_conversation_id = conv[:64]
+    if call is None:
         return None
     settings = get_settings(call.account_id)
 

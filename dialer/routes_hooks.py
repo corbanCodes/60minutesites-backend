@@ -151,6 +151,58 @@ def twilio_voice(account_id):
     return _xml(twiml)
 
 
+@hooks_bp.route("/twilio/ai/<int:call_id>/connect", methods=["POST", "GET"])
+def twilio_ai_connect(call_id):
+    """A prospect call WE placed has been answered: hand it to the agent.
+
+    The whole reason for owning the leg. Because this call is ours, a
+    hand-off later is a redirect of an answered call -- no dial, no
+    ringback -- instead of a transfer the vendor dials for us.
+    """
+    call = db.session.get(Call, call_id)
+    if call is None:
+        abort(404)
+    s = _settings(call.account_id)
+    if not _verify_twilio(s):
+        abort(403)
+    p = request.values.to_dict()
+    _inbox(call.account_id, "twilio", "ai_connect",
+           f"connect:{p.get('CallSid', call_id)}", p)
+    from dialer import trace
+    from dialer.models import AiAgent
+    from dialer.inbound import _vars
+    from dialer.providers import registry
+    from app import Lead
+    agent = db.session.get(AiAgent, call.ai_agent_id) if call.ai_agent_id else None
+    if agent is None or not agent.elevenlabs_agent_id:
+        trace.record(call.account_id, "connect", "no agent", call_id=call.id)
+        return _xml("<Response><Hangup/></Response>")
+    if p.get("CallSid") and not call.twilio_sid:
+        call.twilio_sid = p["CallSid"][:64]
+    lead = db.session.get(Lead, call.lead_id) if call.lead_id else None
+    variables = _vars(lead)
+    variables.update({"last_note": variables.get("last_note", ""),
+                      "city": "", "hq_call_id": str(call.id)})
+    r = registry.voice_agent(s).register_call(
+        agent.elevenlabs_agent_id, call.from_number or "", call.to_number or "",
+        "outbound", variables=variables)
+    if not r.get("ok") or not r.get("twiml"):
+        call.error = (r.get("error") or "ElevenLabs gave no TwiML")[:400]
+        db.session.commit()
+        trace.record(call.account_id, "connect", f"FAILED: {call.error}",
+                     payload=r, call_id=call.id)
+        return _xml("<Response><Hangup/></Response>")
+    twiml = r["twiml"]
+    if "<?xml" in twiml:
+        twiml = twiml.split("?>", 1)[1]
+    call.status = "in-progress"
+    db.session.commit()
+    trace.record(call.account_id, "connect", f"sid={p.get('CallSid', '')} "
+                 f"agent={agent.elevenlabs_agent_id}", payload=twiml[:1500],
+                 call_id=call.id)
+    return _xml(twiml.strip())
+
+
 @hooks_bp.route("/twilio/<int:account_id>/bridge/wait",
                 methods=["POST", "GET"])
 def twilio_bridge_wait(account_id):

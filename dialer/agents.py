@@ -72,7 +72,7 @@ def _fill(agent, settings, text):
 
 def _transfer_mechanics(agent, settings):
     """How to drive the transfer tool, for a prompt we did not write."""
-    if not transfer_number(settings, agent):
+    if not owned(agent) and not transfer_number(settings, agent):
         return ""
     return ("# How the hand-off actually works (mechanics, not wording)\n"
             + transfer_intro(agent))
@@ -324,6 +324,15 @@ def transfer_intro(agent):
     said first.
     """
     line = transfer_say(agent)
+    if owned(agent):
+        return ("Do NOT say anything and do NOT wait for a reply. Call the "
+                "set_disposition tool straight away, in the same turn, with "
+                "disposition \"handoff\". That is the hand-off. The line "
+                f"\"{line}\" is played to them in your own voice the "
+                "instant you call it, so you must not say it yourself \u2014 "
+                "saying anything first ends your turn and the hand-off waits "
+                "for them to talk again, which loses the call. After the tool "
+                "returns, you are done: say nothing more.")
     return ("Do NOT say anything first and do NOT wait for a reply. Call the "
             "transfer_to_number tool straight away, in the same turn, and "
             f"pass exactly this as its client_message: \"{line}\"\n"
@@ -346,6 +355,8 @@ def transfer_number(settings, agent=None):
     callback number the AI already reads out, which is required to reach a
     human during business hours anyway.
     """
+    if handoff_type(agent) == "owned":
+        return ""
     if handoff_type(agent) == "bridge":
         from dialer.bridge import handoff_line
         line = handoff_line(getattr(agent, "account_id", None)
@@ -406,6 +417,17 @@ def delivery_tts(agent):
 
 
 HANDOFFS = {
+    "owned": {
+        "label": "Seamless \u2014 we hold the line (no ring, no music, nothing)",
+        "hint": "We place the call ourselves and the AI rides it. When it "
+                "reaches a decision maker, the already-answered call is "
+                "simply moved into a room with office ambience and you are "
+                "rung into it \u2014 nothing is dialled on their side, so "
+                "there is no ringback to hear. Your hand-off line is "
+                "pre-recorded in the AI's voice and plays as the room opens. "
+                "Needs a rep-pool number for the room; the browser phone or "
+                "a typed mobile answers.",
+    },
     "bridge": {
         "label": "Through our own line \u2014 no ring, no hold music",
         "hint": "The AI hands the call to one of your rep-pool numbers, we "
@@ -451,8 +473,14 @@ def handoff_type(agent):
 
 def vendor_transfer_type(agent):
     """What ElevenLabs is asked for. The bridge is a blind transfer to our
-    own line; the quiet part happens on our side of it."""
-    return "blind" if handoff_type(agent) == "bridge" else handoff_type(agent)
+    own line; the quiet part happens on our side of it. Owned mode asks
+    the vendor for nothing: the hand-off is our own tool."""
+    kind = handoff_type(agent)
+    return "blind" if kind in ("bridge", "owned") else kind
+
+
+def owned(agent):
+    return handoff_type(agent) == "owned"
 
 
 def transfer_collides(agent, settings, to_number):
@@ -485,6 +513,8 @@ def transfer_config(agent, settings):
     given to it. The agent would say "let me put you through to a colleague"
     and then sit there, which is worse than never offering.
     """
+    if owned(agent):
+        return None
     number = transfer_number(settings, agent)
     if not number:
         return None
@@ -559,6 +589,36 @@ def normalise_llm(value):
     return LLM_RENAMES.get(v, v)
 
 
+def ensure_handoff_line(agent, settings, va=None):
+    """Synthesise the hand-off line in the agent's voice, once per
+    (voice, wording). Played by Twilio the instant the call moves rooms,
+    so the model never has to time it and never gets to reword it."""
+    import hashlib
+    from app import Media
+    line = transfer_say(agent)
+    voice = (getattr(agent, "voice_id", "") or "").strip()
+    if not line or not voice:
+        return None
+    key = hashlib.sha1(f"{voice}|{line}".encode()).hexdigest()[:40]
+    if agent.handoff_line_media_id and agent.handoff_line_key == key \
+            and db.session.get(Media, agent.handoff_line_media_id) is not None:
+        return agent.handoff_line_media_id
+    va = va or registry.voice_agent(settings)
+    if not hasattr(va, "speak"):
+        return None
+    r = va.speak(line, voice)
+    if not r.get("ok") or not r.get("audio"):
+        return None
+    media = Media(owner_id=agent.account_id, filename="handoff-line.mp3",
+                  mimetype=r.get("mimetype") or "audio/mpeg", data=r["audio"])
+    db.session.add(media)
+    db.session.flush()
+    agent.handoff_line_media_id = media.id
+    agent.handoff_line_key = key
+    db.session.commit()
+    return media.id
+
+
 def sync_agent(agent, settings):
     """Create or update the agent at the vendor. Idempotent."""
     va = registry.voice_agent(settings)
@@ -594,9 +654,15 @@ def sync_agent(agent, settings):
         agent.voicemail_message = voicemail_text(agent, settings)
 
     created = not (agent.elevenlabs_agent_id or "").strip()
+    if owned(agent):
+        ensure_handoff_line(agent, settings, va)
     kwargs = dict(webhook_id=settings.elevenlabs_webhook_id or None,
                   transfer=transfer_config(agent, settings),
-                  first_message=opening_for_vendor)
+                  first_message=opening_for_vendor,
+                  # Owned mode: our webhook tools carry the hand-off and the
+                  # vendor's transfer tool must go. Sending the tools array
+                  # on update rebuilds the set from it, which is the point.
+                  force_tools=owned(agent))
     r = va.upsert_agent(agent, prompt, tools, **kwargs)
     if r.get("ok"):
         agent.elevenlabs_agent_id = (r.get("agent_id") or "")[:64]

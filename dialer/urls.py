@@ -49,6 +49,17 @@ def twilio_status(account_id):
     return hook(f"/twilio/{account_id}/status")
 
 
+def twilio_ai_connect(call_id):
+    """Where a prospect call WE placed fetches its TwiML: the hook that asks
+    ElevenLabs to ride the call as a media stream."""
+    return hook(f"/twilio/ai/{call_id}/connect")
+
+
+def handoff_line_media(media_id):
+    """The pre-synthesised hand-off line, fetched by Twilio to play."""
+    return f"{origin()}/dialer/handoff-line/{media_id}"
+
+
 def twilio_bridge_rep(account_id, room):
     """Status callback for the rep's leg of a silent hand-off."""
     return hook(f"/twilio/{account_id}/bridge/{room}/rep")

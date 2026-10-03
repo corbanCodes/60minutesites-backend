@@ -628,6 +628,18 @@ def _link_number_to_elevenlabs(s, number):
 
 
 # -------------------------------------------------------------- voicemail
+@bp.route("/handoff-line/<int:media_id>")
+def handoff_line_media(media_id):
+    """The hand-off line in the AI's voice, served for Twilio to play.
+    Unauthenticated like the voicemail media: the id is opaque and the
+    clip is one short sentence made for exactly this."""
+    from flask import Response
+    media = db.session.get(Media, media_id)
+    if media is None or not (media.filename or "").startswith("handoff-line"):
+        abort(404)
+    return Response(media.data, mimetype=media.mimetype or "audio/mpeg")
+
+
 @bp.route("/vm/<int:drop_id>")
 def voicemail_media(drop_id):
     """Served unauthenticated so Twilio can fetch it, but the id is opaque and
@@ -1154,10 +1166,12 @@ def playbook_napkin():
     # No ring and no hold music is the brief. The bridge delivers that and
     # needs a rep-pool number to land on; without one it is a normal ring.
     from dialer.bridge import ensure_line, handoff_line
-    agent.transfer_handoff = ("bridge" if handoff_line(g.account_id)
+    # Seamless is the brief: we hold the line, nothing is dialled on the
+    # prospect's side, nothing to hear. Needs a rep-pool number for the room.
+    agent.transfer_handoff = ("owned" if handoff_line(g.account_id)
                               else (agent.transfer_handoff or "blind"))
     line_err = ""
-    if agent.transfer_handoff == "bridge":
+    if agent.transfer_handoff in ("bridge", "owned"):
         lr = ensure_line(s, g.account_id)
         line_err = "" if lr.get("ok") else (lr.get("error") or "unknown")
     # A pasted-in copy of an older prompt would freeze all of the above.
@@ -1190,7 +1204,7 @@ def playbook_napkin():
     if line_err:
         extra += (f" WARNING: the hand-off line could not be pointed at this "
                   f"app ({line_err}), so a hand-off will fail until it is.")
-    elif agent.transfer_handoff == "bridge":
+    elif agent.transfer_handoff in ("bridge", "owned"):
         extra += " Your rep line now answers hand-offs here."
     if res.get("ok"):
         flash(f"{what} \u201c{pb.name}\u201d and its agent "
@@ -1605,7 +1619,7 @@ def agent_edit(agent_id):
                   f"type a real mobile.", "error")
             a.transfer_to_number = ""
             db.session.commit()
-        bridged = (a.transfer_handoff or "") == "bridge"
+        bridged = (a.transfer_handoff or "") in ("bridge", "owned")
         if bridged:
             from dialer.bridge import ensure_line
             lr = ensure_line(s, g.account_id)
@@ -2480,7 +2494,8 @@ def test_call():
         flash("No number on your account can place this call. Buy one on "
               "step 4, or check none of them are parked.", "error")
         return redirect(url_for("dialer.setup", step=12))
-    if agent:
+    from dialer.agents import owned as _owned
+    if agent and not _owned(agent):
         # ElevenLabs places the call, not Twilio, so it has to have been
         # given the number first. Importing only happened when a number was
         # bought or moved pools, so a number that existed before ElevenLabs
@@ -2502,10 +2517,25 @@ def test_call():
                   f"press “Try the sync again”.", "error")
             return redirect(url_for("dialer.setup", step=12))
 
+    if agent and _owned(agent) and not agent.elevenlabs_agent_id:
+        flash(f"\u201c{agent.name}\u201d has not synced to ElevenLabs. Open it "
+              f"and press \u201cTry the sync again\u201d.", "error")
+        return redirect(url_for("dialer.setup", step=12))
     call = calls_mod.start_call(g.account_id, lead, mode, s,
                                 from_number=number.e164 if number else "",
                                 ai_agent=agent, gate=ev)
-    if agent and agent.elevenlabs_agent_id:
+    if agent and agent.elevenlabs_agent_id and _owned(agent):
+        # Owned: WE place the call and the agent rides it. A hand-off is
+        # then a move of an answered call, not a dial -- no ringback.
+        from dialer import urls
+        r = registry.telephony(s).create_call(
+            to=call.to_number, from_=number.e164 if number else "",
+            url=urls.twilio_ai_connect(call.id),
+            status_callback=urls.twilio_status(g.account_id),
+            time_limit=s.max_call_seconds or 600)
+        if r.get("ok"):
+            call.twilio_sid = (r.get("sid") or "")[:64]
+    elif agent and agent.elevenlabs_agent_id:
         r = registry.voice_agent(s).outbound_call(
             agent.elevenlabs_agent_id,
             number.elevenlabs_phone_id if number else "",
