@@ -181,3 +181,51 @@ def test_the_delivery_choice_saves(setup):
     client.post(f"/dialer/agents/{a.id}", follow_redirects=True,
                 data={"name": a.name, "voice_delivery": "lively"})
     assert db.session.get(AiAgent, a.id).voice_delivery == "lively"
+
+
+# ------------------------------------------- overrides must still transfer
+def test_an_override_still_gets_the_transfer_mechanics(setup):
+    """Overrides are made by copying the generated prompt, editing it, and
+    pasting it back -- which freezes whatever the tool instructions said on
+    the day of the copy. One such copy carried "say this, THEN call the
+    transfer tool", and no later fix could reach that agent."""
+    owner, s, _ = setup
+    a = agent_with(owner.id, prompt_override="Be brief. Ask for the owner.")
+    prompt = build_prompt(a, s)
+    assert "Be brief. Ask for the owner." in prompt
+    assert "Do NOT say anything first" in prompt
+    assert "same turn" in prompt
+
+
+def test_the_override_itself_is_never_altered(setup):
+    owner, s, _ = setup
+    mine = "Say only what I wrote. Nothing else."
+    a = agent_with(owner.id, prompt_override=mine)
+    assert build_prompt(a, s).startswith(mine)
+
+
+def test_the_mechanics_carry_the_chosen_line_too(setup):
+    owner, s, _ = setup
+    a = agent_with(owner.id, prompt_override="Mine.",
+                   transfer_style="custom", transfer_line="Oh, okay. Thanks.")
+    assert '"Oh, okay. Thanks."' in build_prompt(a, s)
+
+
+def test_nothing_is_appended_when_there_is_nowhere_to_transfer(setup):
+    """An agent that cannot hand over should not be told how to."""
+    owner, s, _ = setup
+    s.ai_callback_number = ""
+    s.transfer_mode = ""
+    db.session.commit()
+    a = agent_with(owner.id, prompt_override="Mine.")
+    prompt = build_prompt(a, s)
+    assert "mechanics, not wording" not in prompt
+    assert "transfer_to_number tool" not in prompt
+    assert prompt.startswith("Mine.")     # the disclosure still follows
+
+
+def test_the_block_is_labelled_as_mechanics_not_wording(setup):
+    """So the next person reading it knows which half is theirs."""
+    owner, s, _ = setup
+    a = agent_with(owner.id, prompt_override="Mine.")
+    assert "mechanics, not wording" in build_prompt(a, s)

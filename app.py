@@ -469,13 +469,15 @@ def _ensure_schema_inner():
         # --- dialer's own tables. create_all() makes a NEW table but never
         # alters one that already exists, so a column added to a dialer model
         # after its table shipped needs a line here exactly like any other.
-        "dialer_settings": {"elevenlabs_webhook_error": "VARCHAR(400)"},
+        "dialer_settings": {"elevenlabs_webhook_error": "VARCHAR(400)",
+                            "ai_person_name": "VARCHAR(60)"},
         "ai_agent": {"transfer_style": "VARCHAR(20)",
                      "transfer_line": "VARCHAR(300)",
                      "opening_mode": "VARCHAR(10)",
                      "transfer_to_number": "VARCHAR(32)",
                      "transfer_handoff": "VARCHAR(20)",
                      "voice_delivery": "VARCHAR(20)",
+                     "person_name": "VARCHAR(60)",
                      "prompt_override": "TEXT"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---

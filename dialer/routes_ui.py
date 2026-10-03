@@ -1363,7 +1363,7 @@ def agent_edit(agent_id):
                       "first_message", "persona", "company_facts",
                       "knowledge_text", "transfer_rules", "voicemail_message",
                       "background_preset", "transfer_handoff",
-                      "voice_delivery"):
+                      "voice_delivery", "person_name"):
             if field in request.form:
                 setattr(a, field, request.form.get(field) or "")
         if "prompt_override" in request.form:

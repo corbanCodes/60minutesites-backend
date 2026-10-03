@@ -135,14 +135,78 @@ def test_it_is_forbidden_from_pitching(account):
 
 
 # ---------------------------------------------------------- the wording
-def test_the_company_name_is_substituted_not_left_as_a_placeholder(account):
-    """A placeholder left in a prompt is a placeholder read out loud."""
+def test_no_placeholder_survives_into_the_prompt(account):
+    """A placeholder left in a prompt is a placeholder read out loud.
+
+    This used to check the stored row, because the name was baked in when
+    the script was created. That froze it: renaming the AI left every
+    existing script saying the old name, and the substitution read the
+    COMPANY field, which is how "This is {ai_name} with NapkinAds" came out
+    of a real account as "This is NapkinAds with NapkinAds". Filling happens
+    when the prompt is assembled now, so this checks the thing that
+    actually reaches the vendor."""
     owner, client = account
     install(client)
-    pb = Playbook.query.filter_by(account_id=owner.id).first()
-    blob = pb.steps_json + pb.objections_json
-    assert "{ai_name}" not in blob
-    assert "NapkinAds" in blob
+    s = get_settings(owner.id)
+    s.ai_person_name = "John"
+    db.session.commit()
+    agent = AiAgent.query.filter_by(account_id=owner.id).first()
+
+    prompt = build_prompt(agent, s)
+
+    assert "{ai_name}" not in prompt
+    assert "{company}" not in prompt
+    assert "This is John." in prompt
+    assert "NapkinAds" in prompt
+
+
+def test_the_speaker_is_never_introduced_as_the_company(account):
+    """The exact production sentence: "This is NapkinAds with NapkinAds."."""
+    owner, client = account
+    install(client)
+    s = get_settings(owner.id)
+    s.ai_person_name = "John"
+    db.session.commit()
+    agent = AiAgent.query.filter_by(account_id=owner.id).first()
+    assert "NapkinAds with NapkinAds" not in build_prompt(agent, s)
+
+
+def test_an_agent_can_have_its_own_name(account):
+    owner, client = account
+    install(client)
+    s = get_settings(owner.id)
+    s.ai_person_name = "John"
+    db.session.commit()
+    agent = AiAgent.query.filter_by(account_id=owner.id).first()
+    agent.person_name = "Sam"
+    db.session.commit()
+    prompt = build_prompt(agent, s)
+    assert "This is Sam." in prompt
+    assert "This is John." not in prompt
+
+
+def test_renaming_reaches_a_script_that_already_existed(account):
+    """The freeze this change exists to prevent."""
+    owner, client = account
+    install(client)
+    s = get_settings(owner.id)
+    agent = AiAgent.query.filter_by(account_id=owner.id).first()
+    s.ai_person_name = "John"
+    db.session.commit()
+    assert "This is John." in build_prompt(agent, s)
+    s.ai_person_name = "Dave"
+    db.session.commit()
+    assert "This is Dave." in build_prompt(agent, s)
+
+
+def test_with_no_name_set_it_still_says_something_sayable(account):
+    owner, client = account
+    install(client)
+    s = get_settings(owner.id)
+    agent = AiAgent.query.filter_by(account_id=owner.id).first()
+    prompt = build_prompt(agent, s)
+    assert "{ai_name}" not in prompt
+    assert "{company}" not in prompt
 
 
 def test_the_opening_asks_for_the_manager_and_nothing_else(account):

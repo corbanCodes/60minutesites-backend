@@ -111,6 +111,11 @@ class DialerSettings(db.Model):
     announce_mode = db.Column(db.String(20), default="proceed")  # proceed|verbal_yes
     ai_disclosure_enabled = db.Column(db.Boolean, default=True)
     ai_disclosure_name = db.Column(db.String(160), default="")
+    # What the AI calls ITSELF, as opposed to the company it calls for.
+    # Without this there was one name field doing both jobs, so a script
+    # reading "This is {ai_name} with NapkinAds" rendered as "This is
+    # NapkinAds with NapkinAds."
+    ai_person_name = db.Column(db.String(60), default="")
     ai_callback_number = db.Column(db.String(32), default="")
     ai_disclosure_text = db.Column(db.String(400), default="")
     window_start = db.Column(db.String(5), default="09:00")   # lead-local HH:MM
@@ -357,6 +362,8 @@ class AiAgent(db.Model):
     # which on a flat line like "Great, thank you" produces a delivery with
     # far more energy than anyone making a routine work call would use.
     voice_delivery = db.Column(db.String(20), default="calm")
+    # What this agent calls itself out loud. Falls back to the account's.
+    person_name = db.Column(db.String(60), default="")
     # A hand-written system prompt that replaces the generated one entirely.
     # Empty means "use the assembled one", which is the right default and
     # not a restriction.

@@ -81,6 +81,14 @@
             account-wide number{% if transfer_to %}, currently {{ transfer_to }}{% else %}, which is not set,
             so this agent would qualify and never hand over{% endif %}. It must not be the phone you are
             testing on — a hand-off to a line that is already on the call rolls to its own voicemail.</span>
+          <label for="ag-person" style="margin-top:14px">What it calls itself</label>
+          <input type="text" id="ag-person" name="person_name" maxlength="60"
+                 value="{{ a.person_name or '' }}" placeholder="John">
+          <span class="field-hint">A first name, nothing else. Asked "who's calling?" it answers with
+            exactly this and stops — adding the company on the end is the most salesy thing it can do in
+            the first five seconds, so it only names the company once they ask what the call is about.
+            Leave it empty to use the account name{% if s.ai_person_name %}, currently
+            {{ s.ai_person_name }}{% endif %}.</span>
           <label for="ag-delivery" style="margin-top:14px">Delivery</label>
           <select id="ag-delivery" name="voice_delivery">
             {% for key, d in DELIVERIES.items() %}

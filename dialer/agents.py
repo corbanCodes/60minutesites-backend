@@ -24,16 +24,58 @@ def build_prompt(agent, settings):
 
     A hand-written override replaces all of this. It is your product and
     there is no good reason the generated version should be the only one you
-    are allowed. The disclosure rule is the single thing still appended
-    afterwards, and only while the step 7 switch is on -- turn that off and
-    even this is yours.
+    are allowed. Two short blocks are still appended after it, and both are
+    mechanics rather than content: the disclosure rule, only while the step
+    7 switch is on, and how to drive the transfer tool, only when there is
+    somewhere to transfer to.
+
+    The second one is appended because of what overrides are made from in
+    practice. People copy the generated prompt out, edit the wording, and
+    paste it back -- which freezes whatever the tool instructions said on
+    the day they copied. One such copy carried "say this, THEN call the
+    transfer tool", an instruction that cannot be obeyed, and no later fix
+    could reach that agent. What it says is the customer's; how the tool is
+    called is not a style choice.
     """
     override = (getattr(agent, "prompt_override", "") or "").strip()
     if override:
+        out = [override]
+        mech = _transfer_mechanics(agent, settings)
+        if mech:
+            out.append(mech)
         if settings.disclose_ai:
-            return override + "\n\n" + _disclosure_block(settings)
-        return override
-    return _generated_prompt(agent, settings)
+            out.append(_disclosure_block(settings))
+        return _fill(agent, settings, "\n\n".join(out))
+    return _fill(agent, settings, _generated_prompt(agent, settings))
+
+
+def _fill(agent, settings, text):
+    """Resolve {ai_name} and {company} in the finished prompt.
+
+    Done here, at the very end, rather than when a script is saved. Baking
+    a name into the stored row froze it: renaming the AI left every
+    existing script saying the old name. The agent's own name wins over the
+    account's, so one account can run "John" on venues and "Sam" on retail.
+
+    ElevenLabs' own {{double brace}} variables are untouched -- these are
+    single braces and the names do not overlap.
+    """
+    from dialer import napkin
+    person = (getattr(agent, "person_name", "") or "").strip()
+    if person:
+        class _Local:
+            ai_person_name = person
+            ai_disclosure_name = getattr(settings, "ai_disclosure_name", "")
+        return napkin.fill(text, _Local)
+    return napkin.fill(text, settings)
+
+
+def _transfer_mechanics(agent, settings):
+    """How to drive the transfer tool, for a prompt we did not write."""
+    if not transfer_number(settings, agent):
+        return ""
+    return ("# How the hand-off actually works (mechanics, not wording)\n"
+            + transfer_intro(agent))
 
 
 def _disclosure_block(settings):
