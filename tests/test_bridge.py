@@ -131,6 +131,61 @@ def test_the_line_is_a_rep_number_never_an_ai_number(world):
     assert bridge.handoff_line(owner.id).e164 == LINE
 
 
+def test_an_unknown_caller_id_during_a_live_ai_call_is_still_a_handoff(world):
+    """The second live test. The webhook reached us, but From was neither
+    the AI's number nor the prospect's -- ElevenLabs never documents what
+    a blind transfer presents -- so the call fell through to the voicemail
+    greeting. A call on the hand-off line while an AI call is live on a
+    bridge agent IS the hand-off, whatever the caller ID says."""
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    found = bridge.detect(owner.id, "+12125550000", LINE)
+    assert found is not None
+    assert found[1].id == call.id
+
+
+def test_anonymous_caller_id_is_handled_the_same_way(world):
+    owner, s, agent, fake, client = world
+    live_call(owner, s, agent)
+    assert bridge.detect(owner.id, "anonymous", LINE) is not None
+    assert bridge.detect(owner.id, "", LINE) is not None
+
+
+def test_the_fallback_needs_a_live_call_on_a_bridge_agent(world):
+    """An ordinary inbound caller minutes after the AI call ended must
+    still get the ordinary treatment."""
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    call.status = "completed"
+    db.session.commit()
+    assert bridge.detect(owner.id, "+12125550000", LINE) is None
+
+
+def test_the_fallback_ignores_agents_not_on_the_bridge(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_handoff = "blind"
+    db.session.commit()
+    live_call(owner, s, agent)
+    assert bridge.detect(owner.id, "+12125550000", LINE) is None
+
+
+def test_the_fallback_window_is_short(world):
+    owner, s, agent, fake, client = world
+    call = live_call(owner, s, agent)
+    call.started_at = bridge._now() - bridge.RECENT_WINDOW * 2
+    db.session.commit()
+    assert bridge.detect(owner.id, "+12125550000", LINE) is None
+
+
+def test_the_full_hook_bridges_an_unknown_caller_id(world):
+    owner, s, agent, fake, client = world
+    live_call(owner, s, agent)
+    body = handoff(client, owner, frm="+12125550000")
+    assert "<Conference" in body
+    assert "Thanks for calling" not in body
+    assert len(fake.created) == 1
+
+
 # ------------------------------------------------------- what the vendor dials
 def test_the_vendor_is_told_to_dial_our_line_blind(world):
     owner, s, agent, fake, client = world
@@ -218,6 +273,77 @@ def test_an_ordinary_caller_still_gets_the_ordinary_treatment(world):
     body = handoff(client, owner, sid="CAin9", frm="+12125550000")
     assert "<Conference" not in body
     assert fake.created == []
+
+
+# --------------------------------------------------- who the rep leg rings
+def present(owner_id, user_id, fresh=True, available=True):
+    from dialer.models import RepPresence
+    from datetime import timedelta
+    p = RepPresence(account_id=owner_id, user_id=user_id, on_shift=True,
+                    available_for_transfers=available,
+                    last_seen_at=bridge._now() - (timedelta(seconds=10) if fresh
+                                                  else timedelta(hours=5)))
+    db.session.add(p)
+    db.session.commit()
+    return p
+
+
+def test_a_typed_number_always_wins(world):
+    owner, s, agent, fake, client = world
+    present(owner.id, owner.id)
+    assert bridge.rep_destination(s, owner.id, agent) == HUMAN
+
+
+def test_with_no_number_the_browser_phone_rings_when_someone_is_there(world):
+    """What "get me ready to answer in my UI" means: the browser is what
+    shows the lead and the transcript as the call arrives."""
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = ""
+    db.session.commit()
+    present(owner.id, owner.id)
+    assert bridge.rep_destination(s, owner.id, agent) == \
+        f"client:t{owner.id}_u{owner.id}"
+
+
+def test_a_stale_browser_presence_is_not_rung(world):
+    """A tab closed yesterday still has a row. Ringing it rings nothing
+    for twenty seconds and then apologises to the prospect."""
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = ""
+    s.ai_callback_number = "+18655550199"
+    db.session.commit()
+    present(owner.id, owner.id, fresh=False)
+    assert bridge.rep_destination(s, owner.id, agent) == "+18655550199"
+
+
+def test_a_rep_marked_unavailable_is_not_rung(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = ""
+    s.ai_callback_number = "+18655550199"
+    db.session.commit()
+    present(owner.id, owner.id, available=False)
+    assert bridge.rep_destination(s, owner.id, agent) == "+18655550199"
+
+
+def test_number_mode_on_the_account_skips_the_browser(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = ""
+    s.transfer_mode = "number"
+    s.transfer_number = "+18655550177"
+    db.session.commit()
+    present(owner.id, owner.id)
+    assert bridge.rep_destination(s, owner.id, agent) == "+18655550177"
+
+
+def test_the_browser_leg_is_a_client_call_into_the_room(world):
+    owner, s, agent, fake, client = world
+    agent.transfer_to_number = ""
+    db.session.commit()
+    present(owner.id, owner.id)
+    live_call(owner, s, agent)
+    handoff(client, owner)
+    assert fake.created[0]["to"] == f"client:t{owner.id}_u{owner.id}"
+    assert "handoff-CAprospect1" in fake.created[0]["twiml"]
 
 
 # ------------------------------------------------------- when nobody picks up
@@ -370,3 +496,25 @@ def test_the_choice_is_on_the_agent_page_with_the_line_named(world):
     body = client.get(f"/dialer/agents/{agent.id}").get_data(as_text=True)
     assert "no ring, no hold music" in body
     assert "hand-off line is" in body
+
+
+def test_a_sample_number_is_never_the_handoff_line(world):
+    """Sample rows have invented SIDs and the lowest ids, so a plain
+    first() would hand a live prospect to a 555 number."""
+    owner, s, agent, fake, client = world
+    from dialer.demo import DEMO_PREFIX
+    # Put the sample at a LOWER id than the only real rep line.
+    PhoneNumber.query.filter_by(e164=LINE).delete()
+    db.session.add(PhoneNumber(account_id=owner.id, e164="+18655550001",
+                               twilio_sid="PNdemo0001", pool="rep",
+                               state="active",
+                               friendly_name=DEMO_PREFIX + "Sample"))
+    db.session.commit()
+    db.session.add(PhoneNumber(account_id=owner.id, e164="+14405550101",
+                               twilio_sid="PN" + "c" * 32, pool="rep",
+                               state="active", friendly_name="Real line"))
+    db.session.commit()
+    sample = PhoneNumber.query.filter_by(e164="+18655550001").one()
+    real = PhoneNumber.query.filter_by(e164="+14405550101").one()
+    assert sample.id < real.id
+    assert bridge.handoff_line(owner.id).e164 == "+14405550101"

@@ -58,11 +58,14 @@ def handoff_line(account_id):
     every rep-pool number. An AI-pool number's inbound goes to ElevenLabs,
     so handing off to one of those would start a second AI conversation.
     """
-    return (PhoneNumber.query
+    rows = (PhoneNumber.query
             .filter_by(account_id=account_id, pool="rep", state="active")
             .filter(PhoneNumber.twilio_sid.isnot(None))
             .filter(PhoneNumber.twilio_sid != "")
-            .order_by(PhoneNumber.id.asc()).first())
+            .order_by(PhoneNumber.id.asc()).all())
+    # Sample numbers have invented SIDs and sit at the lowest ids. Handing a
+    # live prospect to one would have the vendor dial a 555 number.
+    return next((n for n in rows if not n.is_placeholder), None)
 
 
 def ensure_line(settings, account_id):
@@ -137,8 +140,21 @@ def detect(account_id, caller, called):
                 .order_by(Call.started_at.desc()).first())
     else:
         call = live_ai_call(account_id, caller)
+
     if call is None and not from_ai_pool:
-        return None
+        # Neither caller-ID signal matched. ElevenLabs does not document
+        # what From a blind transfer presents, and on the first live test
+        # it was neither the AI's number nor the prospect's -- so the
+        # hand-off fell through to the voicemail greeting. A call landing
+        # on the hand-off line while an AI call is live on an agent set to
+        # the bridge IS the hand-off, whatever the caller ID says. The
+        # window is short so an unrelated inbound call minutes later is
+        # not mistaken for one.
+        call = live_bridge_call(account_id)
+        if call is None:
+            _warn(f"call to hand-off line {called} from {caller} matched "
+                  f"no live AI call; treated as ordinary inbound")
+            return None
 
     agent = db.session.get(AiAgent, call.ai_agent_id) if (
         call and call.ai_agent_id) else None
@@ -151,6 +167,33 @@ def detect(account_id, caller, called):
     if agent is None:
         return None
     return agent, call
+
+
+RECENT_WINDOW = timedelta(minutes=5)
+
+
+def live_bridge_call(account_id):
+    """The most recent live AI call on an agent set to the bridge."""
+    since = _now() - RECENT_WINDOW
+    bridge_agents = [a.id for a in AiAgent.query.filter_by(
+        account_id=account_id).filter(AiAgent.transfer_handoff == "bridge")]
+    if not bridge_agents:
+        return None
+    return (Call.query
+            .filter_by(account_id=account_id, mode="ai_outbound")
+            .filter(Call.ai_agent_id.in_(bridge_agents))
+            .filter(Call.started_at >= since)
+            .filter(Call.status.notin_(("completed", "failed", "canceled",
+                                        "busy", "no-answer")))
+            .order_by(Call.started_at.desc()).first())
+
+
+def _warn(msg):
+    try:
+        from flask import current_app
+        current_app.logger.warning("[bridge] %s", msg)
+    except Exception:
+        pass
 
 
 def ambience_url():
@@ -197,12 +240,49 @@ def rep_twiml(room):
             f'{room}</Conference></Dial></Response>')
 
 
+PRESENCE_FRESH = timedelta(minutes=2)
+
+
+def softphone_target(account_id):
+    """-> "client:<identity>" for a rep whose browser phone is open and
+    marked available, or "". Presence has to be fresh: a tab closed
+    yesterday still has a row, and ringing it would ring nothing for
+    twenty seconds and then apologise to the prospect."""
+    from dialer.models import RepPresence
+    since = _now() - PRESENCE_FRESH
+    rep = (RepPresence.query
+           .filter_by(account_id=account_id, available_for_transfers=True)
+           .filter(RepPresence.current_call_id.is_(None))
+           .filter(RepPresence.last_seen_at >= since)
+           .order_by(RepPresence.last_seen_at.desc()).first())
+    return f"client:t{account_id}_u{rep.user_id}" if rep else ""
+
+
+def rep_destination(settings, account_id, agent):
+    """Where the rep leg goes.
+
+    A number typed on the agent wins -- that is an explicit instruction.
+    Otherwise, whoever is on shift in the browser phone, if anyone is;
+    otherwise the account-wide number. The browser is what shows the
+    rep the lead and the transcript as the call arrives, so it is
+    preferred whenever it is actually there to answer.
+    """
+    own = (getattr(agent, "transfer_to_number", "") or "").strip()
+    if own:
+        return own
+    if (settings.transfer_mode or "") != "number":
+        client = softphone_target(account_id)
+        if client:
+            return client
+    from dialer.agents import human_number
+    return human_number(settings, agent)
+
+
 def ring_rep(settings, account_id, agent, room, caller_id):
     """Dial the human into the room. -> provider result dict."""
-    from dialer.agents import human_number
     from dialer.providers import registry
     from dialer import urls
-    to = human_number(settings, agent)
+    to = rep_destination(settings, account_id, agent)
     if not to:
         return {"ok": False, "error": "no human destination"}
     return registry.telephony(settings).create_call(
