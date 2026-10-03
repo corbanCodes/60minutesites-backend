@@ -161,7 +161,11 @@ def test_the_prospect_is_parked_with_our_ambience_not_twilios_music(world):
     live_call(owner, s, agent)
     body = handoff(client, owner)
     assert "<Conference" in body
-    assert 'waitUrl="' in body and "handoff-office.mp3" in body
+    assert f'waitUrl="' in body and f"/twilio/{owner.id}/bridge/wait" in body
+    assert "handoff-office.mp3" not in body, (
+        "a bare file at waitUrl plays once then silence; it must be the "
+        "looping document")
+    assert 'waitMethod="GET"' in body
     assert 'startConferenceOnEnter="false"' in body
     assert 'beep="false"' in body
     assert "handoff-CAprospect1" in body
@@ -265,6 +269,26 @@ def test_the_ambience_loop_is_served_where_the_room_expects_it(world):
     assert r.status_code == 200
     assert r.mimetype in ("audio/mpeg", "audio/mp3")
     assert bridge.ambience_url().endswith("/static-admin/handoff-office.mp3")
+
+
+def test_the_wait_document_plays_the_ambience_and_loops_forever(world):
+    """Twilio loops hold audio one documented way: a TwiML document that
+    ends in a blank <Redirect/>. Anything else goes silent after one play."""
+    owner, s, agent, fake, client = world
+    body = client.get(f"/dialer/hooks/twilio/{owner.id}/bridge/wait"
+                      ).get_data(as_text=True)
+    assert "<Play>" in body and "handoff-office.mp3" in body
+    assert "<Redirect/>" in body
+    for banned in ("<Dial", "<Gather", "<Hangup", "<Record"):
+        assert banned not in body, "not permitted inside a waitUrl document"
+
+
+def test_the_wait_document_is_served_without_a_signature(world):
+    """A failed waitUrl request means the conference is never established,
+    so this must answer even when Twilio's signature cannot be checked."""
+    owner, s, agent, fake, client = world
+    r = client.post(f"/dialer/hooks/twilio/{owner.id}/bridge/wait")
+    assert r.status_code == 200
 
 
 def test_the_choice_is_on_the_agent_page_with_the_line_named(world):

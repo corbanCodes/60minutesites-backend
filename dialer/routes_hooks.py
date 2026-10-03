@@ -139,6 +139,20 @@ def twilio_voice(account_id):
                               request.values.get("CallSid", "")))
 
 
+@hooks_bp.route("/twilio/<int:account_id>/bridge/wait",
+                methods=["POST", "GET"])
+def twilio_bridge_wait(account_id):
+    """The looping office ambience a parked prospect hears.
+
+    Deliberately unsigned. Twilio's own docs: "If the request to your
+    waitUrl fails, the Conference will not be fully established." A
+    signature mismatch here would not leak anything -- the document names
+    a public audio file -- but it WOULD drop a live hand-off on the floor.
+    """
+    from dialer.bridge import wait_twiml
+    return _xml(wait_twiml())
+
+
 @hooks_bp.route("/twilio/<int:account_id>/bridge/<room>/rep",
                 methods=["POST", "GET"])
 def twilio_bridge_rep(account_id, room):

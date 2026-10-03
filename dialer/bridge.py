@@ -129,20 +129,39 @@ def detect(account_id, caller, called):
 
 
 def ambience_url():
+    """The audio file itself."""
     from dialer import urls
     return f"{urls.origin()}/static-admin/handoff-office.mp3"
 
 
-def prospect_twiml(room):
+def wait_url(account_id):
+    """What waitUrl points at: a TwiML document, NOT the file.
+
+    Twilio documents looping only one way: a TwiML document that ends in a
+    <Redirect/> with a blank URL. A bare MP3 at waitUrl is played once and
+    then "silence will be played" -- so a hand-off that outlasted the clip
+    would go dead quiet. Verified against the <Conference> docs.
+    """
+    from dialer import urls
+    return urls.handoff_wait(account_id)
+
+
+def wait_twiml():
+    """Play the ambience, then start again. Blank <Redirect/> loops."""
+    return (f'<Response><Play>{ambience_url()}</Play><Redirect/></Response>')
+
+
+def prospect_twiml(room, account_id):
     """Park the prospect in the room with our wait audio.
 
     startConferenceOnEnter="false": the room does not start until the rep
-    joins, and until then the prospect hears waitUrl on a loop. beep off,
-    because a beep is the one thing more jarring than music.
+    joins, and until then the prospect hears waitUrl. beep off, because a
+    beep is the one thing more jarring than music. waitMethod GET so the
+    looping document is fetched the way Twilio caches static media.
     """
     return (f'<Response><Dial><Conference beep="false" '
             f'startConferenceOnEnter="false" endConferenceOnExit="false" '
-            f'waitUrl="{ambience_url()}" waitMethod="GET">'
+            f'waitUrl="{wait_url(account_id)}" waitMethod="GET">'
             f'{room}</Conference></Dial></Response>')
 
 
@@ -190,7 +209,7 @@ def try_bridge(account_id, settings, caller, called, call_sid):
     if not r.get("ok"):
         # Nobody to dial. Do not leave them in a silent room.
         return no_answer_twiml()
-    return prospect_twiml(room)
+    return prospect_twiml(room, account_id)
 
 
 def no_answer_twiml():
