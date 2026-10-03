@@ -120,8 +120,6 @@ def _generated_prompt(agent, settings):
                 "qualifying question, do not explain the offer again, do not "
                 "confirm details you already have.\n"
                 f"{transfer_intro(agent)}\n"
-                "Then call the transfer tool. Do not wait for them to "
-                "answer whatever you just said.\n"
                 "Every extra sentence after they qualify is a chance to lose "
                 "them. Transferring a second too early costs nothing; a second "
                 "too late costs the call.\n"
@@ -230,51 +228,66 @@ TRANSFER_STYLES = {
     "brief": {
         "label": "One short line, then go",
         "hint": "Fastest. The prospect barely registers a pause.",
-        "say": "Say one short line and transfer immediately. Something like "
-               "\"Perfect \u2014 one second\" or \"Great, let me grab a "
-               "colleague.\" Do not explain what you are doing, do not ask "
-               "permission, do not confirm anything first.",
+        "line": "Perfect \u2014 one second.",
     },
     "explicit": {
         "label": "Say plainly that a person is coming on",
         "hint": "Slower, but nobody is surprised by the new voice.",
-        "say": "Tell them clearly what is about to happen, then transfer: "
-               "\"That's great \u2014 I'm going to put you through to a "
-               "colleague who can set this up. One moment.\" Then go. Do "
-               "not keep selling while you say it.",
+        "line": "That's great \u2014 I'm going to put you through to a "
+                "colleague. One moment.",
     },
     "natural": {
         "label": "A natural aside, like a person would",
         "hint": "Sounds least like a machine. Worth a second of delay.",
-        "say": "Use a small human aside and transfer while you say it. "
-               "Something like \"Oh great \u2014 sorry, can you give me one "
-               "second?\" or \"Perfect, bear with me a moment.\" Keep it "
-               "under about three seconds and sound slightly busy rather "
-               "than scripted.",
+        "line": "Oh great \u2014 sorry, can you give me one second?",
     },
     "custom": {
         "label": "My own line",
         "hint": "Write exactly what it says before handing over.",
-        "say": "",
+        "line": "",
     },
 }
 
 
-def transfer_intro(agent):
-    """What the agent says in the second before it hands over.
+def transfer_say(agent):
+    """The literal words spoken as the hand-off fires.
 
-    The words here decide whether the prospect waits for the new voice or
-    hangs up on a silence, which is too much to leave to one hard-coded
-    sentence.
+    These used to be descriptions aimed at the model -- "say one short line
+    and transfer immediately" -- which left the model free to compose its
+    own. It reliably composed corporate filler: "I'm going to connect you
+    with one of our team members now." The words are a literal string now
+    because they are handed to the tool, not described to a writer.
     """
     style = (getattr(agent, "transfer_style", "") or "brief").lower()
     if style == "custom":
         line = (getattr(agent, "transfer_line", "") or "").strip()
         if line:
-            return (f"Say exactly this, then transfer immediately: "
-                    f"\"{line}\"")
+            return line
         style = "brief"
-    return TRANSFER_STYLES.get(style, TRANSFER_STYLES["brief"])["say"]
+    return TRANSFER_STYLES.get(style, TRANSFER_STYLES["brief"])["line"]
+
+
+def transfer_intro(agent):
+    """How to hand over in ONE turn.
+
+    This used to read "say exactly this, then transfer immediately", and
+    that instruction cannot be obeyed. Speaking ends the model's turn, so
+    the tool call lands in the NEXT turn -- which only arrives when the
+    other person says something else. The observed behaviour was an agent
+    that announced the transfer and then sat there until the prospect spoke
+    again, which reads as the transfer being broken.
+
+    The tool takes the spoken line as its own client_message parameter, so
+    the words and the hand-off go together in a single turn. Nothing is
+    said first.
+    """
+    line = transfer_say(agent)
+    return ("Do NOT say anything first and do NOT wait for a reply. Call the "
+            "transfer_to_number tool straight away, in the same turn, and "
+            f"pass exactly this as its client_message: \"{line}\"\n"
+            "Speaking before you call the tool ends your turn, and the "
+            "hand-off then waits for them to talk again. That delay loses "
+            "the call. The tool speaks the line for you.")
 
 
 def transfer_number(settings, agent=None):
@@ -297,6 +310,41 @@ def transfer_number(settings, agent=None):
     if (settings.transfer_mode or "") == "number" and settings.transfer_number:
         return settings.transfer_number
     return settings.ai_callback_number or ""
+
+
+DELIVERIES = {
+    "calm": {
+        "label": "Calm \u2014 like a routine work call",
+        "hint": "Flat and unbothered. Use this for cold calls: the job is "
+                "to sound like someone who rings twenty venues a day, not "
+                "someone delighted to be on the phone.",
+        "tts": {"stability": 0.75, "speed": 1.0, "expressive_mode": False},
+    },
+    "natural": {
+        "label": "Natural",
+        "hint": "ElevenLabs' own defaults. Some warmth and variation.",
+        "tts": {"stability": 0.5, "speed": 1.0, "expressive_mode": True},
+    },
+    "lively": {
+        "label": "Lively",
+        "hint": "Bright and animated. Good for a warm inbound line, far "
+                "too much for a cold call.",
+        "tts": {"stability": 0.35, "speed": 1.05, "expressive_mode": True},
+    },
+}
+
+
+def delivery_tts(agent):
+    """Prosody settings for the voice.
+
+    We sent nothing but a voice_id, so every agent ran on ElevenLabs'
+    defaults -- and expressive_mode defaults to TRUE. On a deliberately flat
+    line like "Great, thank you" that produces something closer to delight
+    than to a person making a routine call, which is the single clearest
+    tell that nobody is really there.
+    """
+    want = (getattr(agent, "voice_delivery", "") or "calm").strip()
+    return DELIVERIES.get(want, DELIVERIES["calm"])["tts"]
 
 
 HANDOFFS = {
@@ -372,10 +420,25 @@ def transfer_config(agent, settings):
     if not condition:
         condition = ("When the person confirms they are the one who decides "
                      "on this, or asks about price, timing or next steps.")
+    # client_message and agent_message are LLM-supplied runtime parameters,
+    # not config, so the ONLY place to pin the wording is the description the
+    # model reads when it decides to call this. Left vague ("hand the live
+    # call to a person on the team") it invents the line itself, and what it
+    # invents is "I'm going to connect you with one of our team members now."
+    line = transfer_say(agent)
     return {
         "type": "system",
         "name": "transfer_to_number",
-        "description": "Hand the live call to a person on the team.",
+        "description": (
+            "Hand the live call straight to a person on the team. Call this "
+            "the instant you are speaking to a decision maker, in the same "
+            "turn, without saying anything first.\n"
+            f"For client_message pass exactly: \"{line}\" \u2014 use those "
+            "words verbatim. Do NOT write your own. Never say \"let me "
+            "connect you\", \"one of our team members\", \"someone who can "
+            "help\" or anything else that sounds like a call centre.\n"
+            "For agent_message give the colleague one plain sentence naming "
+            "the venue and who is on the line."),
         "params": {
             "system_tool_type": "transfer_to_number",
             "transfers": [{

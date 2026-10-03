@@ -353,6 +353,10 @@ class AiAgent(db.Model):
     # company. Blind hands the leg straight over: normal ringing, original
     # caller ID, no music, and the agent is gone the moment it fires.
     transfer_handoff = db.Column(db.String(20), default="blind")
+    # calm|natural|lively. ElevenLabs ships expressive_mode on by default,
+    # which on a flat line like "Great, thank you" produces a delivery with
+    # far more energy than anyone making a routine work call would use.
+    voice_delivery = db.Column(db.String(20), default="calm")
     # A hand-written system prompt that replaces the generated one entirely.
     # Empty means "use the assembled one", which is the right default and
     # not a restriction.

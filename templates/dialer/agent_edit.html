@@ -81,6 +81,16 @@
             account-wide number{% if transfer_to %}, currently {{ transfer_to }}{% else %}, which is not set,
             so this agent would qualify and never hand over{% endif %}. It must not be the phone you are
             testing on — a hand-off to a line that is already on the call rolls to its own voicemail.</span>
+          <label for="ag-delivery" style="margin-top:14px">Delivery</label>
+          <select id="ag-delivery" name="voice_delivery">
+            {% for key, d in DELIVERIES.items() %}
+            <option value="{{ key }}" {{ 'selected' if (a.voice_delivery or 'calm') == key }}>
+              {{ d.label }}</option>
+            {% endfor %}
+          </select>
+          <span class="field-hint">
+            {% for key, d in DELIVERIES.items() %}{% if (a.voice_delivery or 'calm') == key %}{{
+              d.hint }}{% endif %}{% endfor %}</span>
           <label for="ag-handoff" style="margin-top:14px">What the prospect hears during the hand-off</label>
           <select id="ag-handoff" name="transfer_handoff">
             {% for key, h in HANDOFFS.items() %}

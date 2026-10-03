@@ -67,11 +67,12 @@ def _dialer_globals():
     template, so nothing has to mirror the list in Jinja."""
     from dialer.models import (DISPOSITION_HOTKEYS, DISPOSITION_ICONS,
                                DISPOSITION_LABELS, DISPOSITIONS)
-    from dialer.agents import HANDOFFS, TRANSFER_STYLES
+    from dialer.agents import DELIVERIES, HANDOFFS, TRANSFER_STYLES
     return {"VOICE_KINDS": VOICE_KINDS,
             "ELEVEN_MODELS": ELEVEN_MODELS,
             "TRANSFER_STYLES": TRANSFER_STYLES,
             "HANDOFFS": HANDOFFS,
+            "DELIVERIES": DELIVERIES,
             "DISPOSITIONS": DISPOSITIONS,
             "DISPOSITION_LABELS": DISPOSITION_LABELS,
             "DISPOSITION_ICONS": DISPOSITION_ICONS,
@@ -1361,7 +1362,8 @@ def agent_edit(agent_id):
         for field in ("name", "voice_id", "voice_name", "llm_model",
                       "first_message", "persona", "company_facts",
                       "knowledge_text", "transfer_rules", "voicemail_message",
-                      "background_preset", "transfer_handoff"):
+                      "background_preset", "transfer_handoff",
+                      "voice_delivery"):
             if field in request.form:
                 setattr(a, field, request.form.get(field) or "")
         if "prompt_override" in request.form:

@@ -14,6 +14,14 @@ import requests
 
 from dialer.providers.base import VoiceAgent, err, ok
 
+
+def _delivery(agent):
+    """Prosody for this agent's voice. Imported locally because
+    dialer.agents reaches the providers through the registry, so a
+    top-level import here closes the loop."""
+    from dialer.agents import delivery_tts
+    return delivery_tts(agent)
+
 API_BASE = "https://api.elevenlabs.io"
 TIMEOUT = 25          # control plane
 AUDIO_TIMEOUT = 60    # a 10-minute MP3 over a slow link
@@ -300,7 +308,12 @@ class ElevenLabsAgent(VoiceAgent):
                                   if first_message is None else first_message),
                 "language": getattr(agent, "language", "") or "en",
             },
-            "tts": {"voice_id": getattr(agent, "voice_id", "") or ""},
+            # Prosody, not just the voice. Sending only a voice_id left
+            # every agent on ElevenLabs' defaults, and expressive_mode
+            # defaults to True -- which is why a flat line came out sounding
+            # thrilled.
+            "tts": {"voice_id": getattr(agent, "voice_id", "") or "",
+                    **_delivery(agent)},
             "turn": {"turn_timeout": 10},
         }
         platform_settings = {

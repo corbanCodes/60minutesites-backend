@@ -134,5 +134,10 @@ def test_the_agent_is_told_to_stop_selling_the_moment_it_can_transfer(ctx):
     agent = AiAgent(account_id=owner.id, name="Q", playbook_id=pb.id)
     prompt = build_prompt(agent, s)
     assert "STOP SELLING" in prompt
-    assert "call the transfer tool" in prompt
-    assert "Do not wait for them to answer" in prompt
+    # The hand-off has to happen in ONE turn. "Say this, THEN call the tool"
+    # cannot be obeyed: speaking ends the turn, so the tool call waits for
+    # the other person to talk again and the transfer looks broken.
+    assert "transfer_to_number" in prompt
+    assert "same turn" in prompt
+    assert "Do NOT say anything first" in prompt
+    assert "waits for them to talk again" in prompt

@@ -171,7 +171,12 @@ def test_a_custom_style_with_no_line_falls_back_rather_than_saying_nothing(agent
     a.transfer_style = "custom"
     a.transfer_line = ""
     db.session.commit()
-    assert "one short line" in build_prompt(a, s).lower()
+    # Falls back to the brief style's literal words. It used to fall back to
+    # a DESCRIPTION of them ("say one short line"), which left the model to
+    # compose the sentence -- and it composed "I'm going to connect you with
+    # one of our team members now" every time.
+    from dialer.agents import TRANSFER_STYLES
+    assert TRANSFER_STYLES["brief"]["line"] in build_prompt(a, s)
 
 
 def test_the_opening_choice_is_actually_on_the_page(agent):
