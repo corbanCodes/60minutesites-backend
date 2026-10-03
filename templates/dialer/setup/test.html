@@ -119,6 +119,47 @@
   {% endif %}
 </form>
 
+{% if last_test %}
+<div class="card wiz-steps-card" id="last-test" data-call-id="{{ last_test.id }}">
+  <h3>Your last test call <span class="muted" style="font-weight:normal">&mdash; #{{ last_test.id }},
+    {{ last_test.started_at | local }}</span></h3>
+  <p class="muted" style="margin:0 0 8px">Fills in by itself as the pieces land: the notes the AI took, its
+    transcript and summary, the hand-off, the recording, and the grade of the human conversation after it.
+    <a href="/dialer/calls/{{ last_test.id }}">Open the full record</a>.</p>
+  <div id="lt-body" class="muted">Checking&hellip;</div>
+</div>
+<script>
+(function () {
+  var box = document.getElementById('lt-body'), id = {{ last_test.id }}, tries = 0;
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function row(label, val) { return val ? '<p style="margin:0 0 6px"><b>' + label + ':</b> ' + esc(val) + '</p>' : ''; }
+  function render(d) {
+    var h = '';
+    h += row('Status', (d.status || '') + (d.disposition ? ' \u00b7 ' + d.disposition.replace(/_/g, ' ') : ''));
+    h += row('Hand-off', d.handed_off ? (d.handoff_at_text || 'yes') + (d.rep_leg ? ' \u2014 ' + d.rep_leg : '') : '');
+    if (d.notes && d.notes.length) h += '<p style="margin:0 0 2px"><b>Notes the AI took:</b></p><ul style="margin:0 0 6px 18px">' + d.notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul>';
+    h += row('Summary', d.summary);
+    if (d.handoff_score != null) h += '<p style="margin:0 0 6px"><b>Human conversation:</b> ' + esc(d.handoff_score) + '/10' + (d.handoff_coaching && d.handoff_coaching.advice ? ' \u2014 ' + esc(d.handoff_coaching.advice) : '') + '</p>';
+    else if (d.pending_grade) h += row('Human conversation', d.pending_grade);
+    h += row('Recording', d.has_recording ? 'attached \u2014 play it on the call record' : '');
+    if (d.transcript) h += '<details><summary>AI transcript</summary><pre style="white-space:pre-wrap;font-size:13px">' + esc(d.transcript) + '</pre></details>';
+    if (d.pending && d.pending.length) h += '<p class="muted" style="margin:6px 0 0">Still waiting for: ' + esc(d.pending.join(', ')) + '</p>';
+    if (d.error) h += row('Error', d.error);
+    box.innerHTML = h || 'Nothing yet.';
+    box.className = '';
+  }
+  function poll() {
+    if (++tries > 200) return;
+    fetch('/dialer/calls/' + id + '/results.json', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d && d.ok) render(d); if (!d || !d.ok || (d.pending && d.pending.length)) setTimeout(poll, 4000); })
+      .catch(function () { setTimeout(poll, 8000); });
+  }
+  poll();
+})();
+</script>
+{% endif %}
+
 <div class="card wiz-steps-card">
   <h3>What the test proves</h3>
   <table class="plan-table">
@@ -130,6 +171,8 @@
       anything dialled.</td></tr>
     <tr><td>Recording</td><td>Audio came back and is attached to the call record.</td></tr>
     <tr><td>Transcript and summary</td><td>Your AI key turned that audio into text, a summary and a score.</td></tr>
+    <tr><td>The hand-off</td><td>The call moved to a person with nothing dialled on the prospect's side, and the
+      human conversation after it was transcribed from the recording and graded.</td></tr>
     <tr><td>The CRM write</td><td>A call record, a note and any follow-up task landed on the lead.</td></tr>
   </table>
   <p class="muted" style="margin:12px 0 0">When it finishes you land on the call record. Everything above is on

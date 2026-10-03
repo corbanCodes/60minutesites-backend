@@ -11,8 +11,8 @@ from datetime import datetime, timedelta, timezone
 from app import Lead, Note, Task, db
 
 from dialer import compliance
-from dialer.models import (DEFAULT_STAGE_MAP, PROTECTED_STAGES, Call, CallEvent,
-                           DISPOSITION_LABELS)
+from dialer.models import (DEFAULT_STAGE_MAP, PROTECTED_STAGES, AiAgent, Call,
+                           CallEvent, DISPOSITION_LABELS)
 from dialer.providers import registry
 
 
@@ -359,6 +359,93 @@ def _follow_up(call, lead, fu):
                         title=title, kind=kind, due_at=due,
                         assignee_id=call.agent_user_id))
     event(call, "follow_up", title)
+
+
+# ------------------------------------------------------- the hand-off grade
+HANDOFF_SYSTEM = (
+    "You review recorded sales calls for a small B2B team and return strict "
+    "JSON. An AI assistant opened the call and reached the decision maker; a "
+    "human salesperson then took over. Judge ONLY the human, and how the "
+    "hand-off itself felt to the prospect. Be concrete and brief. Never "
+    "invent anything that is not in the transcript.")
+
+HANDOFF_SHAPE = """Return ONLY a JSON object:
+{"score": 1-10 for the human salesperson, or null if no human spoke,
+ "reasons": ["<=3 short reasons for the score"],
+ "advice": "one sentence the salesperson should do differently next time",
+ "handoff_moment": "one sentence: how the switch from the AI to the person
+   came across to the prospect -- seamless, awkward, noticed, not noticed",
+ "prospect_said": "<=2 sentences: what the prospect wanted or decided"}"""
+
+
+def _transcript_text(tr):
+    if tr.get("text"):
+        return str(tr["text"])
+    segs = tr.get("segments") or []
+    return "\n".join(f"{s.get('speaker', '')}: {s.get('text', '')}".strip(": ")
+                     for s in segs if isinstance(s, dict))
+
+
+def grade_handoff(call, settings=None, force=False):
+    """The human conversation after the AI handed over: transcript + grade.
+
+    An owned-mode recording covers the whole call -- the AI, the hand-off
+    line and the salesperson -- so this is where the hand-off itself is
+    judged, which is the one thing the test page could not show. Each
+    step says why it stopped, on the call's timeline, so "no grade" is
+    never a mystery.
+    """
+    from dialer.settings_store import get_settings
+    settings = settings or get_settings(call.account_id)
+    if not call.conference_name or not call.recording_sid:
+        return None
+    if call.handoff_score is not None and not force:
+        return None
+    if not call.handoff_transcript:
+        if not _can_transcribe(settings):
+            event(call, "handoff_grade_skipped",
+                  "no transcription key: add an OpenAI key on step 5")
+            db.session.commit()
+            return None
+        rec = registry.telephony(settings).fetch_recording(call.recording_sid)
+        if not rec.get("ok"):
+            event(call, "handoff_transcript_failed",
+                  f"recording: {rec.get('error', '')}")
+            db.session.commit()
+            return None
+        tr = registry.transcriber(settings).transcribe(
+            rec["content"], rec.get("mimetype", "audio/mpeg"))
+        if not tr.get("ok"):
+            event(call, "handoff_transcript_failed", tr.get("error", ""))
+            db.session.commit()
+            return None
+        call.handoff_transcript = _transcript_text(tr)[:20000]
+        db.session.commit()
+    if not (settings.has_llm or registry.simulating(settings)):
+        event(call, "handoff_grade_skipped", "no LLM key: add one on step 5")
+        db.session.commit()
+        return None
+    agent = db.session.get(AiAgent, call.ai_agent_id) if call.ai_agent_id else None
+    line = (getattr(agent, "transfer_line", "") or "").strip() or "Oh, okay. Thanks."
+    prompt = (f"{HANDOFF_SHAPE}\n\nThe AI handed over by saying: {line!r}. "
+              f"Everything before that line is the AI assistant; grade only "
+              f"the human salesperson after it.\n\nFULL CALL TRANSCRIPT:\n"
+              f"{call.handoff_transcript[:12000]}")
+    r = registry.llm(settings).complete(HANDOFF_SYSTEM, prompt,
+                                        max_tokens=500, json_mode=True)
+    if r.get("ok") and isinstance(r.get("data"), dict):
+        d = r["data"]
+        call.handoff_score = d.get("score") if isinstance(d.get("score"), int) else None
+        call.handoff_coaching_json = json.dumps({
+            "reasons": d.get("reasons") or [],
+            "advice": d.get("advice") or "",
+            "handoff_moment": d.get("handoff_moment") or "",
+            "prospect_said": d.get("prospect_said") or ""})
+        event(call, "handoff_graded", f"score={call.handoff_score}")
+    else:
+        event(call, "handoff_grade_failed", r.get("error", ""))
+    db.session.commit()
+    return call
 
 
 # ------------------------------------------------------------------ cost

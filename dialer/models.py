@@ -555,6 +555,10 @@ class Call(db.Model):
     score = db.Column(db.Integer)
     coaching_json = db.Column(db.Text, default="")
     objections_json = db.Column(db.Text, default="")
+    # The human part after an owned-mode hand-off, from the full recording.
+    handoff_transcript = db.Column(db.Text, default="")
+    handoff_score = db.Column(db.Integer)
+    handoff_coaching_json = db.Column(db.Text, default="")
     revocation_detected = db.Column(db.Boolean, default=False)
 
     transferred_to = db.Column(db.String(120), default="")
@@ -586,6 +590,13 @@ class Call(db.Model):
     def coaching(self):
         try:
             return json.loads(self.coaching_json or "{}")
+        except ValueError:
+            return {}
+
+    @property
+    def handoff_coaching(self):
+        try:
+            return json.loads(self.handoff_coaching_json or "{}")
         except ValueError:
             return {}
 

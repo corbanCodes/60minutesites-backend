@@ -482,6 +482,8 @@ def _ensure_schema_inner():
                      "handoff_line_media_id": "INTEGER",
                      "handoff_line_key": "VARCHAR(80)",
                      "prompt_override": "TEXT"},
+        "call": {"handoff_transcript": "TEXT", "handoff_score": "INTEGER",
+                 "handoff_coaching_json": "TEXT"},
         "flipbook_page": {"text": "TEXT"},
         # --- dialer: columns on existing CRM tables ---
         "task": {"assignee_id": "INTEGER"},

@@ -315,6 +315,8 @@ def _place(call, campaign, settings, number, lead):
                 to=call.to_number, from_=number.e164,
                 url=urls.twilio_ai_connect(call.id),
                 status_callback=status_cb,
+                record=bool(settings.records_calls),
+                recording_status_callback=urls.twilio_recording(call.account_id),
                 time_limit=settings.max_call_seconds or 600)
             if not r.get("ok"):
                 call.error = r.get("error", "")[:400]

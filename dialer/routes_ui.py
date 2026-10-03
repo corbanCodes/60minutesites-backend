@@ -188,8 +188,14 @@ def _step_data(key, s):
                     where[a.id] = destination_explained(s_, acct, a)[1]
                 except Exception as e:      # never let the readout break the page
                     where[a.id] = f"could not work it out: {e}"
+        from datetime import timedelta as _td
+        from dialer.models import Call as _Call
+        last_test = (_Call.query.filter_by(account_id=acct)
+                     .filter(_Call.started_at >= _now() - _td(hours=3))
+                     .order_by(_Call.started_at.desc()).first())
         return {"agents": agents,
                 "handoff_where": where,
+                "last_test": last_test,
                 "numbers": [n for n in rows if not n.is_placeholder],
                 "fake_numbers": [n for n in rows if n.is_placeholder]}
     return {}
@@ -2405,11 +2411,24 @@ def call_detail(call_id):
                                perm="recordings.listen"), 403
     from app import Lead
     from dialer.models import CallEvent
+    from dialer.results import results_for
     return render_template(
         "dialer/call_detail.html", s=s, ready=ready, prog=prog, call=call,
         lead=db.session.get(Lead, call.lead_id) if call.lead_id else None,
         events=CallEvent.query.filter_by(call_id=call.id)
-        .order_by(CallEvent.at).all())
+        .order_by(CallEvent.at).all(),
+        results=results_for(call))
+
+
+@bp.route("/calls/<int:call_id>/results.json")
+def call_results(call_id):
+    """Everything the call produced so far, for the pages that update
+    themselves as the pieces land."""
+    call = Call.query.get_or_404(call_id)
+    if call.account_id != g.account_id:
+        abort(403)
+    from dialer.results import results_for
+    return jsonify(ok=True, **results_for(call))
 
 
 @bp.route("/calls/<int:call_id>/recording")
@@ -2601,10 +2620,15 @@ def test_call():
         # Owned: WE place the call and the agent rides it. A hand-off is
         # then a move of an answered call, not a dial -- no ringback.
         from dialer import urls
+        # Recorded from the answer: the one recording then covers the AI,
+        # the hand-off line and the salesperson, which is what the
+        # hand-off grade is read from.
         r = registry.telephony(s).create_call(
             to=call.to_number, from_=number.e164 if number else "",
             url=urls.twilio_ai_connect(call.id),
             status_callback=urls.twilio_status(g.account_id),
+            record=bool(s.records_calls),
+            recording_status_callback=urls.twilio_recording(g.account_id),
             time_limit=s.max_call_seconds or 600)
         if r.get("ok"):
             call.twilio_sid = (r.get("sid") or "")[:64]

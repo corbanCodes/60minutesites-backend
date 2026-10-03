@@ -67,17 +67,49 @@ def _inbox(account_id, source, kind, dedupe_key, payload, signature_ok=True):
     """Idempotent write. Returns False when this exact event was already seen."""
     if dedupe_key and WebhookInbox.query.filter_by(dedupe_key=dedupe_key).first():
         return False
-    db.session.add(WebhookInbox(
+    row = WebhookInbox(
         account_id=account_id, source=source, kind=kind,
         dedupe_key=dedupe_key[:200] if dedupe_key else None,
         signature_ok=signature_ok,
-        payload=json.dumps(payload)[:200000]))
+        payload=json.dumps(payload)[:200000])
+    db.session.add(row)
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
         return False
+    _process_soon(row.id)
     return True
+
+
+def _process_soon(row_id):
+    """Act on the row now, not when a worker next looks.
+
+    There is no worker in production: the inbox was written and never
+    read, so no transcript, summary, recording or grade ever reached a
+    call page. The row is committed first, so the carrier is answered
+    whatever happens next; then a short-lived thread folds the event into
+    the call. Tests run it inline. A worker, if one is ever started, skips
+    rows already done.
+    """
+    from flask import current_app
+    app = current_app._get_current_object()
+    if app.config.get("TESTING") or app.config.get("INBOX_SYNC"):
+        from dialer import processor
+        processor.process_one(row_id)
+        return
+    import threading
+
+    def run():
+        with app.app_context():
+            try:
+                from dialer import processor
+                processor.process_one(row_id)
+            except Exception:
+                pass
+            finally:
+                db.session.remove()
+    threading.Thread(target=run, daemon=True, name=f"inbox-{row_id}").start()
 
 
 # ------------------------------------------------------------- Twilio: TwiML

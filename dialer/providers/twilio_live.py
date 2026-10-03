@@ -552,6 +552,10 @@ class TwilioTelephony(Telephony):
         if amd_cb:
             args["async_amd_status_callback"] = amd_cb
             args["async_amd_status_callback_method"] = "POST"
+        if kw.get("recording_status_callback"):
+            args["recording_status_callback"] = kw["recording_status_callback"]
+            args["recording_status_callback_method"] = "POST"
+            args["recording_status_callback_event"] = ["completed"]
         try:
             call = client.calls.create(**_supported(client.calls.create, args))
         except TwilioRestException as e:

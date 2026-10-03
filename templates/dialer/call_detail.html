@@ -56,6 +56,56 @@
     </div>
     {% endif %}
 
+    {# ---------------------------------------------------- hand-off #}
+    {% if results and results.handed_off %}
+    <div class="mg-card" id="handoff-card">
+      <h3><i class="bi bi-arrow-left-right"></i> The hand-off</h3>
+      <p style="margin:0 0 6px;font-size:14px">{{ results.handoff_at_text }}{% if results.rep_leg %} &mdash; {{ results.rep_leg }}{% endif %}</p>
+      {% if results.handoff_score is not none %}
+      <p style="margin:6px 0"><b>Human conversation: {{ results.handoff_score }}/10</b></p>
+      {% if results.handoff_coaching.handoff_moment %}<p class="muted" style="margin:0 0 6px">{{ results.handoff_coaching.handoff_moment }}</p>{% endif %}
+      {% if results.handoff_coaching.reasons %}<ul class="reasonlist">{% for r in results.handoff_coaching.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+      {% if results.handoff_coaching.advice %}<p style="margin:6px 0 0"><b>Next time:</b> {{ results.handoff_coaching.advice }}</p>{% endif %}
+      {% if results.handoff_coaching.prospect_said %}<p style="margin:6px 0 0"><b>They wanted:</b> {{ results.handoff_coaching.prospect_said }}</p>{% endif %}
+      {% elif results.pending_grade %}
+      <p class="muted" style="margin:0">{{ results.pending_grade }}</p>
+      {% endif %}
+      {% if results.handoff_transcript %}
+      <details style="margin-top:8px"><summary>Full call transcript, from the recording</summary>
+        <div class="transcript" tabindex="0">{% for raw_line in results.handoff_transcript.split('\n') %}<p style="margin:0 0 4px">{{ raw_line }}</p>{% endfor %}</div>
+      </details>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ---------------------------------------------------- AI notes #}
+    {% if results and results.notes %}
+    <div class="mg-card">
+      <h3><i class="bi bi-journal-text"></i> Notes the AI took</h3>
+      <ul class="reasonlist">{% for n in results.notes %}<li>{{ n }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    {% if results and results.pending %}
+    <p class="muted" style="margin:0 0 10px" id="results-pending">Still waiting for: {{ results.pending | join(', ') }}. This page updates itself.</p>
+    <script>
+      (function () {
+        var tries = 0, seen = {{ results.version }};
+        function poll() {
+          if (++tries > 150) return;
+          fetch('/dialer/calls/{{ call.id }}/results.json', { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d && d.ok && d.version !== seen) { location.reload(); return; }
+              setTimeout(poll, 4000);
+            })
+            .catch(function () { setTimeout(poll, 8000); });
+        }
+        setTimeout(poll, 4000);
+      })();
+    </script>
+    {% endif %}
+
     {# ---------------------------------------------------- score #}
     {% if call.score is not none or coach.get('reasons') or coach.get('coaching') %}
     <div class="mg-card">

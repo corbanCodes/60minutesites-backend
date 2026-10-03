@@ -11,6 +11,7 @@ from app import db
 from dialer.models import Call, WebhookInbox
 
 MAX_ATTEMPTS = 5
+TERMINAL = ("completed", "failed", "canceled", "busy", "no-answer")
 
 
 def _now():
@@ -40,6 +41,29 @@ def process_all(account_id=None, limit=50):
             failed += 1
         db.session.commit()
     return {"processed": done, "failed": failed}
+
+
+def process_one(row_id):
+    """One inbox row, right now. The hooks call this so a result is on the
+    page seconds after the call, not whenever a worker next looks."""
+    row = db.session.get(WebhookInbox, row_id)
+    if row is None or row.processed_at or (row.attempts or 0) >= MAX_ATTEMPTS:
+        return False
+    row.attempts = (row.attempts or 0) + 1
+    try:
+        handle(row)
+        row.processed_at = _now()
+        row.error = ""
+        done = True
+    except Exception as e:
+        db.session.rollback()
+        row = db.session.get(WebhookInbox, row_id)
+        if row is not None:
+            row.attempts = (row.attempts or 0) + 1
+            row.error = str(e)[:400]
+        done = False
+    db.session.commit()
+    return done
 
 
 def handle(row):
@@ -81,6 +105,8 @@ def _twilio(row, p):
         db.session.commit()
         if status in ("completed", "busy", "no-answer", "failed", "canceled"):
             calls_mod.finalize(call, settings)
+            if call.recording_sid:
+                calls_mod.grade_handoff(call, settings)
     elif row.kind == "amd":
         answered_by = p.get("AnsweredBy", "")
         calls_mod.apply_status(call, call.status or "in-progress",
@@ -92,6 +118,7 @@ def _twilio(row, p):
         call.recording_duration_s = int(float(p.get("RecordingDuration") or 0))
         db.session.commit()
         calls_mod.finalize(call, settings, force=not call.transcript)
+        calls_mod.grade_handoff(call, settings)
     return call
 
 
@@ -126,8 +153,13 @@ def _elevenlabs(row, body):
             if t.get("message"))
     elif isinstance(transcript, str):
         call.transcript = transcript
+    # In owned mode the AI's conversation ends at the hand-off while the
+    # call itself carries on with a person. The vendor saying "conversation
+    # ended" must not mark the call completed or finalize it: Twilio's own
+    # completed status does that, with the whole call's duration.
+    handed_off = bool(call.conference_name) and call.status not in TERMINAL
     meta = data.get("metadata") or {}
-    if meta.get("call_duration_secs"):
+    if meta.get("call_duration_secs") and not handed_off:
         call.duration_s = int(meta["call_duration_secs"])
         call.billable_minutes = max(1, (call.duration_s + 59) // 60)
     if meta.get("cost"):
@@ -135,9 +167,10 @@ def _elevenlabs(row, body):
             call.vendor_cost = float(meta["cost"]) / 100.0
         except (TypeError, ValueError):
             pass
-    call.status = "completed"
-    call.ended_at = call.ended_at or _now()
-    if call.duration_s:
+    if not handed_off:
+        call.status = "completed"
+        call.ended_at = call.ended_at or _now()
+    if call.duration_s or handed_off:
         call.answered_live = True
         call.system_outcome = call.system_outcome or "answered_human"
     analysis = data.get("analysis") or {}
@@ -149,6 +182,11 @@ def _elevenlabs(row, body):
     if analysis.get("transcript_summary") and not call.summary:
         call.summary = str(analysis["transcript_summary"])[:4000]
     db.session.commit()
+    if handed_off:
+        calls_mod.event(call, "ai_part_done",
+                        "AI transcript stored; the call is still live with a person")
+        db.session.commit()
+        return call
     calls_mod.finalize(call, settings)
     return call
 
